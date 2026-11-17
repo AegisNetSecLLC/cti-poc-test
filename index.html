@@ -26,14 +26,14 @@
   <!-- TOP NAVIGATION HEADER -->
   <header class="min-h-14 border-b border-slate-800/80 bg-[#0b0f19]/90 backdrop-blur sticky top-0 z-50 px-4 py-2 flex items-center justify-between flex-wrap gap-y-2">
     <div class="flex items-center gap-3">
-      <div class="h-8 w-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
+      <button onclick="switchTab('triage')" title="Home" class="h-8 w-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20 hover:brightness-110 transition">
         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
         </svg>
-      </div>
+      </button>
       <div>
         <div class="flex items-center gap-2">
-          <span class="font-bold tracking-tight text-white text-base">AEGIS<span class="text-cyan-400">.INTEL</span></span>
+          <button onclick="switchTab('triage')" class="font-bold tracking-tight text-white text-base hover:opacity-80 transition">AEGIS<span class="text-cyan-400">.INTEL</span></button>
           <span class="text-[12px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/50" id="platformVersionBadge">v2.6 DYNAMIC GRAPH</span>
         </div>
         <p class="text-[12px] text-slate-400 hidden sm:block">Automated Threat-to-Environment Correlation & Triage Engine</p>
@@ -83,6 +83,10 @@
         <div>
           <div class="text-[12px] font-semibold text-slate-400 tracking-wider uppercase px-2 mb-2 font-mono">Navigation</div>
           <nav class="space-y-1">
+            <button onclick="switchTab('triage')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+              Home
+            </button>
             <button onclick="switchTab('triage')" id="nav-triage" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-white bg-slate-800/90 border border-slate-700/60 shadow-sm transition">
               <span class="flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -118,6 +122,19 @@
               </span>
               <span class="text-[12px] font-mono text-slate-400">CMDB/EDR</span>
             </button>
+            <button onclick="switchTab('memos')" id="nav-memos" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Memo Archive
+              </span>
+              <span id="badgeMemoArchiveCount" class="text-[12px] font-mono text-slate-400">0</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+                Settings
+              </span>
+            </button>
           </nav>
         </div>
 
@@ -129,21 +146,6 @@
           <p class="text-[13px] text-slate-400 leading-relaxed">
             Clicking any CVE card (e.g., <strong class="text-cyan-300">CVE-2026-10332</strong>) dynamically maps its specific threat actor, target host, and crown jewels on the graph.
           </p>
-        </div>
-      </div>
-
-      <!-- Environment Health -->
-      <div class="p-3 border-t border-slate-800/80 bg-slate-950/40">
-        <div class="text-[12px] font-mono text-slate-400 mb-1 flex justify-between">
-          <span>ENV EXPOSURE INDEX</span>
-          <span class="text-rose-400 font-bold">78 / 100</span>
-        </div>
-        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <div class="bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 h-full w-[78%]"></div>
-        </div>
-        <div class="flex justify-between text-[11px] text-slate-400 font-mono mt-1">
-          <span>Target: &lt; 25</span>
-          <span>Elevated Alert</span>
         </div>
       </div>
     </aside>
@@ -499,6 +501,38 @@
             </thead>
             <tbody class="divide-y divide-slate-800/60 font-mono" id="assetsTableBody"></tbody>
           </table>
+        </div>
+      </section>
+
+      <!-- TAB: MEMO ARCHIVE -->
+      <section id="view-memos" class="p-4 md:p-6 space-y-6 hidden">
+        <div>
+          <h2 class="text-base font-semibold text-white">Threat Memo Archive</h2>
+          <p class="text-sm text-slate-400">Every memo you've copied, downloaded, or emailed this session, for quick re-access.</p>
+        </div>
+        <div class="space-y-3" id="memoArchiveList"></div>
+      </section>
+
+      <!-- TAB: SETTINGS -->
+      <section id="view-settings" class="p-4 md:p-6 space-y-6 hidden">
+        <div>
+          <h2 class="text-base font-semibold text-white">Settings</h2>
+          <p class="text-sm text-slate-400">Platform status and what's coming next.</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden max-w-xl">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 text-sm font-semibold text-slate-200">Platform Status</div>
+          <div class="p-4 space-y-2 text-sm font-mono" id="settingsStatusBody"></div>
+        </div>
+
+        <div class="rounded-xl border border-dashed border-slate-700 bg-slate-900/20 overflow-hidden max-w-xl">
+          <div class="p-3 border-b border-dashed border-slate-700 text-sm font-semibold text-slate-300">🚧 Coming Soon</div>
+          <div class="p-4 space-y-2 text-sm text-slate-400">
+            <div>• Identity & SSO (Okta / Active Directory) — static login for now</div>
+            <div>• Email & ticketing integrations wired to real accounts</div>
+            <div>• Notification preferences per owning team</div>
+            <div>• Data retention & audit export controls</div>
+          </div>
         </div>
       </section>
 
@@ -2350,6 +2384,71 @@
     // THREAT MEMO DRAFT (PREBUILT FORMAT FOR LEADERSHIP)
     // ==========================================
     let activeMemoAlertId = null;
+    const memoArchive = [];
+
+    function logMemoArchiveEntry(alertId, riskRating) {
+      const alert = MOCK_ALERTS.find(a => a.id === alertId);
+      if (!alert) return;
+      const existing = memoArchive.find(m => m.alertId === alertId);
+      if (existing) {
+        existing.riskRating = riskRating;
+        existing.lastTouched = Date.now();
+      } else {
+        memoArchive.unshift({ alertId: alertId, cve: alert.cve, title: alert.title, riskRating: riskRating, lastTouched: Date.now() });
+      }
+      const badge = document.getElementById('badgeMemoArchiveCount');
+      if (badge) badge.textContent = memoArchive.length;
+    }
+
+    function renderMemoArchive() {
+      const list = document.getElementById('memoArchiveList');
+      if (memoArchive.length === 0) {
+        list.innerHTML = `<div class="p-8 text-center border border-slate-800 rounded-xl bg-slate-900/20 text-slate-400 text-sm font-mono">No memos generated yet this session. Copy, download, or email a Threat Memo to see it archived here.</div>`;
+        return;
+      }
+
+      list.innerHTML = memoArchive.map(entry => {
+        const meta = RISK_RATING_META[entry.riskRating] || RISK_RATING_META.medium;
+        return `
+          <div class="p-3.5 rounded-xl bg-[#090d16] border border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border ${meta.activeClasses}">${meta.label}</span>
+                <span class="font-mono text-sm font-bold text-cyan-300">${entry.cve}</span>
+              </div>
+              <div class="text-sm text-slate-200">${entry.title}</div>
+              <div class="text-[11px] text-slate-500 font-mono">${timeAgo(entry.lastTouched)}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="reopenArchivedMemo('${entry.alertId}', '${entry.riskRating}')" class="px-2.5 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm transition">📋 Reopen</button>
+              <button onclick="removeMemoArchiveEntry('${entry.alertId}')" class="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-sm transition">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function reopenArchivedMemo(alertId, riskRating) {
+      openThreatMemoModal(alertId);
+      setMemoRiskRating(riskRating);
+    }
+
+    function removeMemoArchiveEntry(alertId) {
+      const idx = memoArchive.findIndex(m => m.alertId === alertId);
+      if (idx !== -1) memoArchive.splice(idx, 1);
+      document.getElementById('badgeMemoArchiveCount').textContent = memoArchive.length;
+      renderMemoArchive();
+    }
+
+    function renderSettingsPanel() {
+      document.getElementById('settingsStatusBody').innerHTML = `
+        <div class="flex justify-between"><span class="text-slate-400">Platform Version</span><span class="text-cyan-300">v${currentVersionMajor}.${currentVersionMinor}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Active Connectors</span><span class="text-emerald-300">${MOCK_CONNECTORS.filter(c => c.enabled).length} / ${MOCK_CONNECTORS.length}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Subscribed Feeds</span><span class="text-emerald-300">${MOCK_FEEDS.filter(f => f.enabled).length} / ${MOCK_FEEDS.length}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Memos Generated This Session</span><span class="text-indigo-300">${memoArchive.length}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Authentication</span><span class="text-amber-300">None (prototype — no login)</span></div>
+      `;
+    }
     let activeMemoRiskRating = 'medium';
 
     const RISK_RATING_META = {
@@ -2484,6 +2583,7 @@ and will re-verify once remediation is reported complete.
       const status = document.getElementById('memoCopyStatus');
       navigator.clipboard.writeText(text).then(() => {
         status.textContent = '✅ Copied to clipboard — paste into email, Slack, or your ticketing system.';
+        logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating);
       }).catch(() => {
         status.textContent = '❌ Copy failed — your browser may be blocking clipboard access.';
       });
@@ -2502,6 +2602,7 @@ and will re-verify once remediation is reported complete.
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       document.getElementById('memoCopyStatus').textContent = '⬇️ Download started.';
+      logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating);
     }
 
     function emailMemo() {
@@ -2517,6 +2618,7 @@ and will re-verify once remediation is reported complete.
       const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
       window.location.href = mailto;
       document.getElementById('memoCopyStatus').textContent = '📧 Opening your email client... (full memo also copied to clipboard as backup in case it gets truncated)';
+      logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating);
     }
 
     // ==========================================
@@ -2570,7 +2672,7 @@ and will re-verify once remediation is reported complete.
     }
 
     function switchTab(tabName) {
-      ['triage', 'graph', 'connectors', 'intel', 'assets'].forEach(t => {
+      ['triage', 'graph', 'connectors', 'intel', 'assets', 'memos', 'settings'].forEach(t => {
         const view = document.getElementById('view-' + t);
         if (view) view.classList.add('hidden');
         const nav = document.getElementById('nav-' + t);
@@ -2590,6 +2692,10 @@ and will re-verify once remediation is reported complete.
       if (tabName === 'graph') {
         populateGraphIncidentSelector();
         renderBlastGraph(currentGraphAlertId, 'cve');
+      } else if (tabName === 'memos') {
+        renderMemoArchive();
+      } else if (tabName === 'settings') {
+        renderSettingsPanel();
       }
     }
 
