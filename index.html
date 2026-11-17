@@ -1,0 +1,2272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegisCTI // Threat Intelligence & Environment Correlation</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Custom sleek scrollbar & cyber accents */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f19; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    .glow-cyan { box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.35); }
+    .glow-rose { box-shadow: 0 0 20px -5px rgba(244, 63, 94, 0.45); }
+    .glow-amber { box-shadow: 0 0 20px -5px rgba(245, 158, 11, 0.35); }
+    .grid-pattern {
+      background-size: 24px 24px;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+  </style>
+</head>
+<body class="bg-[#07090e] text-slate-200 antialiased font-sans min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="h-14 border-b border-slate-800/80 bg-[#0b0f19]/90 backdrop-blur sticky top-0 z-50 px-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-bold tracking-tight text-white text-base">AEGIS<span class="text-cyan-400">.INTEL</span></span>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/50">v2.6 DYNAMIC GRAPH</span>
+        </div>
+        <p class="text-[10px] text-slate-400 hidden sm:block">Automated Threat-to-Environment Correlation & Triage Engine</p>
+      </div>
+    </div>
+
+    <!-- Active Ingestion Stats Ticker -->
+    <div class="hidden md:flex items-center gap-4 text-xs font-mono border-x border-slate-800 px-4 py-1">
+      <div class="flex items-center gap-1.5">
+        <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-400">CONNECTORS:</span>
+        <span class="text-emerald-300 font-semibold" id="headerConnectorsCount">16 Active</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-slate-400">ASSETS MONITORED:</span>
+        <span class="text-cyan-300 font-semibold" id="headerAssetsCount">1,420</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-slate-400">CORRELATED P1:</span>
+        <span class="text-rose-400 font-semibold" id="headerP1Count">3 Active</span>
+      </div>
+    </div>
+
+    <!-- Right Actions -->
+    <div class="flex items-center gap-2">
+      <button onclick="openAddConnectorModal()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <span>Add Connector / API</span>
+      </button>
+      <button onclick="triggerSimulation()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition">
+        <svg class="w-3.5 h-3.5 text-cyan-400 animate-spin" id="simSpinner" style="display:none;" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+        <span id="simBtnText">⚡ Simulate 0-Day Feed Drop</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- LEFT SIDEBAR -->
+    <aside class="w-60 border-r border-slate-800/80 bg-[#090d16] flex flex-col justify-between shrink-0 hidden lg:flex">
+      <div class="p-3 space-y-6">
+        <div>
+          <div class="text-[10px] font-semibold text-slate-400 tracking-wider uppercase px-2 mb-2 font-mono">Navigation</div>
+          <nav class="space-y-1">
+            <button onclick="switchTab('triage')" id="nav-triage" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-white bg-slate-800/90 border border-slate-700/60 shadow-sm transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Correlated Triage
+              </span>
+              <span id="badgeTriageCount" class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30">3</span>
+            </button>
+            <button onclick="switchTab('graph')" id="nav-graph" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M7.5 7.5L10.5 16.5M16.5 7.5L13.5 16.5"/></svg>
+                Blast Radius Graph
+              </span>
+              <span class="text-[10px] font-mono text-purple-400">Dynamic</span>
+            </button>
+            <button onclick="switchTab('connectors')" id="nav-connectors" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Connectors & APIs
+              </span>
+              <span id="badgeConnectorsCount" class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-1.5 py-0.5 rounded">16</span>
+            </button>
+            <button onclick="switchTab('intel')" id="nav-intel" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                Threat Intel & KEV
+              </span>
+              <span class="text-[10px] font-mono text-slate-400">Feeds</span>
+            </button>
+            <button onclick="switchTab('assets')" id="nav-assets" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
+                Internal Inventory
+              </span>
+              <span class="text-[10px] font-mono text-slate-400">CMDB/EDR</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Quick Help Tip -->
+        <div class="rounded-xl p-3 bg-gradient-to-b from-slate-900 to-[#0e1424] border border-cyan-900/40 text-xs space-y-2">
+          <div class="flex items-center gap-1.5 text-cyan-400 font-semibold text-[11px] font-mono">
+            <span>💡 DYNAMIC BLAST GRAPHS</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            Clicking any CVE card (e.g., <strong class="text-cyan-300">CVE-2026-10332</strong>) dynamically maps its specific threat actor, target host, and crown jewels on the graph.
+          </p>
+        </div>
+      </div>
+
+      <!-- Environment Health -->
+      <div class="p-3 border-t border-slate-800/80 bg-slate-950/40">
+        <div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between">
+          <span>ENV EXPOSURE INDEX</span>
+          <span class="text-rose-400 font-bold">78 / 100</span>
+        </div>
+        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div class="bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 h-full w-[78%]"></div>
+        </div>
+        <div class="flex justify-between text-[9px] text-slate-400 font-mono mt-1">
+          <span>Target: &lt; 25</span>
+          <span>Elevated Alert</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER CONTENT AREA -->
+    <main class="flex-1 flex flex-col overflow-y-auto bg-[#07090e]">
+
+      <!-- TAB 1: CORRELATED TRIAGE VIEW -->
+      <section id="view-triage" class="p-4 md:p-6 space-y-6">
+        
+        <!-- Summary Cards Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-rose-500/30 hover:border-rose-500/50 transition">
+            <div class="flex items-center justify-between text-slate-400 text-xs">
+              <span>Active Correlated Exploits</span>
+              <span class="p-1 rounded bg-rose-500/10 text-rose-400">🔥 P0/P1</span>
+            </div>
+            <div class="text-2xl font-bold font-mono text-rose-400 mt-2" id="statP0Count">3</div>
+            <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+              <span class="text-rose-400">●</span> 100% matched to exposed assets
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-amber-500/30 hover:border-amber-500/50 transition">
+            <div class="flex items-center justify-between text-slate-400 text-xs">
+              <span>In CISA KEV (Known Exploited)</span>
+              <span class="p-1 rounded bg-amber-500/10 text-amber-400">Catalog</span>
+            </div>
+            <div class="text-2xl font-bold font-mono text-amber-300 mt-2">12</div>
+            <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+              <span class="text-amber-400">●</span> 3 actively reachable in prod
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-cyan-500/30 hover:border-cyan-500/50 transition">
+            <div class="flex items-center justify-between text-slate-400 text-xs">
+              <span>High EPSS Probability (&gt;75%)</span>
+              <span class="p-1 rounded bg-cyan-500/10 text-cyan-400">Weaponized</span>
+            </div>
+            <div class="text-2xl font-bold font-mono text-cyan-300 mt-2">19</div>
+            <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+              <span class="text-cyan-400">●</span> 82.4% avg exploit velocity
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition">
+            <div class="flex items-center justify-between text-slate-400 text-xs">
+              <span>Connected Data Sources</span>
+              <span class="p-1 rounded bg-slate-800 text-slate-400 font-mono">Pipelines</span>
+            </div>
+            <div class="text-2xl font-bold font-mono text-emerald-400 mt-2" id="statConnectedSources">16</div>
+            <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+              <span class="text-emerald-400">●</span> All APIs healthy & polling
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Bar & Search -->
+        <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/40 border border-slate-800">
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="setFilter('all')" id="filter-all" class="filter-chip px-3 py-1 rounded-md text-xs font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">All (<span id="countFilterAll">5</span>)</button>
+            <button onclick="setFilter('p1')" id="filter-p1" class="filter-chip px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Critical P1 (<span id="countFilterP1">3</span>)</button>
+            <button onclick="setFilter('kev')" id="filter-kev" class="filter-chip px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">CISA KEV Only</button>
+            <button onclick="setFilter('internet')" id="filter-internet" class="filter-chip px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Internet Exposed Only</button>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="triageSearchInput" onkeyup="filterAlerts()" placeholder="Filter CVE, Host, or Actor..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+          </div>
+        </div>
+
+        <!-- CORRELATED ALERTS LIST (Clickable Cards for Deep Dive) -->
+        <div class="space-y-3" id="alertsContainer"></div>
+      </section>
+
+      <!-- TAB 2: BLAST RADIUS GRAPH EXPLORER (FULLY DYNAMIC SVG) -->
+      <section id="view-graph" class="p-4 md:p-6 space-y-4 hidden flex-1 flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-semibold text-white">Attack Path & Blast Radius Correlation Visualizer</h2>
+              <span class="text-xs font-normal text-purple-400 font-mono px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800">Dynamic Multi-Threat Engine</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Showing exact traversal path: Threat Actor ➔ Weaponized CVE ➔ Exposed Asset ➔ Crown Jewel Enclave.</p>
+          </div>
+
+          <!-- Incident Selector & Canvas Zoom Controls -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Dynamic Incident Picker -->
+            <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs font-mono">
+              <span class="text-slate-400">Incident:</span>
+              <select id="graphIncidentSelect" onchange="renderBlastGraph(this.value, 'cve')" class="bg-transparent text-cyan-300 font-bold focus:outline-none cursor-pointer">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+
+            <!-- Zoom Controls -->
+            <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-mono text-slate-300">
+              <button onclick="zoomGraph(1.2)" class="px-2.5 py-1 hover:bg-slate-800 rounded text-cyan-300" title="Zoom In">+</button>
+              <button onclick="zoomGraph(0.8)" class="px-2.5 py-1 hover:bg-slate-800 rounded text-cyan-300" title="Zoom Out">−</button>
+              <button onclick="resetGraphView()" class="px-2.5 py-1 hover:bg-slate-800 rounded text-slate-400" title="Reset View">Reset</button>
+              <span class="px-2 text-[10px] text-slate-500 border-l border-slate-800" id="zoomLevelIndicator">100%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SVG Interactive Graph Canvas with Drag & Zoom -->
+        <div class="relative flex-1 min-h-[520px] rounded-xl border border-slate-800 bg-[#06080e] grid-pattern overflow-hidden flex items-center justify-center select-none" id="graphContainer">
+          
+          <!-- Graph Legend -->
+          <div class="absolute top-3 left-3 z-10 bg-slate-900/85 backdrop-blur p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono space-y-1 pointer-events-none">
+            <div class="text-slate-400 font-bold mb-1">GRAPH ENTITIES:</div>
+            <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Threat Actor Group</div>
+            <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Weaponized CVE / Exploit</div>
+            <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-cyan-500"></span> Internal Exposed Asset</div>
+            <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-purple-500"></span> Crown Jewel / Target Data</div>
+          </div>
+
+          <!-- Dynamic SVG Canvas -->
+          <svg id="blastSvg" class="w-full h-full min-h-[520px] cursor-grab active:cursor-grabbing" viewBox="0 0 1000 520">
+            <defs>
+              <linearGradient id="edgeGradRose" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.8"/>
+                <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.8"/>
+              </linearGradient>
+              <linearGradient id="edgeGradCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.8"/>
+                <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.8"/>
+              </linearGradient>
+              <linearGradient id="edgeGradPurple" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.8"/>
+                <stop offset="100%" stop-color="#a855f7" stop-opacity="0.8"/>
+              </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- TRANSFORMABLE VIEWPORT GROUP (DYNAMICALLY INJECTED NODES & LINKS) -->
+            <g id="graphViewport" transform="translate(0, 0) scale(1)">
+              <!-- Injected dynamically via JS based on selected alert! -->
+            </g>
+          </svg>
+
+          <!-- Floating Node Details Drawer (Collapsible) -->
+          <div id="graphDrawer" class="absolute right-3 top-3 bottom-3 w-88 bg-[#090d16]/95 border border-slate-700 rounded-xl p-4 shadow-2xl backdrop-blur hidden flex-col justify-between overflow-y-auto z-20 transition-all duration-300">
+            <div>
+              <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div class="flex items-center gap-1.5 overflow-hidden">
+                  <span class="text-xs font-mono text-cyan-400 font-bold" id="drawerType">NODE DETAILS</span>
+                  <span class="text-[10px] font-mono text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80 truncate" id="drawerAlertId"></span>
+                </div>
+                <button onclick="closeGraphDrawer()" class="text-slate-400 hover:text-white text-xs p-1">✕</button>
+              </div>
+              <div class="mt-3 space-y-3" id="drawerBody"></div>
+            </div>
+            <div class="pt-3 border-t border-slate-800 space-y-2" id="drawerActions"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: CONNECTORS & INTEGRATIONS HUB -->
+      <section id="view-connectors" class="p-4 md:p-6 space-y-6 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-semibold text-white">Connectors & Integrations Management</h2>
+              <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">Bi-Directional Engine</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Plug in Open Source feeds, commercial intelligence, internal CMDBs, cloud providers, and custom enterprise APIs.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openAddConnectorModal()" class="px-3.5 py-1.5 rounded-lg text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-900/40 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span>+ Add Connector / Custom API</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Tabs -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="filterConnectors('all')" id="connTab-all" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">All Connectors (<span id="countConnAll">16</span>)</button>
+            <button onclick="filterConnectors('intel')" id="connTab-intel" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Threat Intel Feeds (<span id="countConnIntel">5</span>)</button>
+            <button onclick="filterConnectors('asset')" id="connTab-asset" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Asset & Telemetry (<span id="countConnAsset">4</span>)</button>
+            <button onclick="filterConnectors('soar')" id="connTab-soar" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Triage, SIEM & SOAR (<span id="countConnSoar">4</span>)</button>
+            <button onclick="filterConnectors('custom')" id="connTab-custom" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Custom Internal APIs (<span id="countConnCustom">3</span>)</button>
+          </div>
+          <div class="text-xs font-mono text-slate-400 flex items-center gap-2">
+            <span>Protocol Support:</span>
+            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">REST</span>
+            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">TAXII 2.1</span>
+            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">GraphQL</span>
+            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">Webhooks</span>
+          </div>
+        </div>
+
+        <!-- Connectors Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5" id="connectorsGrid"></div>
+      </section>
+
+      <!-- TAB 3: THREAT INTEL & FEEDS -->
+      <section id="view-intel" class="p-4 md:p-6 space-y-6 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-semibold text-white">Threat Intelligence Ingestion Feeds</h2>
+            <p class="text-xs text-slate-400">Real-time ingestion pipelines: CISA KEV, EPSS Daily Scores, TAXII 2.1 Feeds & Threat Actors</p>
+          </div>
+          <button onclick="openAddFeedModal()" class="px-3 py-1.5 rounded-lg text-xs bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition">
+            + Connect New Feed
+          </button>
+        </div>
+
+        <!-- Feed Sources Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="h-9 w-9 rounded-lg bg-rose-950/60 border border-rose-800/60 flex items-center justify-center text-rose-400 font-mono font-bold text-xs">KEV</div>
+              <div>
+                <div class="text-xs font-semibold text-white">CISA KEV Catalog</div>
+                <div class="text-[11px] text-slate-400">1,280 Known Exploits</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">SYNCED (5m ago)</span>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-blue-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="h-9 w-9 rounded-lg bg-blue-950/60 border border-blue-800/60 flex items-center justify-center text-blue-400 font-mono font-bold text-xs">EPSS</div>
+              <div>
+                <div class="text-xs font-semibold text-white">FIRST.org EPSS v3</div>
+                <div class="text-[11px] text-slate-400">240k Exploit Predictions</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">SYNCED (Daily)</span>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-purple-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="h-9 w-9 rounded-lg bg-purple-950/60 border border-purple-800/60 flex items-center justify-center text-purple-400 font-mono font-bold text-xs">ATT&CK</div>
+              <div>
+                <div class="text-xs font-semibold text-white">MITRE ATT&CK v15</div>
+                <div class="text-[11px] text-slate-400">Enterprise Tactics & TTPs</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">LOADED</span>
+          </div>
+        </div>
+
+        <!-- OpenCTI-Compatible Feed Subscriptions (STIX / TAXII / RSS) -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex flex-wrap justify-between items-center gap-2">
+            <div>
+              <span class="text-xs font-semibold text-slate-200">OpenCTI-Compatible Feed Subscriptions</span>
+              <p class="text-[10px] text-slate-400 mt-0.5">Subscribe directly to any STIX 2.1 bundle URL, TAXII 2.1 collection, or RSS/Atom security feed.</p>
+            </div>
+            <button onclick="openAddFeedModal()" class="px-2.5 py-1 rounded-lg text-[11px] bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-medium transition">
+              + Add STIX / TAXII / RSS Feed
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-3" id="feedsGrid"></div>
+        </div>
+
+        <!-- Threat Actor Library -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex justify-between items-center">
+            <span class="text-xs font-semibold text-slate-200">Tracked Threat Actors Targeting Our Sector</span>
+            <span class="text-[10px] font-mono text-slate-400">Financial & Cloud Infra</span>
+          </div>
+          <div class="divide-y divide-slate-800/60 text-xs">
+            <div class="p-3 flex items-center justify-between hover:bg-slate-800/30 transition">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-white">APT-88 (Vanguard Viper)</span>
+                  <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono text-[10px]">Active Campaign</span>
+                </div>
+                <p class="text-[11px] text-slate-400">State-sponsored group exploiting perimeter VPNs & gateway edge software (HyperMesh, Citrix, Fortinet).</p>
+              </div>
+              <div class="text-right font-mono text-[11px] space-y-1">
+                <div class="text-rose-400 font-semibold">T1190 (Exploit Public App)</div>
+                <div class="flex items-center gap-2 justify-end">
+                  <button onclick="openGraphForAlert('CORR-2026-091')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-200 text-[10px] font-mono">🕸️ Graph</button>
+                  <button onclick="openDeepDive('CORR-2026-091')" class="text-cyan-400 hover:underline">Inspect Details →</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-3 flex items-center justify-between hover:bg-slate-800/30 transition">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-white">VoltSpider / CryptoMining botnet</span>
+                  <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono text-[10px]">Active Botnet</span>
+                </div>
+                <p class="text-[11px] text-slate-400">Targeting Kubernetes API and KubeProxy filters for cluster hijack and billing API compromise.</p>
+              </div>
+              <div class="text-right font-mono text-[11px] space-y-1">
+                <div class="text-rose-400 font-semibold">T1611 (Escape to Host)</div>
+                <div class="flex items-center gap-2 justify-end">
+                  <button onclick="openGraphForAlert('CORR-2026-065')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-200 text-[10px] font-mono">🕸️ Graph</button>
+                  <button onclick="openDeepDive('CORR-2026-065')" class="text-cyan-400 hover:underline">Inspect Details →</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-3 flex items-center justify-between hover:bg-slate-800/30 transition">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-white">FIN-12 (Silver Fox)</span>
+                  <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px]">Opportunistic</span>
+                </div>
+                <p class="text-[11px] text-slate-400">Ransomware broker targeting unpatched authentication proxies and healthcare/fintech APIs.</p>
+              </div>
+              <div class="text-right font-mono text-[11px] space-y-1">
+                <div class="text-amber-400 font-semibold">T1078 (Valid Accounts)</div>
+                <div class="flex items-center gap-2 justify-end">
+                  <button onclick="openGraphForAlert('CORR-2026-088')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-200 text-[10px] font-mono">🕸️ Graph</button>
+                  <button onclick="openDeepDive('CORR-2026-088')" class="text-cyan-400 hover:underline">Inspect Details →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: INTERNAL INVENTORY -->
+      <section id="view-assets" class="p-4 md:p-6 space-y-6 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-semibold text-white">Internal Asset & Software Inventory</h2>
+            <p class="text-xs text-slate-400">Synced via AWS/Azure Cloud Connectors, Osquery, and CrowdStrike EDR Agent Telemetry</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono">
+            <span class="px-2 py-1 rounded bg-slate-800 text-slate-300">1,420 Total Hosts</span>
+            <span class="px-2 py-1 rounded bg-rose-950 text-rose-300 border border-rose-800">42 Internet-Exposed</span>
+          </div>
+        </div>
+
+        <!-- Asset Table -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950/80 text-slate-400 font-mono text-[11px] border-b border-slate-800">
+              <tr>
+                <th class="p-3">Asset Name & IP</th>
+                <th class="p-3">Environment / Cloud</th>
+                <th class="p-3">Installed Software & Version</th>
+                <th class="p-3">Exposure</th>
+                <th class="p-3">Correlated CVEs</th>
+                <th class="p-3 text-right">EDR Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 font-mono" id="assetsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- CVE & ALERT DEEP DIVE MODAL -->
+  <div id="deepDiveModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-[#0b0f19] border border-cyan-800/70 w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-rose-950 border border-rose-700/80 flex items-center justify-center text-rose-400 font-bold font-mono text-sm" id="modalRiskBadge">
+            99
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-white font-mono" id="modalCveId">CVE-2026-44201</span>
+              <span id="modalKevBadge" class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[10px] font-mono font-bold">CISA KEV</span>
+              <span id="modalPriorityBadge" class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold">P1-CRITICAL</span>
+            </div>
+            <h3 class="text-sm font-semibold text-slate-200 mt-0.5" id="modalCveTitle">HyperMesh Edge Gateway Remote Code Execution</h3>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="pivotToGraphFromModal()" class="px-3 py-1.5 rounded-lg bg-purple-950/80 hover:bg-purple-900 border border-purple-700 text-purple-200 text-xs font-mono flex items-center gap-1.5 transition">
+            <span>🕸️ View in Blast Radius Graph</span>
+          </button>
+          <button onclick="closeDeepDiveModal()" class="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-sm">✕</button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- LEFT: 6-AXIS RISK SPIDER CHART & VECTORS (5 Cols) -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <span class="text-xs font-mono font-bold text-cyan-400">RISK FACTOR SPIDER CHART</span>
+                <span class="text-[10px] font-mono text-slate-400">Composite Dimensions</span>
+              </div>
+
+              <!-- DYNAMIC SVG SPIDER / RADAR CHART -->
+              <div class="flex items-center justify-center py-1">
+                <svg id="spiderChartSvg" width="280" height="260" viewBox="0 0 280 260"></svg>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-[10px] font-mono pt-1 border-t border-slate-800/80 text-slate-400">
+                <div class="flex items-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                  <span>Active Incident Risk</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full bg-slate-600"></span>
+                  <span>Industry Baseline</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- CVSS & EPSS Metric Breakdown -->
+            <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+              <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
+                <span class="text-slate-400 text-[10px] block">CVSS v3.1 BASE</span>
+                <span class="text-rose-400 font-bold text-lg" id="modalCvssVal">9.8</span>
+                <span class="text-[10px] text-slate-500 block truncate" id="modalCvssVector">CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</span>
+              </div>
+              <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
+                <span class="text-slate-400 text-[10px] block">EPSS PREDICTION</span>
+                <span class="text-cyan-400 font-bold text-lg" id="modalEpssVal">96.4%</span>
+                <span class="text-[10px] text-emerald-400 block" id="modalEpssSub">Top 0.5% weaponized</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: CORRELATION BREAKDOWN, ASSETS & KILL CHAIN (7 Cols) -->
+          <div class="lg:col-span-7 space-y-4">
+            
+            <!-- Contextual Correlation Verdict -->
+            <div class="p-4 rounded-xl bg-gradient-to-r from-rose-950/40 via-slate-900 to-slate-900 border border-rose-900/60 space-y-2">
+              <div class="flex items-center gap-2 text-rose-400 font-mono text-xs font-bold">
+                <span>🔥 WHY THIS IS PRIORITIZED (CORRELATION REASONING)</span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed" id="modalCorrelationExplanation"></p>
+            </div>
+
+            <!-- Impacted Assets Table -->
+            <div class="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+              <div class="p-2.5 bg-slate-950 border-b border-slate-800 text-[11px] font-mono text-slate-300 font-bold flex justify-between">
+                <span>INTERNAL ENVIRONMENT MATCH</span>
+                <span class="text-cyan-400" id="modalHostBadge">1 Host Reached</span>
+              </div>
+              <div class="p-3 text-xs space-y-2 font-mono">
+                <div class="flex justify-between items-center text-slate-300">
+                  <span class="text-white font-bold" id="modalHostName">gw-prod-east-01.company.net</span>
+                  <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]" id="modalExposureBadge">Internet Exposed</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-400 pt-1">
+                  <div>Cloud/VPC: <span class="text-slate-200" id="modalHostEnv">AWS us-east-1</span></div>
+                  <div>IP Address: <span class="text-slate-200" id="modalHostIp">198.51.100.24</span></div>
+                  <div>Running Software: <span class="text-rose-300" id="modalHostSw">HyperMesh Gateway 2.4.1</span></div>
+                  <div>EDR Protection: <span class="text-emerald-300" id="modalHostEdr">CrowdStrike Online</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MITRE ATT&CK Kill Chain -->
+            <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-3 space-y-2">
+              <div class="text-[11px] font-mono text-slate-400 font-bold">ATTACKER EXECUTION CHAIN (MITRE ATT&CK)</div>
+              <div class="flex flex-wrap items-center gap-1.5 text-xs font-mono" id="modalKillChain"></div>
+            </div>
+
+            <!-- Triage Actions -->
+            <div class="flex items-center gap-2 pt-2">
+              <button onclick="executeModalAction('isolate')" class="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-mono text-xs font-semibold shadow-lg shadow-rose-900/40 transition">
+                🛡️ Isolate Host via EDR
+              </button>
+              <button onclick="executeModalAction('waf')" class="flex-1 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-semibold shadow-lg shadow-cyan-900/40 transition">
+                ⚡ Deploy WAF Virtual Patch
+              </button>
+              <button onclick="executeModalAction('jira')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs transition">
+                🎫 Sync to Jira
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ADD CONNECTOR / API MODAL -->
+  <div id="addConnectorModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0b0f19] border border-slate-700 w-full max-w-2xl rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-white font-mono flex items-center gap-2">
+            <span>PLUG IN NEW CONNECTOR OR CUSTOM API</span>
+            <span class="text-[10px] text-emerald-400 px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800">WIZARD</span>
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Integrate open source, commercial vendors, or custom in-house REST/GraphQL endpoints.</p>
+        </div>
+        <button onclick="closeAddConnectorModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <!-- Quick Template Selector -->
+      <div class="space-y-1.5">
+        <label class="text-[11px] font-mono text-slate-300 uppercase tracking-wide">Quick Preset Templates</label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button type="button" onclick="applyPreset('crowdstrike')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-cyan-500/60 text-left text-xs transition">
+            <div class="font-bold text-white flex items-center gap-1.5">🦅 CrowdStrike</div>
+            <div class="text-[10px] text-slate-400">Falcon Intel & EDR</div>
+          </button>
+          <button type="button" onclick="applyPreset('aws')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-amber-500/60 text-left text-xs transition">
+            <div class="font-bold text-white flex items-center gap-1.5">☁️ AWS Cloud</div>
+            <div class="text-[10px] text-slate-400">Config & Security Hub</div>
+          </button>
+          <button type="button" onclick="applyPreset('misp')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-purple-500/60 text-left text-xs transition">
+            <div class="font-bold text-white flex items-center gap-1.5">🛡️ MISP / TAXII</div>
+            <div class="text-[10px] text-slate-400">Open Source Threat Feed</div>
+          </button>
+          <button type="button" onclick="applyPreset('custom')" class="p-2 rounded-lg border border-emerald-500/60 bg-emerald-950/20 text-left text-xs transition">
+            <div class="font-bold text-emerald-400 flex items-center gap-1.5">⚙️ Custom API</div>
+            <div class="text-[10px] text-slate-400">Internal REST / Webhook</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Form Inputs -->
+      <form id="connectorForm" onsubmit="handleSaveConnector(event)" class="space-y-4 text-xs font-sans">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Connector Name *</label>
+            <input type="text" id="connName" required placeholder="e.g. Internal Microservices CMDB" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Connector Category *</label>
+            <select id="connCategory" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+              <option value="intel">Threat Intelligence (OSINT / Commercial Feed)</option>
+              <option value="asset">Internal Asset & Telemetry (CMDB / EDR / Cloud)</option>
+              <option value="soar">Triage, Alerting & SOAR (SIEM / Slack / Jira)</option>
+              <option value="custom">Custom Internal API / Microservice</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono text-slate-300 mb-1">Base Endpoint URL or Webhook *</label>
+          <div class="flex">
+            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-800 bg-slate-900 text-slate-400 font-mono text-[11px]">HTTPS://</span>
+            <input type="text" id="connUrl" required placeholder="api.security.internal.corp/v1/telemetry" class="w-full bg-slate-950 border border-slate-800 rounded-r-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Authentication Method</label>
+            <select id="connAuthType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+              <option value="bearer">Bearer Token / JWT</option>
+              <option value="apikey">API Key (X-API-KEY Header)</option>
+              <option value="oauth2">OAuth2 Client Credentials</option>
+              <option value="mtls">Mutual TLS (mTLS Cert / Key)</option>
+              <option value="none">No Auth (Internal VPC Private Enclave)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Secret / Token Value</label>
+            <input type="password" id="connToken" placeholder="••••••••••••••••••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Sync Cadence / Ingestion Mode</label>
+            <select id="connCadence" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+              <option value="Real-time Webhook">Real-time Webhook (Event-Driven Push)</option>
+              <option value="Every 5 Minutes">Continuous Polling (Every 5 Minutes)</option>
+              <option value="Hourly Sync">Batch Sync (Hourly)</option>
+              <option value="Daily Sync">Daily Sync (Midnight UTC)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Schema Parser / Normalization</label>
+            <select id="connParser" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+              <option value="STIX 2.1 Standard">STIX 2.1 Standard Format</option>
+              <option value="Generic JSON (Auto-Map CPE/CVE)">Generic JSON (Auto-Map IP/Host/CVE)</option>
+              <option value="CycloneDX / SPDX (SBOM)">CycloneDX / SPDX (Software Bill of Materials)</option>
+              <option value="Custom Python Transform Script">Custom Python Transform Script</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="testResultBanner" class="p-2.5 rounded-lg border text-xs font-mono hidden"></div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+          <button type="button" onclick="testConnectionHandshake()" id="btnTestConn" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs flex items-center gap-1.5 transition">
+            <span>🧪 Test Connection Handshake</span>
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeAddConnectorModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition">Save & Activate Connector</button>
+          </div>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ADD STIX / TAXII / RSS FEED MODAL -->
+  <div id="addFeedModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0b0f19] border border-slate-700 w-full max-w-xl rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-white font-mono flex items-center gap-2">
+            <span id="feedModalTitle">SUBSCRIBE TO STIX / TAXII / RSS FEED</span>
+            <span class="text-[10px] text-cyan-400 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800">OpenCTI Compatible</span>
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Point directly at a STIX 2.1 bundle, TAXII 2.1 collection, or an RSS/Atom security feed URL.</p>
+        </div>
+        <button onclick="closeAddFeedModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form id="feedForm" onsubmit="handleSaveFeed(event)" class="space-y-4 text-xs font-sans">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Feed Name *</label>
+            <input type="text" id="feedName" required placeholder="e.g. OpenCTI OpenSource STIX Bundle" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Feed Type *</label>
+            <select id="feedType" onchange="updateFeedUrlPlaceholder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
+              <option value="stix">STIX 2.1 Bundle (JSON over HTTPS)</option>
+              <option value="taxii">TAXII 2.1 Collection</option>
+              <option value="rss">RSS / Atom Security Feed</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono text-slate-300 mb-1">Feed URL *</label>
+          <div class="flex">
+            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-800 bg-slate-900 text-slate-400 font-mono text-[11px]">HTTPS://</span>
+            <input type="text" id="feedUrl" required placeholder="opencti.example.org/taxii2/collections/..." class="w-full bg-slate-950 border border-slate-800 rounded-r-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono text-slate-300 mb-1">Source / Description</label>
+          <textarea id="feedDesc" rows="2" placeholder="e.g. Community OpenCTI connector re-publishing MISP galaxy clusters as a public STIX bundle." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 resize-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Poll Cadence</label>
+            <select id="feedCadence" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
+              <option value="Every 5 Minutes">Continuous Polling (Every 5 Minutes)</option>
+              <option value="Hourly Sync">Batch Sync (Hourly)</option>
+              <option value="Daily Sync">Daily Sync (Midnight UTC)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-slate-300 mb-1">Auth Token (optional, TAXII only)</label>
+            <input type="password" id="feedToken" placeholder="••••••••••••••••••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
+          </div>
+        </div>
+
+        <div id="feedTestResultBanner" class="p-2.5 rounded-lg border text-xs font-mono hidden"></div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+          <button type="button" onclick="testFeedHandshake()" id="btnTestFeed" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs flex items-center gap-1.5 transition">
+            <span>🧪 Test Feed Handshake</span>
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeAddFeedModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">Cancel</button>
+            <button type="submit" id="btnSaveFeed" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition">Subscribe to Feed</button>
+          </div>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- GENERIC CONFIRMATION MODAL -->
+  <div id="modalOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0b0f19] border border-slate-700 w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-semibold text-white font-mono" id="modalTitle">ACTION CONFIRMATION</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed" id="modalMessage"></p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeModal()" class="px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700">Dismiss</button>
+        <button onclick="confirmModalAction()" id="modalConfirmBtn" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white">Execute</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT ENGINE -->
+  <script>
+    // COMPREHENSIVE DATA STORE (EVERY ALERT MAPS TO ITS OWN COMPLETE GRAPH & DETAILS)
+    const MOCK_ALERTS = [
+      {
+        id: 'CORR-2026-065',
+        title: 'KubeProxy Ingress Filter Authorization Bypass',
+        cve: 'CVE-2026-10332',
+        cvss: 9.1,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+        epss: 88.5,
+        inKev: true,
+        actor: 'VoltSpider / CryptoMining botnet',
+        actorType: 'Financially Motivated Threat Actor',
+        actorDesc: 'Automated adversary targeting Kubernetes API and ingress reverse proxies to hijack cloud compute clusters, deploy high-throughput cryptominers, and exfiltrate internal billing API credentials.',
+        actorTtp: 'T1611 - Escape to Host & Ingress Bypass',
+        riskScore: 92,
+        status: 'Active',
+        priority: 'P1-CRITICAL',
+        internetFacing: true,
+        targetHost: 'k8s-ingress-prod-eu.corp',
+        hostIp: '203.0.113.88',
+        environment: 'Azure westeurope (AKS Cluster)',
+        software: 'KubeProxy v1.32.0 (VULNERABLE)',
+        secondaryNode: {
+          name: 'k8s-worker-pool-02',
+          type: 'NODE POOL',
+          sw: 'Containerd 1.7.12',
+          desc: 'Internal worker pool hosting microservices.'
+        },
+        crownJewel: 'Customer Billing Microservice & Stripe Vault',
+        crownJewelPath: 'Can pivot to Customer Billing Microservice',
+        crownJewelDesc: 'Houses live Stripe API secret keys and customer transaction processing webhooks. Unauthenticated ingress allows internal token forgery.',
+        summary: 'Internet-exposed Kubernetes Ingress running unpatched proxy filter. KEV confirmed in active botnet recruitment with direct traversal to Billing services.',
+        mitreTtp: 'T1611 - Escape to Host',
+        killChain: ['Initial Access (T1190)', 'Execution (T1059.004)', 'Privilege Escalation (T1611)', 'Lateral Movement to Billing API'],
+        radar: {
+          exploitability: 90,
+          exposure: 92,
+          lateralMovement: 85,
+          assetCriticality: 88,
+          actorSophistication: 70,
+          detectionGap: 65
+        }
+      },
+      {
+        id: 'CORR-2026-091',
+        title: 'Active Exploitation: HyperMesh Gateway Remote Code Execution',
+        cve: 'CVE-2026-44201',
+        cvss: 9.8,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+        epss: 96.4,
+        inKev: true,
+        actor: 'APT-88 (Vanguard Viper)',
+        actorType: 'State-Sponsored Advanced Persistent Threat',
+        actorDesc: 'Sophisticated group exploiting perimeter VPN and gateway edge software to establish persistent interactive C2 channels inside fintech organizations.',
+        actorTtp: 'T1190 - Exploit Public-Facing Application',
+        riskScore: 99,
+        status: 'Active',
+        priority: 'P1-CRITICAL',
+        internetFacing: true,
+        targetHost: 'gw-prod-east-01.company.net',
+        hostIp: '198.51.100.24',
+        environment: 'AWS us-east-1 (Public Ingress)',
+        software: 'HyperMesh Edge Gateway v2.4.1 (VULNERABLE)',
+        secondaryNode: {
+          name: 'sso-portal.corp.internal',
+          type: 'AUTH PROXY',
+          sw: 'Cloudflare Tunnel Daemon',
+          desc: 'Internal single-sign-on routing proxy.'
+        },
+        crownJewel: 'PCI-VAULT-DB Production Cluster',
+        crownJewelPath: 'Connects directly to PCI-VAULT-DB via VPC Peering',
+        crownJewelDesc: 'Stores tokenized customer cardholder data and cryptographic signing keys. An edge gateway compromise permits direct uninspected transit to PCI enclave.',
+        summary: 'Target is public-facing and running unpatched HyperMesh v2.4.1. Ingested via CISA KEV connector; active in-the-wild PoC actively used by APT-88.',
+        mitreTtp: 'T1190 - Exploit Public-Facing Application',
+        killChain: ['Initial Access (T1190)', 'Execution (T1059)', 'Privilege Escalation (T1068)', 'Lateral Movement to PCI-DB'],
+        radar: {
+          exploitability: 98,
+          exposure: 95,
+          lateralMovement: 92,
+          assetCriticality: 95,
+          actorSophistication: 90,
+          detectionGap: 85
+        }
+      },
+      {
+        id: 'CORR-2026-088',
+        title: 'SSO Session Bypass & Privileged Token Impersonation',
+        cve: 'CVE-2026-21890',
+        cvss: 8.7,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:N',
+        epss: 78.1,
+        inKev: true,
+        actor: 'FIN-12 (Silver Fox Affiliates)',
+        actorType: 'Ransomware Access Broker',
+        actorDesc: 'Monetizes initial network access by selling elevated enterprise SSO credentials to ransomware-as-a-service (RaaS) affiliates on illicit marketplaces.',
+        actorTtp: 'T1078 - Valid Accounts & Token Impersonation',
+        riskScore: 88,
+        status: 'Investigating',
+        priority: 'P1-CRITICAL',
+        internetFacing: true,
+        targetHost: 'auth-sso.corp.internal',
+        hostIp: '10.240.12.8',
+        environment: 'GCP europe-west1 (Cloudflare Access)',
+        software: 'AuthShield Enterprise SSO v4.2 (VULNERABLE)',
+        secondaryNode: {
+          name: 'corp-admin-vpn.internal',
+          type: 'VPN GW',
+          sw: 'WireGuard Mesh v1.2',
+          desc: 'Internal corporate administrator jump host.'
+        },
+        crownJewel: 'IAM Root Admin Enclave & SSO Directory',
+        crownJewelPath: 'Grants root access to all corporate AWS roles',
+        crownJewelDesc: 'Contains master SAML signing certificates and Okta/Google Workspace delegation keys granting organization-wide cloud administrative control.',
+        summary: 'Cloudflare-fronted SSO endpoint matches vulnerable version. Active underground chatter selling access tokens.',
+        mitreTtp: 'T1078 - Valid Accounts',
+        killChain: ['Initial Access (T1078)', 'Credential Access (T1528)', 'Defense Evasion (T1550)', 'Lateral Movement to IAM Enclave'],
+        radar: {
+          exploitability: 80,
+          exposure: 85,
+          lateralMovement: 95,
+          assetCriticality: 90,
+          actorSophistication: 75,
+          detectionGap: 70
+        }
+      },
+      {
+        id: 'CORR-2026-074',
+        title: 'NexusDB Remote Unauthenticated Memory Disclosure',
+        cve: 'CVE-2025-99411',
+        cvss: 7.5,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N',
+        epss: 42.0,
+        inKev: false,
+        actor: 'Known Exploit Kit (Masscan Scanners)',
+        actorType: 'Automated Opportunistic Scanner',
+        actorDesc: 'Broad-spectrum automated scanners scanning IPv4 ranges for vulnerable database ports and unauthenticated cache services.',
+        actorTtp: 'T1046 - Network Service Scanning',
+        riskScore: 62,
+        status: 'Triage',
+        priority: 'P2-HIGH',
+        internetFacing: false,
+        targetHost: 'analytics-worker-04.dev',
+        hostIp: '10.0.84.112',
+        environment: 'Private Dev Subnet',
+        software: 'NexusDB Engine v1.9.0 (VULNERABLE)',
+        secondaryNode: {
+          name: 'staging-redis-cache.dev',
+          type: 'CACHE NODE',
+          sw: 'Redis 7.0.8',
+          desc: 'Dev staging cache instance.'
+        },
+        crownJewel: 'Sanitized Staging Data Lake',
+        crownJewelPath: 'Contains sanitized staging data only',
+        crownJewelDesc: 'Contains synthetic user activity datasets for testing. Strictly segregated from customer PII or production payment rails.',
+        summary: 'Memory leak vulnerability exists on internal dev node. Low blast radius because node is strictly air-gapped from production.',
+        mitreTtp: 'T1005 - Data from Local System',
+        killChain: ['Reconnaissance (T1046)', 'Initial Access (T1190)', 'Discovery (T1083)', 'Data Exfiltration (T1005)'],
+        radar: {
+          exploitability: 60,
+          exposure: 20,
+          lateralMovement: 35,
+          assetCriticality: 40,
+          actorSophistication: 30,
+          detectionGap: 50
+        }
+      },
+      {
+        id: 'CORR-2026-051',
+        title: 'OpenSSH Terrapin Prefix Truncation Weakness',
+        cve: 'CVE-2023-48795',
+        cvss: 5.9,
+        cvssVector: 'CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N',
+        epss: 12.1,
+        inKev: false,
+        actor: 'No Active In-The-Wild Threat Actor',
+        actorType: 'Theoretical Academic Exploit',
+        actorDesc: 'Adversary in an active MitM position capable of tampering with cryptographic sequence numbers during SSH handshake.',
+        actorTtp: 'T1557 - Adversary-in-the-Middle',
+        riskScore: 35,
+        status: 'Suppressed',
+        priority: 'P3-MEDIUM',
+        internetFacing: false,
+        targetHost: 'bastion-mgmt-jump.internal',
+        hostIp: '10.100.1.5',
+        environment: 'AWS Management VPC',
+        software: 'OpenSSH 8.9p1 (VULNERABLE)',
+        secondaryNode: {
+          name: 'internal-ssh-cluster',
+          type: 'INTERNAL JUMP',
+          sw: 'OpenSSH 8.9',
+          desc: 'Internal server admin shell cluster.'
+        },
+        crownJewel: 'Internal Bastion Shell Access',
+        crownJewelPath: 'Requires pre-existing Man-In-The-Middle network position',
+        crownJewelDesc: 'Provides terminal access to private infrastructure; however host requires hardware MFA tokens making downgrade attacks ineffective.',
+        summary: 'Theoretical downgrade attack on SSH handshake. Deprioritized because host requires MFA and is private only.',
+        mitreTtp: 'T1557 - Adversary-in-the-Middle',
+        killChain: ['MitM Positioning (T1557)', 'Handshake Downgrade (T1562)', 'Session Interception (T1040)'],
+        radar: {
+          exploitability: 25,
+          exposure: 15,
+          lateralMovement: 30,
+          assetCriticality: 50,
+          actorSophistication: 20,
+          detectionGap: 35
+        }
+      }
+    ];
+
+    const MOCK_CONNECTORS = [
+      { id: 'conn-1', name: 'CISA Known Exploited Vulns (KEV)', category: 'intel', type: 'REST JSON', status: 'Active', latency: '120ms', sync: 'Synced 5m ago', icon: '🚨', enabled: true, desc: 'Official federal catalog of vulnerabilities actively weaponized in the wild.' },
+      { id: 'conn-2', name: 'FIRST.org EPSS v3 Predictor', category: 'intel', type: 'REST API', status: 'Active', latency: '340ms', sync: 'Synced 1h ago', icon: '📈', enabled: true, desc: 'Machine learning model predicting 30-day weaponization probability for all CVEs.' },
+      { id: 'conn-3', name: 'MISP TAXII 2.1 Threat Exchange', category: 'intel', type: 'TAXII 2.1', status: 'Active', latency: '480ms', sync: 'Real-time Streaming', icon: '🛡️', enabled: true, desc: 'Community-driven open source STIX 2.1 threat indicators and campaign clusters.' },
+      { id: 'conn-4', name: 'AlienVault OTX (Open Threat Exchange)', category: 'intel', type: 'REST API', status: 'Active', latency: '210ms', sync: 'Synced 12m ago', icon: '👽', enabled: true, desc: 'Crowdsourced pulses covering emerging malware hashes, domains, and C2 IPs.' },
+      { id: 'conn-5', name: 'Recorded Future Intelligence API', category: 'intel', type: 'Commercial API', status: 'Active', latency: '180ms', sync: 'Continuous', icon: '🌐', enabled: true, desc: 'Dark web forum chatter, ransomware extortion leak monitoring, and brand defense.' },
+      { id: 'conn-6', name: 'AWS CloudTrail & Config Inventory', category: 'asset', type: 'AWS IAM / SQS', status: 'Active', latency: '95ms', sync: 'Synced 2m ago', icon: '☁️', enabled: true, desc: 'Auto-discovers EC2 instances, public ALBs, RDS databases, and exposed S3 buckets across 4 accounts.' },
+      { id: 'conn-7', name: 'CrowdStrike Falcon Sensor Telemetry', category: 'asset', type: 'OAuth2 REST', status: 'Active', latency: '150ms', sync: 'Real-time Event Stream', icon: '🦅', enabled: true, desc: '1,420 active host agents providing installed package versions, CPEs, and active process trees.' },
+      { id: 'conn-8', name: 'ServiceNow CMDB Production Sync', category: 'asset', type: 'REST API', status: 'Active', latency: '610ms', sync: 'Synced 30m ago', icon: '💼', enabled: true, desc: 'Imports service ownership tags, criticality tiers (P0/P1), and business unit boundaries.' },
+      { id: 'conn-9', name: 'Wiz.io Cloud Security Posture (CSPM)', category: 'asset', type: 'GraphQL', status: 'Active', latency: '290ms', sync: 'Synced 8m ago', icon: '🧙‍♂️', enabled: true, desc: 'Correlates network reachability and IAM privilege escalation pathways in multi-cloud.' },
+      { id: 'conn-10', name: 'Jira Software & Service Management', category: 'soar', type: 'Webhook / REST', status: 'Active', latency: '110ms', sync: 'Bi-Directional', icon: '🎫', enabled: true, desc: 'Creates enriched remediation tickets with MITRE ATT&CK tags and tracks SLA closure.' },
+      { id: 'conn-11', name: 'Slack SOC Security War Room', category: 'soar', type: 'Incoming Webhook', status: 'Active', latency: '80ms', sync: 'Instant Push', icon: '💬', enabled: true, desc: 'Sends immediate interactive alert cards to #soc-tier1-alerts with 1-click isolate buttons.' },
+      { id: 'conn-12', name: 'AWS WAF & Cloudflare Virtual Patching', category: 'soar', type: 'Edge API', status: 'Active', latency: '220ms', sync: 'Active Orchestration', icon: '⚡', enabled: true, desc: 'Automates deployment of URI regex blocks to perimeter WAFs when weaponized 0-days hit KEV.' },
+      { id: 'conn-13', name: 'Splunk Enterprise SIEM Forwarder', category: 'soar', type: 'HEC', status: 'Active', latency: '90ms', sync: 'Streaming', icon: '📊', enabled: true, desc: 'Streams correlated risk incidents and contextual telemetry directly into internal security data lake.' },
+      { id: 'conn-14', name: 'internal-k8s-sbom-collector.prod', category: 'custom', type: 'Internal REST', status: 'Active', latency: '45ms', sync: 'Synced 1m ago', icon: '☸️', enabled: true, desc: 'Internal Go daemon scanning Kubernetes pod container image manifests and Syft SBOMs.' },
+      { id: 'conn-15', name: 'corp-pci-network-mapper.internal', category: 'custom', type: 'mTLS Private', status: 'Active', latency: '60ms', sync: 'Synced 15m ago', icon: '🔒', enabled: true, desc: 'Internal network scanner verifying VPC peering routes and security group ingress limits.' },
+      { id: 'conn-16', name: 'ad-identity-privilege-audit-api', category: 'custom', type: 'Kerberos API', status: 'Active', latency: '190ms', sync: 'Hourly Sync', icon: '🔑', enabled: true, desc: 'Correlates compromised service accounts and domain admin privileges from Active Directory.' }
+    ];
+
+    const MOCK_ASSETS = [
+      { name: 'k8s-ingress-prod-eu.corp', ip: '203.0.113.88', cloud: 'Azure westeurope', sw: 'KubeProxy 1.32.0', exposed: true, cves: ['CVE-2026-10332 (P1)'], edr: 'Defender (Online)' },
+      { name: 'gw-prod-east-01.company.net', ip: '198.51.100.24', cloud: 'AWS us-east-1', sw: 'HyperMesh Gateway 2.4.1', exposed: true, cves: ['CVE-2026-44201 (P1)'], edr: 'CrowdStrike (Online)' },
+      { name: 'auth-sso.corp.internal', ip: '10.240.12.8', cloud: 'GCP europe-west1', sw: 'AuthShield SSO 4.2', exposed: true, cves: ['CVE-2026-21890 (P1)'], edr: 'SentinelOne (Online)' },
+      { name: 'analytics-worker-04.dev', ip: '10.0.84.112', cloud: 'Private Dev VPC', sw: 'NexusDB 1.9.0', exposed: false, cves: ['CVE-2025-99411 (P2)'], edr: 'CrowdStrike (Online)' },
+      { name: 'bastion-mgmt-jump.internal', ip: '10.100.1.5', cloud: 'AWS Mgmt VPC', sw: 'OpenSSH 8.9p1', exposed: false, cves: ['CVE-2023-48795 (P3)'], edr: 'CrowdStrike (Online)' },
+      { name: 'payments-db-cluster-01', ip: '10.200.5.12', cloud: 'AWS us-east-1 (PCI)', sw: 'PostgreSQL 16.2', exposed: false, cves: ['None (Hardened)'], edr: 'CrowdStrike (Online)' }
+    ];
+
+    const MOCK_FEEDS = [
+      { id: 'feed-1', name: 'OpenCTI OpenSource STIX Bundle', type: 'stix', url: 'demo.opencti.io/feeds/opensource-bundle.json', desc: 'Community OpenCTI instance re-publishing MISP galaxy clusters and OSINT reports as a public STIX 2.1 bundle.', cadence: 'Hourly Sync', status: 'Active', lastSync: 'Synced 40m ago', enabled: true },
+      { id: 'feed-2', name: 'MITRE ATT&CK TAXII Collection', type: 'taxii', url: 'cti-taxii.mitre.org/stix/collections/enterprise-attack', desc: 'Official MITRE-hosted TAXII 2.1 server exposing Enterprise ATT&CK techniques and groups as STIX objects.', cadence: 'Daily Sync', status: 'Active', lastSync: 'Synced 6h ago', enabled: true },
+      { id: 'feed-3', name: 'The Hacker News - Security RSS', type: 'rss', url: 'thehackernews.com/feeds/posts/default', desc: 'General security news RSS feed used for analyst situational awareness, not auto-correlated against assets.', cadence: 'Every 5 Minutes', status: 'Active', lastSync: 'Synced 3m ago', enabled: true }
+    ];
+
+    let editingFeedId = null;
+
+    let currentFilter = 'all';
+    let currentConnFilter = 'all';
+    let activeAlertForModal = null;
+    let currentGraphAlertId = 'CORR-2026-065';
+
+    // ==========================================
+    // DYNAMIC BLAST RADIUS GRAPH ENGINE
+    // ==========================================
+    let graphScale = 1;
+    let graphPanX = 0;
+    let graphPanY = 0;
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
+
+    function initGraphPanZoom() {
+      const svg = document.getElementById('blastSvg');
+
+      svg.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+        zoomGraph(zoomFactor);
+      });
+
+      svg.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'svg' || e.target.id === 'blastSvg' || e.target.tagName === 'path') {
+          isPanning = true;
+          startX = e.clientX - graphPanX;
+          startY = e.clientY - graphPanY;
+        }
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isPanning) return;
+        graphPanX = e.clientX - startX;
+        graphPanY = e.clientY - startY;
+        applyGraphTransform();
+      });
+
+      window.addEventListener('mouseup', () => {
+        isPanning = false;
+      });
+    }
+
+    function zoomGraph(factor) {
+      const newScale = graphScale * factor;
+      if (newScale >= 0.4 && newScale <= 3.0) {
+        graphScale = newScale;
+        applyGraphTransform();
+      }
+    }
+
+    function resetGraphView() {
+      graphScale = 1;
+      graphPanX = 0;
+      graphPanY = 0;
+      applyGraphTransform();
+      closeGraphDrawer();
+    }
+
+    function applyGraphTransform() {
+      const viewport = document.getElementById('graphViewport');
+      if (viewport) {
+        viewport.setAttribute('transform', `translate(${graphPanX}, ${graphPanY}) scale(${graphScale})`);
+      }
+      const indicator = document.getElementById('zoomLevelIndicator');
+      if (indicator) {
+        indicator.textContent = Math.round(graphScale * 100) + '%';
+      }
+    }
+
+    function populateGraphIncidentSelector() {
+      const select = document.getElementById('graphIncidentSelect');
+      select.innerHTML = '';
+      MOCK_ALERTS.forEach(alert => {
+        const opt = document.createElement('option');
+        opt.value = alert.id;
+        opt.textContent = `${alert.cve} // ${alert.title.length > 32 ? alert.title.substring(0, 32) + '...' : alert.title} (${alert.priority.split('-')[0]})`;
+        if (alert.id === currentGraphAlertId) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+    }
+
+    function renderBlastGraph(alertId, focusEntity = 'cve') {
+      currentGraphAlertId = alertId;
+      const alert = MOCK_ALERTS.find(a => a.id === alertId);
+      if (!alert) return;
+
+      document.getElementById('graphIncidentSelect').value = alertId;
+
+      const viewport = document.getElementById('graphViewport');
+      viewport.innerHTML = '';
+
+      viewport.innerHTML = `
+        <path id="dyn-link-1" d="M 140 220 Q 260 140 390 180" stroke="url(#edgeGradRose)" stroke-width="2.5" stroke-dasharray="6,4" fill="none" class="animate-pulse"/>
+        <path id="dyn-link-2" d="M 390 180 Q 520 140 650 150" stroke="url(#edgeGradCyan)" stroke-width="3" fill="none" filter="url(#glow)"/>
+        <path id="dyn-link-3" d="M 390 180 Q 520 250 650 290" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4" fill="none"/>
+        <path id="dyn-link-4" d="M 650 150 Q 770 170 890 220" stroke="url(#edgeGradPurple)" stroke-width="2.5" stroke-dasharray="5,3" fill="none"/>
+        <path id="dyn-link-5" d="M 650 290 Q 770 270 890 220" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="4,4" fill="none"/>
+
+        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('actor')" transform="translate(140, 220)">
+          <circle r="38" fill="#1e1022" stroke="#f43f5e" stroke-width="2.5" filter="url(#glow)"/>
+          <text y="-8" text-anchor="middle" fill="#f43f5e" font-size="9" font-weight="bold" font-family="monospace">THREAT ACTOR</text>
+          <text y="8" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="600">${alert.actor.split('/')[0].trim()}</text>
+          <text y="22" text-anchor="middle" fill="#94a3b8" font-size="8">Active Campaign</text>
+        </g>
+
+        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('cve')" transform="translate(390, 180)">
+          <circle r="42" fill="#251608" stroke="#f59e0b" stroke-width="3" filter="url(#glow)"/>
+          <text y="-10" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="bold" font-family="monospace">${alert.inKev ? '🚨 IN CISA KEV' : 'EXPLOIT'}</text>
+          <text y="6" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold">${alert.cve}</text>
+          <text y="22" text-anchor="middle" fill="#f59e0b" font-size="9">EPSS: ${alert.epss}%</text>
+        </g>
+
+        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('asset')" transform="translate(650, 150)">
+          <circle r="40" fill="#082029" stroke="#06b6d4" stroke-width="3" filter="url(#glow)"/>
+          <rect x="-38" y="-48" width="76" height="15" rx="3" fill="${alert.internetFacing ? '#dc2626' : '#059669'}"/>
+          <text y="-38" text-anchor="middle" fill="#ffffff" font-size="7.5" font-weight="bold" font-family="monospace">${alert.internetFacing ? 'INTERNET-FACING' : 'INTERNAL VPC'}</text>
+          <text y="-4" text-anchor="middle" fill="#06b6d4" font-size="8.5" font-family="monospace">EXPOSED HOST</text>
+          <text y="11" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="bold">${alert.targetHost.split('.')[0]}</text>
+          <text y="24" text-anchor="middle" fill="#67e8f9" font-size="8">${alert.software.split(' ')[0]}</text>
+        </g>
+
+        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('secondary')" transform="translate(650, 290)">
+          <circle r="34" fill="#0c1822" stroke="#0284c7" stroke-width="1.5"/>
+          <text y="-4" text-anchor="middle" fill="#38bdf8" font-size="8.5" font-family="monospace">${alert.secondaryNode ? alert.secondaryNode.type : 'INTERNAL NODE'}</text>
+          <text y="10" text-anchor="middle" fill="#ffffff" font-size="9.5">${alert.secondaryNode ? alert.secondaryNode.name.split('.')[0] : 'proxy-node'}</text>
+        </g>
+
+        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('crownJewel')" transform="translate(890, 220)">
+          <circle r="42" fill="#1c0f2b" stroke="#a855f7" stroke-width="3" filter="url(#glow)"/>
+          <rect x="-35" y="-50" width="70" height="15" rx="3" fill="#9333ea"/>
+          <text y="-40" text-anchor="middle" fill="#ffffff" font-size="8" font-weight="bold" font-family="monospace">TIER-0 ASSET</text>
+          <text y="-2" text-anchor="middle" fill="#c084fc" font-size="9" font-family="monospace">CROWN JEWEL</text>
+          <text y="14" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="bold">${alert.crownJewel.split(' ')[0]}</text>
+          <text y="27" text-anchor="middle" fill="#f43f5e" font-size="7.5">DIRECT EXPOSURE</text>
+        </g>
+      `;
+
+      showDynamicNodeDetails(focusEntity);
+
+      graphScale = 1.1;
+      graphPanX = -100;
+      graphPanY = 10;
+      applyGraphTransform();
+    }
+
+    function showDynamicNodeDetails(nodeType) {
+      const alert = MOCK_ALERTS.find(a => a.id === currentGraphAlertId);
+      if (!alert) return;
+
+      const drawer = document.getElementById('graphDrawer');
+      const typeLabel = document.getElementById('drawerType');
+      const drawerAlertId = document.getElementById('drawerAlertId');
+      const body = document.getElementById('drawerBody');
+      const actions = document.getElementById('drawerActions');
+
+      if (drawerAlertId) {
+        drawerAlertId.textContent = `${alert.cve} // ${alert.id}`;
+      }
+
+      drawer.classList.remove('hidden');
+
+      const cvssSeverity = alert.cvss >= 9.0 ? 'CRITICAL' : (alert.cvss >= 7.0 ? 'HIGH' : 'MEDIUM');
+      const cvssColor = alert.cvss >= 9.0 ? 'text-rose-400' : (alert.cvss >= 7.0 ? 'text-amber-400' : 'text-yellow-400');
+
+      if (nodeType === 'cve') {
+        typeLabel.textContent = 'CORRELATED VULNERABILITY';
+        body.innerHTML = `
+          <div class="text-base font-bold text-amber-400 font-mono">${alert.cve}</div>
+          <div class="text-xs text-white font-semibold">${alert.title}</div>
+          
+          <div class="grid grid-cols-2 gap-2 mt-2 font-mono text-xs">
+            <div class="p-2 bg-slate-900 rounded border border-slate-800">
+              <span class="text-slate-400 block text-[10px]">CVSS BASE</span>
+              <span class="${cvssColor} font-bold text-sm">${alert.cvss} ${cvssSeverity}</span>
+            </div>
+            <div class="p-2 bg-slate-900 rounded border border-slate-800">
+              <span class="text-slate-400 block text-[10px]">EPSS PROBABILITY</span>
+              <span class="text-cyan-400 font-bold text-sm">${alert.epss}%</span>
+            </div>
+          </div>
+
+          ${alert.inKev ? `
+            <div class="p-2 rounded bg-rose-950/40 border border-rose-800 text-[11px] text-rose-300 font-mono mt-2 flex items-center gap-1.5">
+              <span>🚨</span>
+              <span>Listed on CISA KEV (Known Exploited Vulnerabilities)</span>
+            </div>
+          ` : `
+            <div class="p-2 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-400 font-mono mt-2">
+              Not listed on CISA KEV (Monitored via EPSS)
+            </div>
+          `}
+
+          <p class="text-xs text-slate-300 leading-relaxed mt-2">${alert.summary}</p>
+        `;
+
+        actions.innerHTML = `
+          <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-purple-600 hover:bg-purple-500 text-white mb-2 flex items-center justify-center gap-1.5">
+            <span>📊 Open Spider Chart & Metrics</span>
+          </button>
+          <button onclick="takeAction('${alert.id}', 'waf', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-cyan-600 hover:bg-cyan-500 text-white">
+            ⚡ Push Virtual Patch for ${alert.cve}
+          </button>
+        `;
+      } 
+      else if (nodeType === 'actor') {
+        typeLabel.textContent = 'THREAT ACTOR GROUP';
+        body.innerHTML = `
+          <div class="text-base font-bold text-white">${alert.actor}</div>
+          <div class="text-xs text-rose-400 font-mono">${alert.actorType}</div>
+          <p class="text-xs text-slate-300 leading-relaxed mt-2">${alert.actorDesc}</p>
+          
+          <div class="space-y-1 text-xs font-mono pt-2 border-t border-slate-800">
+            <div class="text-slate-400">Weaponized CVE: <span class="text-amber-400 font-bold">${alert.cve}</span></div>
+            <div class="text-slate-400">Primary TTP: <span class="text-white">${alert.actorTtp}</span></div>
+            <div class="text-slate-400">Campaign Target: <span class="text-cyan-300">${alert.targetHost}</span></div>
+          </div>
+        `;
+
+        actions.innerHTML = `
+          <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-purple-600 hover:bg-purple-500 text-white mb-2">View Full Attack Profile</button>
+          <button onclick="showMockModal('Pivot Threat Actor', 'Extracting known IP ranges, ASN blocks, and hashes for ${alert.actor} to perimeter firewalls...')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-rose-600 hover:bg-rose-500 text-white">Extract IOCs to Firewall</button>
+        `;
+      }
+      else if (nodeType === 'asset') {
+        typeLabel.textContent = 'EXPOSED INTERNAL HOST';
+        body.innerHTML = `
+          <div class="text-base font-bold text-cyan-300 truncate">${alert.targetHost}</div>
+          <div class="text-xs text-slate-400 font-mono">IP: ${alert.hostIp} ${alert.internetFacing ? '(Public Route)' : '(Private Subnet)'}</div>
+          
+          <div class="space-y-1.5 text-xs font-mono pt-2 border-t border-slate-800">
+            <div class="text-slate-400">Cloud / Subnet: <span class="text-white">${alert.environment}</span></div>
+            <div class="text-slate-400">Software: <span class="text-rose-400 font-bold">${alert.software}</span></div>
+            <div class="text-slate-400">Exposure: <span class="${alert.internetFacing ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${alert.internetFacing ? 'Direct Internet Facing' : 'Private Only'}</span></div>
+            <div class="text-slate-400">Pivot Route: <span class="text-purple-300">${alert.crownJewelPath}</span></div>
+          </div>
+        `;
+
+        actions.innerHTML = `
+          <button onclick="takeAction('${alert.id}', 'isolate', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-rose-600 hover:bg-rose-500 text-white mb-2">
+            🚨 Isolate Host (${alert.hostIp})
+          </button>
+          <button onclick="takeAction('${alert.id}', 'jira', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">
+            🎫 Create Remediation Ticket
+          </button>
+        `;
+      }
+      else if (nodeType === 'secondary') {
+        const sec = alert.secondaryNode || { name: 'Internal Hop', type: 'NODE', sw: 'Standard', desc: 'Internal network route.' };
+        typeLabel.textContent = 'INTERMEDIATE INFRASTRUCTURE';
+        body.innerHTML = `
+          <div class="text-base font-bold text-white">${sec.name}</div>
+          <div class="text-xs text-cyan-400 font-mono">${sec.type} // ${sec.sw}</div>
+          <p class="text-xs text-slate-300 leading-relaxed mt-2">${sec.desc}</p>
+        `;
+        actions.innerHTML = `
+          <button onclick="showMockModal('Inspect Route', 'Inspecting network policy routes from ${alert.targetHost} to ${sec.name}... 0 unauthorized open ports.')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">Inspect Network Route</button>
+        `;
+      }
+      else if (nodeType === 'crownJewel') {
+        typeLabel.textContent = 'CROWN JEWEL / TARGET';
+        body.innerHTML = `
+          <div class="text-base font-bold text-purple-300">${alert.crownJewel}</div>
+          <div class="text-xs text-rose-400 font-mono font-bold">TIER-0 CRITICAL ENTERPRISE ASSET</div>
+          <p class="text-xs text-slate-300 leading-relaxed mt-2">${alert.crownJewelDesc}</p>
+          <div class="p-2 rounded bg-rose-950/40 border border-rose-800 text-[10px] text-rose-300 font-mono mt-2">
+            ⚠️ Threat path connects unpatched edge directly to this database with no intermediate zero-trust gateway.
+          </div>
+        `;
+
+        actions.innerHTML = `
+          <button onclick="showMockModal('Sever Route', 'Severing ingress network routes and VPC peering to ${alert.crownJewel} to prevent lateral movement.')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-purple-600 hover:bg-purple-500 text-white">Sever Inbound Ingress Route</button>
+        `;
+      }
+    }
+
+    function closeGraphDrawer() {
+      document.getElementById('graphDrawer').classList.add('hidden');
+    }
+
+    function pivotToGraphFromModal() {
+      if (!activeAlertForModal) return;
+      const targetAlertId = activeAlertForModal.id;
+      currentGraphAlertId = targetAlertId;
+      closeDeepDiveModal();
+      switchTab('graph');
+      renderBlastGraph(targetAlertId, 'cve');
+    }
+
+    function openGraphForAlert(alertId) {
+      currentGraphAlertId = alertId;
+      switchTab('graph');
+      renderBlastGraph(alertId, 'cve');
+    }
+
+    // ==========================================
+    // SPIDER / RADAR CHART SVG RENDERER
+    // ==========================================
+    function renderSpiderChart(radarData) {
+      const svg = document.getElementById('spiderChartSvg');
+      svg.innerHTML = '';
+
+      const cx = 140;
+      const cy = 130;
+      const radius = 85;
+
+      const axes = [
+        { name: 'Exploitability', key: 'exploitability' },
+        { name: 'Public Exposure', key: 'exposure' },
+        { name: 'Lateral Pivot', key: 'lateralMovement' },
+        { name: 'Asset Criticality', key: 'assetCriticality' },
+        { name: 'Threat Actor', key: 'actorSophistication' },
+        { name: 'Detection Gap', key: 'detectionGap' }
+      ];
+
+      const numAxes = axes.length;
+      const angleSlice = (Math.PI * 2) / numAxes;
+
+      const levels = [0.2, 0.4, 0.6, 0.8, 1.0];
+      levels.forEach(level => {
+        let points = [];
+        for (let i = 0; i < numAxes; i++) {
+          const angle = angleSlice * i - Math.PI / 2;
+          const r = radius * level;
+          const x = cx + r * Math.cos(angle);
+          const y = cy + r * Math.sin(angle);
+          points.push(`${x},${y}`);
+        }
+        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        polygon.setAttribute('points', points.join(' '));
+        polygon.setAttribute('fill', 'none');
+        polygon.setAttribute('stroke', '#1e293b');
+        polygon.setAttribute('stroke-width', '1');
+        svg.appendChild(polygon);
+      });
+
+      axes.forEach((axis, i) => {
+        const angle = angleSlice * i - Math.PI / 2;
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', cx);
+        line.setAttribute('y1', cy);
+        line.setAttribute('x2', x);
+        line.setAttribute('y2', y);
+        line.setAttribute('stroke', '#334155');
+        line.setAttribute('stroke-dasharray', '2,2');
+        svg.appendChild(line);
+
+        const labelR = radius + 22;
+        const lx = cx + labelR * Math.cos(angle);
+        const ly = cy + labelR * Math.sin(angle);
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', lx);
+        text.setAttribute('y', ly + 4);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', '#94a3b8');
+        text.setAttribute('font-size', '9');
+        text.setAttribute('font-family', 'monospace');
+        text.textContent = axis.name;
+        svg.appendChild(text);
+      });
+
+      let baselinePoints = [];
+      for (let i = 0; i < numAxes; i++) {
+        const angle = angleSlice * i - Math.PI / 2;
+        const r = radius * 0.45;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        baselinePoints.push(`${x},${y}`);
+      }
+      const baselinePoly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      baselinePoly.setAttribute('points', baselinePoints.join(' '));
+      baselinePoly.setAttribute('fill', 'rgba(71, 85, 105, 0.2)');
+      baselinePoly.setAttribute('stroke', '#64748b');
+      baselinePoly.setAttribute('stroke-width', '1.5');
+      baselinePoly.setAttribute('stroke-dasharray', '3,3');
+      svg.appendChild(baselinePoly);
+
+      let incidentPoints = [];
+      axes.forEach((axis, i) => {
+        const val = (radarData[axis.key] || 50) / 100;
+        const angle = angleSlice * i - Math.PI / 2;
+        const r = radius * val;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        incidentPoints.push(`${x},${y}`);
+      });
+
+      const incidentPoly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      incidentPoly.setAttribute('points', incidentPoints.join(' '));
+      incidentPoly.setAttribute('fill', 'rgba(244, 63, 94, 0.35)');
+      incidentPoly.setAttribute('stroke', '#f43f5e');
+      incidentPoly.setAttribute('stroke-width', '2.5');
+      svg.appendChild(incidentPoly);
+
+      axes.forEach((axis, i) => {
+        const val = (radarData[axis.key] || 50) / 100;
+        const angle = angleSlice * i - Math.PI / 2;
+        const r = radius * val;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', x);
+        circle.setAttribute('cy', y);
+        circle.setAttribute('r', '4');
+        circle.setAttribute('fill', '#f43f5e');
+        circle.setAttribute('stroke', '#ffffff');
+        circle.setAttribute('stroke-width', '1.5');
+        svg.appendChild(circle);
+      });
+    }
+
+    // ==========================================
+    // DEEP DIVE MODAL CONTROLLER
+    // ==========================================
+    function openDeepDive(alertId) {
+      const alert = MOCK_ALERTS.find(a => a.id === alertId);
+      if (!alert) return;
+
+      activeAlertForModal = alert;
+
+      document.getElementById('modalRiskBadge').textContent = alert.riskScore;
+      document.getElementById('modalCveId').textContent = alert.cve;
+      document.getElementById('modalCveTitle').textContent = alert.title;
+      document.getElementById('modalCvssVal').textContent = alert.cvss;
+      document.getElementById('modalCvssVector').textContent = alert.cvssVector;
+      document.getElementById('modalEpssVal').textContent = alert.epss + '%';
+      document.getElementById('modalHostName').textContent = alert.targetHost;
+      document.getElementById('modalHostEnv').textContent = alert.environment;
+      document.getElementById('modalHostIp').textContent = alert.hostIp;
+      document.getElementById('modalHostSw').textContent = alert.software;
+
+      const kevBadge = document.getElementById('modalKevBadge');
+      if (alert.inKev) {
+        kevBadge.className = 'px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[10px] font-mono font-bold';
+        kevBadge.textContent = '🚨 IN CISA KEV';
+      } else {
+        kevBadge.className = 'px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-mono';
+        kevBadge.textContent = 'NOT IN KEV';
+      }
+
+      document.getElementById('modalPriorityBadge').textContent = alert.priority;
+      document.getElementById('modalExposureBadge').textContent = alert.internetFacing ? 'Internet Exposed' : 'Internal VPC';
+      document.getElementById('modalExposureBadge').className = alert.internetFacing ? 'px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]' : 'px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]';
+
+      document.getElementById('modalCorrelationExplanation').innerHTML = `
+        This vulnerability is prioritized at <strong class="text-rose-400">${alert.riskScore}/100</strong> because <strong class="text-white">${alert.actor}</strong> is weaponizing this exploit in real-world campaigns${alert.inKev ? ' (confirmed on CISA KEV)' : ''}, directly impacting your internal host <strong class="text-cyan-300">${alert.targetHost}</strong> (${alert.environment}) running unpatched software with lateral movement reachability to <strong class="text-purple-300">${alert.crownJewel}</strong>.
+      `;
+
+      const killChainContainer = document.getElementById('modalKillChain');
+      killChainContainer.innerHTML = alert.killChain.map((step, idx) => `
+        <span class="px-2 py-1 rounded ${idx === alert.killChain.length - 1 ? 'bg-purple-950 text-purple-200 border border-purple-800 font-bold' : 'bg-slate-800 text-slate-200 border border-slate-700'}">${step}</span>
+        ${idx < alert.killChain.length - 1 ? '<span class="text-slate-500">➔</span>' : ''}
+      `).join(' ');
+
+      renderSpiderChart(alert.radar);
+      document.getElementById('deepDiveModal').classList.remove('hidden');
+    }
+
+    function closeDeepDiveModal() {
+      document.getElementById('deepDiveModal').classList.add('hidden');
+      activeAlertForModal = null;
+    }
+
+    function executeModalAction(actionType) {
+      if (!activeAlertForModal) return;
+      takeAction(activeAlertForModal.id, actionType, activeAlertForModal.targetHost);
+      closeDeepDiveModal();
+    }
+
+    // ==========================================
+    // RENDER ALERTS LIST (CLICKABLE CARDS)
+    // ==========================================
+    function renderAlerts(filterType = currentFilter, searchTerm = '') {
+      const container = document.getElementById('alertsContainer');
+      container.innerHTML = '';
+
+      const search = searchTerm.toLowerCase();
+
+      document.getElementById('countFilterAll').textContent = MOCK_ALERTS.length;
+      document.getElementById('countFilterP1').textContent = MOCK_ALERTS.filter(a => a.priority.includes('P1')).length;
+
+      const filtered = MOCK_ALERTS.filter(alert => {
+        const matchesSearch = alert.title.toLowerCase().includes(search) || 
+                              alert.cve.toLowerCase().includes(search) || 
+                              alert.targetHost.toLowerCase().includes(search) ||
+                              alert.actor.toLowerCase().includes(search);
+        if (!matchesSearch) return false;
+
+        if (filterType === 'p1') return alert.priority.includes('P1');
+        if (filterType === 'kev') return alert.inKev;
+        if (filterType === 'internet') return alert.internetFacing;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center border border-slate-800 rounded-xl bg-slate-900/20 text-slate-400 text-xs font-mono">
+            No matching correlated threats found.
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(alert => {
+        const isCritical = alert.riskScore >= 85;
+        const scoreColor = isCritical ? 'text-rose-400 border-rose-500/50 bg-rose-950/40' : (alert.riskScore >= 60 ? 'text-amber-400 border-amber-500/50 bg-amber-950/40' : 'text-slate-400 border-slate-700 bg-slate-900');
+        const badgeColor = isCritical ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : (alert.riskScore >= 60 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-800 text-slate-300 border-slate-700');
+
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl bg-[#090d16] border ${isCritical ? 'border-rose-900/60 hover:border-rose-500/50' : 'border-slate-800/80 hover:border-slate-700'} transition space-y-3 shadow-md group cursor-pointer`;
+        
+        card.innerHTML = `
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${badgeColor}">${alert.priority}</span>
+                <span onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Click to view Attack Path & Blast Radius Graph for ${alert.cve}" class="font-mono text-xs font-bold text-cyan-400 hover:text-cyan-200 hover:underline bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/80 cursor-pointer flex items-center gap-1 shadow-sm">
+                  ${alert.cve}
+                  <span class="text-[10px] text-purple-400">🕸️</span>
+                </span>
+                ${alert.inKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[9px] font-mono font-bold">🚨 IN CISA KEV</span>' : ''}
+                ${alert.internetFacing ? '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 text-[9px] font-mono">🌐 INTERNET-FACING</span>' : '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-mono">🔒 INTERNAL ONLY</span>'}
+                <span class="text-[10px] font-mono text-slate-400">${alert.id}</span>
+                <span class="text-[10px] text-cyan-400 font-mono ml-1 group-hover:inline hidden" onclick="openDeepDive('${alert.id}')">🔍 Inspect Spider Chart ➔</span>
+              </div>
+              <h3 onclick="openDeepDive('${alert.id}')" class="text-sm font-semibold text-white tracking-tight group-hover:text-cyan-200 transition cursor-pointer">${alert.title}</h3>
+            </div>
+
+            <!-- Risk Score Widget -->
+            <div class="flex items-center gap-3" onclick="openDeepDive('${alert.id}')">
+              <div class="text-right">
+                <div class="text-[10px] font-mono text-slate-400">CORRELATED RISK</div>
+                <div class="text-lg font-mono font-bold ${scoreColor.split(' ')[0]}">${alert.riskScore} <span class="text-xs text-slate-400">/ 100</span></div>
+              </div>
+              <div class="h-9 w-9 rounded-lg border flex items-center justify-center font-mono font-bold text-sm ${scoreColor}">
+                ${alert.riskScore}
+              </div>
+            </div>
+          </div>
+
+          <!-- Correlation Proof Box -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 p-2.5 rounded-lg bg-slate-950/70 border border-slate-800/70 text-[11px] font-mono cursor-pointer" onclick="openDeepDive('${alert.id}')">
+            <div>
+              <span class="text-slate-400 block text-[9px]">MATCHED ENVIRONMENT ASSET:</span>
+              <span class="text-cyan-300 font-semibold truncate block">${alert.targetHost}</span>
+              <span class="text-slate-400 text-[10px]">${alert.software}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[9px]">EXTERNAL THREAT SIGNAL:</span>
+              <span class="text-rose-300 font-semibold block truncate">${alert.actor}</span>
+              <span class="text-slate-400 text-[10px]">EPSS: ${alert.epss}% | CVSS: ${alert.cvss}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[9px]">BLAST RADIUS / IMPACT:</span>
+              <span class="text-purple-300 font-semibold block truncate">${alert.crownJewelPath}</span>
+              <span class="text-slate-400 text-[10px]">${alert.mitreTtp}</span>
+            </div>
+          </div>
+
+          <!-- Summary and Fast Triage Actions -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <p class="text-xs text-slate-400 max-w-xl leading-relaxed">${alert.summary}</p>
+            <div class="flex items-center gap-2">
+              <button onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Open Attack Path in Blast Radius Graph" class="px-2.5 py-1 rounded bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-800 text-xs font-mono transition flex items-center gap-1.5 shadow-sm">
+                <span>🕸️ View in Graph</span>
+              </button>
+              <button onclick="event.stopPropagation(); openDeepDive('${alert.id}')" title="Open 6-Axis Spider Chart & Full Metrics" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-mono transition flex items-center gap-1">
+                <span>📊 Spider Chart</span>
+              </button>
+              <button onclick="event.stopPropagation(); takeAction('${alert.id}', 'isolate', '${alert.targetHost}')" class="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs transition">
+                🛡️ Isolate
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ==========================================
+    // RENDER CONNECTORS HUB
+    // ==========================================
+    function renderConnectors(category = currentConnFilter) {
+      const grid = document.getElementById('connectorsGrid');
+      grid.innerHTML = '';
+
+      const filtered = MOCK_CONNECTORS.filter(c => {
+        if (category === 'all') return true;
+        return c.category === category;
+      });
+
+      document.getElementById('countConnAll').textContent = MOCK_CONNECTORS.length;
+      document.getElementById('countConnIntel').textContent = MOCK_CONNECTORS.filter(c => c.category === 'intel').length;
+      document.getElementById('countConnAsset').textContent = MOCK_CONNECTORS.filter(c => c.category === 'asset').length;
+      document.getElementById('countConnSoar').textContent = MOCK_CONNECTORS.filter(c => c.category === 'soar').length;
+      document.getElementById('countConnCustom').textContent = MOCK_CONNECTORS.filter(c => c.category === 'custom').length;
+      document.getElementById('badgeConnectorsCount').textContent = MOCK_CONNECTORS.filter(c => c.enabled).length;
+      document.getElementById('headerConnectorsCount').textContent = MOCK_CONNECTORS.filter(c => c.enabled).length + ' Active';
+      document.getElementById('statConnectedSources').textContent = MOCK_CONNECTORS.filter(c => c.enabled).length;
+
+      filtered.forEach(conn => {
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl bg-[#090d16] border ${conn.enabled ? 'border-slate-800/90 hover:border-emerald-500/40' : 'border-slate-800/40 opacity-60'} transition space-y-3 flex flex-col justify-between`;
+        card.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                <span class="text-xl p-1.5 rounded-lg bg-slate-900 border border-slate-800">${conn.icon}</span>
+                <div>
+                  <h4 class="text-xs font-bold text-white leading-tight">${conn.name}</h4>
+                  <span class="text-[10px] font-mono text-cyan-400">${conn.type}</span>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" ${conn.enabled ? 'checked' : ''} onchange="toggleConnector('${conn.id}')" class="sr-only peer">
+                <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">${conn.desc}</p>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800/70 space-y-2">
+            <div class="flex items-center justify-between text-[10px] font-mono">
+              <div class="flex items-center gap-1.5 text-slate-400">
+                <span class="h-1.5 w-1.5 rounded-full ${conn.enabled ? 'bg-emerald-400' : 'bg-slate-600'}"></span>
+                <span>${conn.sync}</span>
+              </div>
+              <span class="text-slate-400">Latency: <span class="text-slate-200">${conn.latency}</span></span>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+              <button onclick="testExistingConnector('${conn.name}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition">
+                🧪 Test Sync
+              </button>
+              <button onclick="editConnector('${conn.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition">
+                ⚙️ Config
+              </button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function filterConnectors(category) {
+      currentConnFilter = category;
+      document.querySelectorAll('.conn-filter-tab').forEach(b => {
+        b.className = 'conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent';
+      });
+      document.getElementById('connTab-' + category).className = 'conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+      renderConnectors(category);
+    }
+
+    function toggleConnector(id) {
+      const conn = MOCK_CONNECTORS.find(c => c.id === id);
+      if (conn) {
+        conn.enabled = !conn.enabled;
+        renderConnectors();
+      }
+    }
+
+    function testExistingConnector(name) {
+      showMockModal('Connector Health Probe', `Sending simulated HTTP HEAD / OAuth probe to ${name}... Response: 200 OK (Latency: 64ms). Synced 0 errors.`);
+    }
+
+    function editConnector(id) {
+      const conn = MOCK_CONNECTORS.find(c => c.id === id);
+      if (conn) {
+        showMockModal(`Configure ${conn.name}`, `Current Protocol: ${conn.type}\nStatus: ${conn.status}\nCadence: ${conn.sync}\n\nYou can update API keys, OAuth credentials, or webhook secrets here.`);
+      }
+    }
+
+    // ==========================================
+    // ADD CONNECTOR MODAL
+    // ==========================================
+    function openAddConnectorModal(preferredCategory = 'custom') {
+      document.getElementById('addConnectorModal').classList.remove('hidden');
+      document.getElementById('connectorForm').reset();
+      document.getElementById('testResultBanner').classList.add('hidden');
+      if (preferredCategory) {
+        document.getElementById('connCategory').value = preferredCategory;
+      }
+    }
+
+    function closeAddConnectorModal() {
+      document.getElementById('addConnectorModal').classList.add('hidden');
+    }
+
+    function applyPreset(presetType) {
+      const nameInput = document.getElementById('connName');
+      const catSelect = document.getElementById('connCategory');
+      const urlInput = document.getElementById('connUrl');
+      const authSelect = document.getElementById('connAuthType');
+      const cadenceSelect = document.getElementById('connCadence');
+      const parserSelect = document.getElementById('connParser');
+
+      if (presetType === 'crowdstrike') {
+        nameInput.value = 'CrowdStrike Falcon Exposure & Intel Stream';
+        catSelect.value = 'asset';
+        urlInput.value = 'api.crowdstrike.com/intel/combined/indicators/v1';
+        authSelect.value = 'oauth2';
+        cadenceSelect.value = 'Continuous Polling (Every 5 Minutes)';
+        parserSelect.value = 'STIX 2.1 Standard';
+      } else if (presetType === 'aws') {
+        nameInput.value = 'AWS Multi-Account Resource Graph';
+        catSelect.value = 'asset';
+        urlInput.value = 'config.us-east-1.amazonaws.com';
+        authSelect.value = 'bearer';
+        cadenceSelect.value = 'Continuous Polling (Every 5 Minutes)';
+        parserSelect.value = 'Generic JSON (Auto-Map CPE/CVE)';
+      } else if (presetType === 'misp') {
+        nameInput.value = 'Internal Corporate MISP Hub';
+        catSelect.value = 'intel';
+        urlInput.value = 'misp.soc.internal.corp/taxii2/roster';
+        authSelect.value = 'apikey';
+        cadenceSelect.value = 'Hourly Sync';
+        parserSelect.value = 'STIX 2.1 Standard';
+      } else if (presetType === 'custom') {
+        nameInput.value = 'Internal SecOps Microservice REST API';
+        catSelect.value = 'custom';
+        urlInput.value = 'api-sec.internal.company.net/v1/assets';
+        authSelect.value = 'bearer';
+        cadenceSelect.value = 'Real-time Webhook';
+        parserSelect.value = 'Generic JSON (Auto-Map CPE/CVE)';
+      }
+    }
+
+    function testConnectionHandshake() {
+      const banner = document.getElementById('testResultBanner');
+      const url = document.getElementById('connUrl').value;
+      if (!url) {
+        banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-rose-950/60 border-rose-800 text-rose-300';
+        banner.textContent = '❌ Please enter a valid base URL first.';
+        banner.classList.remove('hidden');
+        return;
+      }
+
+      banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-cyan-950/60 border-cyan-800 text-cyan-300';
+      banner.textContent = '⏳ Probing endpoint TLS certificate & handshake...';
+      banner.classList.remove('hidden');
+
+      setTimeout(() => {
+        banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-emerald-950/60 border-emerald-800 text-emerald-300';
+        banner.innerHTML = `✅ <strong>HANDSHAKE SUCCESSFUL (HTTP 200 OK)</strong><br>Endpoint reached in 82ms. Valid JSON schema payload received.`;
+      }, 700);
+    }
+
+    function handleSaveConnector(e) {
+      e.preventDefault();
+      const name = document.getElementById('connName').value;
+      const category = document.getElementById('connCategory').value;
+      const url = document.getElementById('connUrl').value;
+      const cadence = document.getElementById('connCadence').value;
+      const parser = document.getElementById('connParser').value;
+
+      const newId = 'conn-' + (MOCK_CONNECTORS.length + 1);
+      const iconMap = { intel: '🌐', asset: '💻', soar: '🚀', custom: '⚡' };
+
+      const newConnector = {
+        id: newId,
+        name: name,
+        category: category,
+        type: parser.includes('STIX') ? 'TAXII 2.1' : 'REST JSON',
+        status: 'Active',
+        latency: '78ms',
+        sync: cadence,
+        icon: iconMap[category] || '🔌',
+        enabled: true,
+        desc: `Custom connector linked to https://${url}. Ingesting via ${parser}.`
+      };
+
+      MOCK_CONNECTORS.unshift(newConnector);
+      renderConnectors();
+      closeAddConnectorModal();
+
+      showMockModal(
+        '🎉 CONNECTOR ACTIVATED',
+        `Successfully initialized and registered "${name}". The ingestion worker has begun indexing events and correlating against your asset inventory.`
+      );
+    }
+
+    // ==========================================
+    // OPENCTI FEED SUBSCRIPTIONS (STIX / TAXII / RSS)
+    // ==========================================
+    const FEED_TYPE_META = {
+      stix: { icon: '📦', label: 'STIX 2.1 Bundle', color: 'cyan' },
+      taxii: { icon: '🛡️', label: 'TAXII 2.1 Collection', color: 'purple' },
+      rss: { icon: '📰', label: 'RSS / Atom Feed', color: 'amber' }
+    };
+
+    function renderFeeds() {
+      const grid = document.getElementById('feedsGrid');
+      grid.innerHTML = '';
+
+      MOCK_FEEDS.forEach(feed => {
+        const meta = FEED_TYPE_META[feed.type] || FEED_TYPE_META.stix;
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-xl bg-[#090d16] border ${feed.enabled ? 'border-slate-800/90 hover:border-cyan-500/40' : 'border-slate-800/40 opacity-60'} transition space-y-2.5 flex flex-col justify-between`;
+        card.innerHTML = `
+          <div class="space-y-1.5">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="text-lg p-1.5 rounded-lg bg-slate-900 border border-slate-800">${meta.icon}</span>
+                <div>
+                  <h4 class="text-xs font-bold text-white leading-tight">${feed.name}</h4>
+                  <span class="text-[10px] font-mono text-${meta.color}-400">${meta.label}</span>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" ${feed.enabled ? 'checked' : ''} onchange="toggleFeed('${feed.id}')" class="sr-only peer">
+                <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            <div class="text-[10px] font-mono text-slate-500 truncate" title="https://${feed.url}">https://${feed.url}</div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">${feed.desc || 'No source description provided.'}</p>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800/70 space-y-2">
+            <div class="flex items-center justify-between text-[10px] font-mono">
+              <div class="flex items-center gap-1.5 text-slate-400">
+                <span class="h-1.5 w-1.5 rounded-full ${feed.enabled ? 'bg-emerald-400' : 'bg-slate-600'}"></span>
+                <span>${feed.lastSync}</span>
+              </div>
+              <span class="text-slate-400">${feed.cadence}</span>
+            </div>
+            <div class="flex items-center gap-2 pt-1">
+              <button onclick="testExistingFeed('${feed.id}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition">
+                🧪 Test
+              </button>
+              <button onclick="openEditFeedModal('${feed.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition">
+                ✏️ Edit
+              </button>
+              <button onclick="removeFeed('${feed.id}')" class="px-2.5 py-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-900 text-[11px] font-mono transition">
+                🗑️
+              </button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function toggleFeed(id) {
+      const feed = MOCK_FEEDS.find(f => f.id === id);
+      if (feed) {
+        feed.enabled = !feed.enabled;
+        renderFeeds();
+      }
+    }
+
+    function testExistingFeed(id) {
+      const feed = MOCK_FEEDS.find(f => f.id === id);
+      if (!feed) return;
+      showMockModal('Feed Health Probe', `Fetching ${feed.type.toUpperCase()} source for "${feed.name}"... Response: 200 OK. Payload parsed successfully, 0 errors.`);
+    }
+
+    function removeFeed(id) {
+      const feed = MOCK_FEEDS.find(f => f.id === id);
+      if (!feed) return;
+      showMockModal('Remove Feed Subscription', `Unsubscribe from "${feed.name}"? This stops future polling but does not delete previously ingested indicators.`, () => {
+        const idx = MOCK_FEEDS.findIndex(f => f.id === id);
+        if (idx !== -1) MOCK_FEEDS.splice(idx, 1);
+        renderFeeds();
+      });
+    }
+
+    function updateFeedUrlPlaceholder() {
+      const type = document.getElementById('feedType').value;
+      const urlInput = document.getElementById('feedUrl');
+      if (type === 'taxii') {
+        urlInput.placeholder = 'opencti.example.org/taxii2/collections/<uuid>';
+      } else if (type === 'rss') {
+        urlInput.placeholder = 'example.com/feeds/threat-advisories.rss';
+      } else {
+        urlInput.placeholder = 'opencti.example.org/feeds/export-bundle.json';
+      }
+    }
+
+    function openAddFeedModal() {
+      editingFeedId = null;
+      document.getElementById('feedForm').reset();
+      document.getElementById('feedModalTitle').textContent = 'SUBSCRIBE TO STIX / TAXII / RSS FEED';
+      document.getElementById('btnSaveFeed').textContent = 'Subscribe to Feed';
+      document.getElementById('feedTestResultBanner').classList.add('hidden');
+      updateFeedUrlPlaceholder();
+      document.getElementById('addFeedModal').classList.remove('hidden');
+    }
+
+    function openEditFeedModal(id) {
+      const feed = MOCK_FEEDS.find(f => f.id === id);
+      if (!feed) return;
+      editingFeedId = id;
+
+      document.getElementById('feedForm').reset();
+      document.getElementById('feedName').value = feed.name;
+      document.getElementById('feedType').value = feed.type;
+      document.getElementById('feedUrl').value = feed.url;
+      document.getElementById('feedDesc').value = feed.desc || '';
+      document.getElementById('feedCadence').value = feed.cadence;
+      document.getElementById('feedTestResultBanner').classList.add('hidden');
+
+      document.getElementById('feedModalTitle').textContent = `EDIT FEED: ${feed.name}`;
+      document.getElementById('btnSaveFeed').textContent = 'Save Changes';
+      updateFeedUrlPlaceholder();
+      document.getElementById('addFeedModal').classList.remove('hidden');
+    }
+
+    function closeAddFeedModal() {
+      document.getElementById('addFeedModal').classList.add('hidden');
+      editingFeedId = null;
+    }
+
+    function testFeedHandshake() {
+      const banner = document.getElementById('feedTestResultBanner');
+      const url = document.getElementById('feedUrl').value;
+      if (!url) {
+        banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-rose-950/60 border-rose-800 text-rose-300';
+        banner.textContent = '❌ Please enter a feed URL first.';
+        banner.classList.remove('hidden');
+        return;
+      }
+
+      banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-cyan-950/60 border-cyan-800 text-cyan-300';
+      banner.textContent = '⏳ Fetching feed source and validating schema...';
+      banner.classList.remove('hidden');
+
+      setTimeout(() => {
+        banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-emerald-950/60 border-emerald-800 text-emerald-300';
+        banner.innerHTML = `✅ <strong>FEED REACHABLE (HTTP 200 OK)</strong><br>Valid ${document.getElementById('feedType').value.toUpperCase()} payload parsed successfully.`;
+      }, 700);
+    }
+
+    function handleSaveFeed(e) {
+      e.preventDefault();
+      const name = document.getElementById('feedName').value;
+      const type = document.getElementById('feedType').value;
+      const url = document.getElementById('feedUrl').value;
+      const desc = document.getElementById('feedDesc').value;
+      const cadence = document.getElementById('feedCadence').value;
+
+      if (editingFeedId) {
+        const feed = MOCK_FEEDS.find(f => f.id === editingFeedId);
+        if (feed) {
+          feed.name = name;
+          feed.type = type;
+          feed.url = url;
+          feed.desc = desc;
+          feed.cadence = cadence;
+        }
+        renderFeeds();
+        closeAddFeedModal();
+        showMockModal('✅ Feed Updated', `Updated subscription details for "${name}".`);
+        return;
+      }
+
+      const newFeed = {
+        id: 'feed-' + (Date.now()),
+        name: name,
+        type: type,
+        url: url,
+        desc: desc,
+        cadence: cadence,
+        status: 'Active',
+        lastSync: 'Just now',
+        enabled: true
+      };
+
+      MOCK_FEEDS.push(newFeed);
+      renderFeeds();
+      closeAddFeedModal();
+      showMockModal('🎉 FEED SUBSCRIBED', `Successfully subscribed to "${name}". Polling will begin on the next cycle (${cadence}).`);
+    }
+
+    // ==========================================
+    // FILTER CONTROLS & NAVIGATION
+    // ==========================================
+    function setFilter(type) {
+      currentFilter = type;
+      document.querySelectorAll('.filter-chip').forEach(btn => {
+        btn.className = 'filter-chip px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent';
+      });
+      document.getElementById('filter-' + type).className = 'filter-chip px-3 py-1 rounded-md text-xs font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40';
+      renderAlerts(type, document.getElementById('triageSearchInput').value);
+    }
+
+    function filterAlerts() {
+      const search = document.getElementById('triageSearchInput').value;
+      renderAlerts(currentFilter, search);
+    }
+
+    function renderAssets() {
+      const tbody = document.getElementById('assetsTableBody');
+      tbody.innerHTML = '';
+      MOCK_ASSETS.forEach(asset => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/30 transition';
+        tr.innerHTML = `
+          <td class="p-3">
+            <div class="font-bold text-white text-xs">${asset.name}</div>
+            <div class="text-[10px] text-slate-400">${asset.ip}</div>
+          </td>
+          <td class="p-3 text-slate-300 text-xs">${asset.cloud}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 text-xs">${asset.sw}</span>
+          </td>
+          <td class="p-3">
+            ${asset.exposed ? '<span class="text-rose-400 text-xs font-bold">● Public Ingress</span>' : '<span class="text-emerald-400 text-xs">● Private VPC</span>'}
+          </td>
+          <td class="p-3">
+            ${asset.cves.map(c => {
+              const matchedAlert = MOCK_ALERTS.find(a => c.includes(a.cve));
+              const alertId = matchedAlert ? matchedAlert.id : 'CORR-2026-065';
+              return `<button onclick="openGraphForAlert('${alertId}')" title="View Blast Radius Graph for ${c}" class="px-1.5 py-0.5 rounded ${c.includes('P1') ? 'bg-rose-950 text-rose-300 border border-rose-800 hover:underline' : 'bg-slate-800 text-slate-300'} text-[10px]">${c}</button>`;
+            }).join(' ')}
+          </td>
+          <td class="p-3 text-right">
+            <span class="text-[10px] text-emerald-400 font-mono">${asset.edr}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function switchTab(tabName) {
+      ['triage', 'graph', 'connectors', 'intel', 'assets'].forEach(t => {
+        const view = document.getElementById('view-' + t);
+        if (view) view.classList.add('hidden');
+        const nav = document.getElementById('nav-' + t);
+        if (nav) {
+          nav.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition';
+        }
+      });
+
+      const activeView = document.getElementById('view-' + tabName);
+      if (activeView) activeView.classList.remove('hidden');
+
+      const activeNav = document.getElementById('nav-' + tabName);
+      if (activeNav) {
+        activeNav.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-white bg-slate-800/90 border border-slate-700/60 shadow-sm transition';
+      }
+
+      if (tabName === 'graph') {
+        populateGraphIncidentSelector();
+        renderBlastGraph(currentGraphAlertId, 'cve');
+      }
+    }
+
+    // ==========================================
+    // ACTIONS & MODALS
+    // ==========================================
+    let pendingAction = null;
+
+    function takeAction(alertId, actionType, host) {
+      if (actionType === 'isolate') {
+        showMockModal('Confirm EDR Host Isolation', `Are you sure you want to trigger CrowdStrike / Osquery network containment on ${host}? This will sever all TCP/UDP traffic except the security agent tunnel.`, () => {
+          updateAlertStatus(alertId, 'Mitigating');
+          showMockModal('✅ Isolation Successful', `Host ${host} has been placed in network containment! Alert ${alertId} updated to 'Mitigating'.`);
+        });
+      } else if (actionType === 'waf') {
+        showMockModal('Deploy Virtual Patch', `Deploying Layer 7 regex signature to AWS WAF and Cloudflare for ${host} to filter exploit payloads for this vulnerability.`, () => {
+          showMockModal('✅ Virtual Patch Deployed', 'Virtual patch deployed to Edge WAF. 0 false positives observed.');
+        });
+      } else if (actionType === 'jira') {
+        showMockModal('Sync to Jira Security Board', `Creating SEC-PRIORITY ticket with full threat intelligence context, MITRE TTPs, and remediation playbook for DevOps team.`, () => {
+          showMockModal('✅ Jira Ticket Created', `Created Jira issue [SEC-4819]: Remediation required on ${host}.`);
+        });
+      }
+    }
+
+    function updateAlertStatus(alertId, newStatus) {
+      const item = MOCK_ALERTS.find(a => a.id === alertId);
+      if (item) {
+        item.status = newStatus;
+        renderAlerts();
+      }
+    }
+
+    function showMockModal(title, message, confirmCallback) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalMessage').textContent = message;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+      pendingAction = confirmCallback || null;
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.add('hidden');
+      pendingAction = null;
+    }
+
+    function confirmModalAction() {
+      const action = pendingAction;
+      closeModal();
+      if (action) {
+        action();
+      }
+    }
+
+    // SIMULATION ENGINE (Interactive 0-day drop)
+    function triggerSimulation() {
+      const spinner = document.getElementById('simSpinner');
+      const btnText = document.getElementById('simBtnText');
+      spinner.style.display = 'inline-block';
+      btnText.textContent = 'Simulating Ingestion & Correlation...';
+
+      setTimeout(() => {
+        spinner.style.display = 'none';
+        btnText.textContent = '⚡ Simulate 0-Day Feed Drop';
+
+        const newAlert = {
+          id: 'CORR-2026-099',
+          title: '🚨 ZERO-DAY INGESTION: OpenSSL Remote Memory Corruption',
+          cve: 'CVE-2026-55901',
+          cvss: 9.9,
+          cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H',
+          epss: 98.7,
+          inKev: true,
+          actor: 'VelvetChollima (North Korean Nexus)',
+          actorType: 'State-Sponsored Threat Actor',
+          actorDesc: 'Targeting perimeter SSL/TLS concentrators to achieve initial remote code execution and pivot into enterprise Active Directory infrastructure.',
+          actorTtp: 'T1190 - Exploit Public-Facing Application',
+          riskScore: 100,
+          status: 'Active',
+          priority: 'P1-CRITICAL',
+          internetFacing: true,
+          targetHost: 'vpn-concentrator-us-west.net',
+          hostIp: '192.0.2.77',
+          environment: 'Edge DataCenter (Public Gateway)',
+          software: 'OpenSSL 3.4.0 Engine (VULNERABLE)',
+          secondaryNode: {
+            name: 'ad-sync-agent-01',
+            type: 'IDENTITY BRIDGE',
+            sw: 'Samba / Winbind',
+            desc: 'Authentication sync tunnel into domain controller.'
+          },
+          crownJewel: 'Corporate Active Directory Domain Controller',
+          crownJewelPath: 'Primary IPsec Tunnel into Corporate Active Directory',
+          crownJewelDesc: 'Domain Controller hosting enterprise Kerberos authentication, NTDS.dit database, and cloud federation tokens.',
+          summary: 'Newly released advisory with weaponized proof-of-concept. Matched our edge VPN concentrator in us-west within 1.2 seconds of feed ingestion.',
+          mitreTtp: 'T1190 - Exploit Public-Facing Application',
+          killChain: ['Initial Access (T1190)', 'Execution (T1059)', 'Defense Evasion (T1562)', 'Lateral Movement to Active Directory'],
+          radar: {
+            exploitability: 99,
+            exposure: 98,
+            lateralMovement: 96,
+            assetCriticality: 98,
+            actorSophistication: 95,
+            detectionGap: 90
+          }
+        };
+
+        MOCK_ALERTS.unshift(newAlert);
+        renderAlerts();
+        populateGraphIncidentSelector();
+
+        document.getElementById('statP0Count').textContent = parseInt(document.getElementById('statP0Count').textContent) + 1;
+        document.getElementById('headerP1Count').textContent = (parseInt(document.getElementById('headerP1Count').textContent) + 1) + ' Active';
+        document.getElementById('badgeTriageCount').textContent = parseInt(document.getElementById('badgeTriageCount').textContent) + 1;
+
+        showMockModal(
+          '🔥 REAL-TIME CORRELATION ALERT TRIGGERED',
+          'A brand new 0-day threat feed advisory (CVE-2026-55901) was just ingested via our connected TAXII feed. The correlation engine cross-referenced your cloud inventory and identified 1 vulnerable public host: vpn-concentrator-us-west.net (Risk Score: 100/100). Prioritized to top of queue.'
+        );
+      }, 1200);
+    }
+
+    // INITIAL LOAD
+    document.addEventListener('DOMContentLoaded', () => {
+      renderAlerts();
+      renderAssets();
+      renderConnectors();
+      renderFeeds();
+      populateGraphIncidentSelector();
+      initGraphPanZoom();
+    });
+  </script>
+</body>
+</html>
