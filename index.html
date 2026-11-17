@@ -19,6 +19,8 @@
       background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
                         linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     }
+    .sidebar-collapsed .nav-label { display: none; }
+    .sidebar-collapsed .nav-item { justify-content: center; }
   </style>
 </head>
 <body class="bg-[#07090e] text-slate-200 antialiased font-sans min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
@@ -78,68 +80,73 @@
   <div class="flex-1 flex overflow-hidden">
     
     <!-- LEFT SIDEBAR -->
-    <aside class="w-60 border-r border-slate-800/80 bg-[#090d16] flex flex-col justify-between shrink-0 hidden lg:flex">
+    <aside id="sidebar" class="w-60 border-r border-slate-800/80 bg-[#090d16] flex flex-col justify-between shrink-0 hidden lg:flex transition-all duration-200">
       <div class="p-3 space-y-6">
         <div>
-          <div class="text-[12px] font-semibold text-slate-400 tracking-wider uppercase px-2 mb-2 font-mono">Navigation</div>
+          <div class="flex items-center justify-between px-2 mb-2">
+            <span class="nav-label text-[12px] font-semibold text-slate-400 tracking-wider uppercase font-mono">Navigation</span>
+            <button onclick="toggleSidebar()" title="Collapse sidebar" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition">
+              <svg id="sidebarToggleIcon" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+          </div>
           <nav class="space-y-1">
             <button onclick="switchTab('triage')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
-              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-              Home
+              <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+              <span class="nav-label">Home</span>
             </button>
             <button onclick="switchTab('triage')" id="nav-triage" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-white bg-slate-800/90 border border-slate-700/60 shadow-sm transition">
               <span class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Correlated Triage
+                <svg class="w-4 h-4 text-cyan-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span class="nav-label">Correlated Triage</span>
               </span>
-              <span id="badgeTriageCount" class="px-1.5 py-0.5 rounded text-[12px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30">3</span>
+              <span id="badgeTriageCount" class="nav-label px-1.5 py-0.5 rounded text-[12px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30">3</span>
             </button>
             <button onclick="switchTab('graph')" id="nav-graph" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M7.5 7.5L10.5 16.5M16.5 7.5L13.5 16.5"/></svg>
-                Blast Radius Graph
+                <svg class="w-4 h-4 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M7.5 7.5L10.5 16.5M16.5 7.5L13.5 16.5"/></svg>
+                <span class="nav-label">Blast Radius Graph</span>
               </span>
-              <span class="text-[12px] font-mono text-purple-400">Dynamic</span>
+              <span class="nav-label text-[12px] font-mono text-purple-400">Dynamic</span>
             </button>
             <button onclick="switchTab('connectors')" id="nav-connectors" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                Connectors & APIs
+                <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span class="nav-label">Connectors & APIs</span>
               </span>
-              <span id="badgeConnectorsCount" class="text-[12px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-1.5 py-0.5 rounded">16</span>
+              <span id="badgeConnectorsCount" class="nav-label text-[12px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-1.5 py-0.5 rounded">16</span>
             </button>
             <button onclick="switchTab('intel')" id="nav-intel" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                Threat Intel & KEV
+                <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span class="nav-label">Threat Intel & KEV</span>
               </span>
-              <span class="text-[12px] font-mono text-slate-400">Feeds</span>
+              <span class="nav-label text-[12px] font-mono text-slate-400">Feeds</span>
             </button>
             <button onclick="switchTab('assets')" id="nav-assets" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
-                Internal Inventory
+                <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
+                <span class="nav-label">Internal Inventory</span>
               </span>
-              <span class="text-[12px] font-mono text-slate-400">CMDB/EDR</span>
+              <span class="nav-label text-[12px] font-mono text-slate-400">CMDB/EDR</span>
             </button>
             <button onclick="switchTab('memos')" id="nav-memos" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                Memo Archive
+                <svg class="w-4 h-4 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span class="nav-label">Memo Archive</span>
               </span>
-              <span id="badgeMemoArchiveCount" class="text-[12px] font-mono text-slate-400">0</span>
+              <span id="badgeMemoArchiveCount" class="nav-label text-[12px] font-mono text-slate-400">0</span>
             </button>
             <button onclick="switchTab('settings')" id="nav-settings" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
-                Settings
+                <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span class="nav-label">Settings</span>
               </span>
             </button>
           </nav>
         </div>
 
         <!-- Quick Help Tip -->
-        <div class="rounded-xl p-3 bg-gradient-to-b from-slate-900 to-[#0e1424] border border-cyan-900/40 text-sm space-y-2">
+        <div class="nav-label rounded-xl p-3 bg-gradient-to-b from-slate-900 to-[#0e1424] border border-cyan-900/40 text-sm space-y-2">
           <div class="flex items-center gap-1.5 text-cyan-400 font-semibold text-[13px] font-mono">
             <span>💡 DYNAMIC BLAST GRAPHS</span>
           </div>
@@ -308,7 +315,7 @@
           </svg>
 
           <!-- Floating Node Details Drawer (Collapsible) -->
-          <div id="graphDrawer" class="absolute right-3 top-3 bottom-3 w-88 bg-[#090d16]/95 border border-slate-700 rounded-xl p-4 shadow-2xl backdrop-blur hidden flex-col justify-between overflow-y-auto z-20 transition-all duration-300">
+          <div id="graphDrawer" class="absolute right-3 top-3 bottom-3 w-[270px] bg-[#090d16]/95 border border-slate-700 rounded-xl p-3 shadow-2xl backdrop-blur hidden flex-col justify-between overflow-y-auto z-20 transition-all duration-300">
             <div>
               <div class="flex items-center justify-between pb-2 border-b border-slate-800">
                 <div class="flex items-center gap-1.5 overflow-hidden">
@@ -1686,7 +1693,7 @@
           return;
         }
         goToSimStep(simIndex + 1);
-      }, 2800);
+      }, 5000);
     }
 
     function stopAutoPlaySimulation() {
@@ -2810,6 +2817,16 @@ and will re-verify once remediation is reported complete.
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    let sidebarCollapsed = false;
+
+    function toggleSidebar() {
+      sidebarCollapsed = !sidebarCollapsed;
+      const aside = document.getElementById('sidebar');
+      aside.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+      aside.style.width = sidebarCollapsed ? '64px' : '240px';
+      document.getElementById('sidebarToggleIcon').classList.toggle('rotate-180', sidebarCollapsed);
     }
 
     function switchTab(tabName) {
