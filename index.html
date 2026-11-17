@@ -248,6 +248,14 @@
               <button onclick="resetGraphView()" class="px-2.5 py-1 hover:bg-slate-800 rounded text-slate-400" title="Reset View">Reset</button>
               <span class="px-2 text-[12px] text-slate-500 border-l border-slate-800" id="zoomLevelIndicator">100%</span>
             </div>
+
+            <!-- Simulate Attack Path Controls -->
+            <div class="flex items-center bg-slate-900 border border-rose-900/50 rounded-lg p-0.5 text-sm font-mono text-slate-300">
+              <button onclick="stepSimulation(-1)" class="px-2.5 py-1 hover:bg-slate-800 rounded text-slate-300" title="Previous Step">⏮</button>
+              <button onclick="togglePlaySimulation()" id="btnPlaySim" class="px-2.5 py-1 hover:bg-slate-800 rounded text-rose-300 font-bold" title="Play / Pause Attack Simulation">▶ Simulate</button>
+              <button onclick="stepSimulation(1)" class="px-2.5 py-1 hover:bg-slate-800 rounded text-slate-300" title="Next Step">⏭</button>
+              <span class="px-2 text-[12px] text-slate-500 border-l border-slate-800" id="simStepIndicator">Step 1 / 5</span>
+            </div>
           </div>
         </div>
 
@@ -261,6 +269,12 @@
             <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Weaponized CVE / Exploit</div>
             <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-cyan-500"></span> Internal Exposed Asset</div>
             <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-purple-500"></span> Crown Jewel / Target Data</div>
+          </div>
+
+          <!-- Simulation Narrative Caption -->
+          <div id="simCaptionBanner" class="absolute bottom-3 left-3 right-3 sm:right-auto sm:max-w-md z-10 bg-rose-950/90 backdrop-blur p-3 rounded-lg border border-rose-800 text-sm space-y-1 hidden">
+            <div class="text-rose-300 font-bold font-mono text-[12px]" id="simCaptionLabel">STEP 1 / 5 — THREAT ACTOR</div>
+            <p class="text-slate-200 leading-snug" id="simCaptionText"></p>
           </div>
 
           <!-- Dynamic SVG Canvas -->
@@ -669,7 +683,12 @@
 
             <!-- MITRE ATT&CK Kill Chain -->
             <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-3 space-y-2">
-              <div class="text-[13px] font-mono text-slate-400 font-bold">ATTACKER EXECUTION CHAIN (MITRE ATT&CK)</div>
+              <div class="flex items-center justify-between">
+                <div class="text-[13px] font-mono text-slate-400 font-bold">ATTACKER EXECUTION CHAIN (MITRE ATT&CK)</div>
+                <button onclick="simulateFromModal()" title="Play Attack Simulation on Blast Radius Graph" class="shrink-0 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-mono font-bold flex items-center gap-1">
+                  <span>▶ Simulate</span>
+                </button>
+              </div>
               <div class="flex flex-wrap items-center gap-1.5 text-sm font-mono" id="modalKillChain"></div>
             </div>
 
@@ -1367,12 +1386,20 @@
       const alert = MOCK_ALERTS.find(a => a.id === alertId);
       if (!alert) return;
 
+      stopAutoPlaySimulation();
+      simIndex = 0;
+      document.getElementById('simCaptionBanner').classList.add('hidden');
+
       document.getElementById('graphIncidentSelect').value = alertId;
 
       const viewport = document.getElementById('graphViewport');
       viewport.innerHTML = '';
 
       viewport.innerHTML = `
+        <g id="simHighlightG" transform="translate(140, 220)" opacity="0" style="transition: transform 0.6s ease, opacity 0.3s;">
+          <circle r="52" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="10,6" class="animate-pulse"/>
+        </g>
+
         <path id="dyn-link-1" d="M 140 220 Q 260 140 390 180" stroke="url(#edgeGradRose)" stroke-width="2.5" stroke-dasharray="6,4" fill="none" class="animate-pulse"/>
         <path id="dyn-link-2" d="M 390 180 Q 520 140 650 150" stroke="url(#edgeGradCyan)" stroke-width="3" fill="none" filter="url(#glow)"/>
         <path id="dyn-link-3" d="M 390 180 Q 520 250 650 290" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4" fill="none"/>
@@ -1551,6 +1578,8 @@
           <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white">View Full Impact & Threat Memo</button>
         `;
       }
+
+      syncSimulationUI(nodeType, alert);
     }
 
     function closeGraphDrawer() {
@@ -1570,6 +1599,118 @@
       currentGraphAlertId = alertId;
       switchTab('graph');
       renderBlastGraph(alertId, 'cve');
+    }
+
+    // ==========================================
+    // ATTACK SIMULATION ENGINE (STEP-THROUGH + AUTO-PLAY)
+    // ==========================================
+    const SIM_STEP_SEQUENCE = ['actor', 'cve', 'asset', 'secondary', 'crownJewel'];
+    const SIM_STEP_LABELS = {
+      actor: 'THREAT ACTOR',
+      cve: 'WEAPONIZED EXPLOIT',
+      asset: 'EXPOSED ASSET',
+      secondary: 'LATERAL HOP',
+      crownJewel: 'CROWN JEWEL'
+    };
+    const SIM_NODE_COORDS = {
+      actor: [140, 220],
+      cve: [390, 180],
+      asset: [650, 150],
+      secondary: [650, 290],
+      crownJewel: [890, 220]
+    };
+
+    let simIndex = 0;
+    let simPlaying = false;
+    let simTimer = null;
+
+    function simCaptionFor(nodeType, alert) {
+      if (nodeType === 'actor') return alert.actorDesc;
+      if (nodeType === 'cve') return alert.exploitDetails || alert.whatIsThis;
+      if (nodeType === 'asset') return `The exploit lands on ${alert.targetHost}, running ${alert.software}${alert.internetFacing ? ' and directly reachable from the internet.' : '.'}`;
+      if (nodeType === 'secondary') return alert.secondaryNode ? alert.secondaryNode.desc : 'The attacker pivots through an intermediate internal hop.';
+      if (nodeType === 'crownJewel') return alert.ifUnremediated;
+      return '';
+    }
+
+    function syncSimulationUI(nodeType, alert) {
+      const idx = SIM_STEP_SEQUENCE.indexOf(nodeType);
+      if (idx === -1) return;
+      simIndex = idx;
+
+      document.getElementById('simStepIndicator').textContent = `Step ${idx + 1} / ${SIM_STEP_SEQUENCE.length}`;
+
+      const ring = document.getElementById('simHighlightG');
+      if (ring) {
+        const [x, y] = SIM_NODE_COORDS[nodeType];
+        ring.setAttribute('transform', `translate(${x}, ${y})`);
+        ring.setAttribute('opacity', '1');
+      }
+
+      const banner = document.getElementById('simCaptionBanner');
+      document.getElementById('simCaptionLabel').textContent = `STEP ${idx + 1} / ${SIM_STEP_SEQUENCE.length} — ${SIM_STEP_LABELS[nodeType]}`;
+      document.getElementById('simCaptionText').textContent = simCaptionFor(nodeType, alert);
+      banner.classList.remove('hidden');
+    }
+
+    function goToSimStep(idx) {
+      const clamped = Math.max(0, Math.min(SIM_STEP_SEQUENCE.length - 1, idx));
+      showDynamicNodeDetails(SIM_STEP_SEQUENCE[clamped]);
+      if (clamped === SIM_STEP_SEQUENCE.length - 1) {
+        stopAutoPlaySimulation();
+      }
+    }
+
+    function stepSimulation(delta) {
+      stopAutoPlaySimulation();
+      goToSimStep(simIndex + delta);
+    }
+
+    function togglePlaySimulation() {
+      if (simPlaying) {
+        stopAutoPlaySimulation();
+      } else {
+        startAutoPlaySimulation();
+      }
+    }
+
+    function startAutoPlaySimulation() {
+      if (simIndex >= SIM_STEP_SEQUENCE.length - 1) {
+        goToSimStep(0);
+      }
+      simPlaying = true;
+      updatePlaySimButton();
+      simTimer = setInterval(() => {
+        if (simIndex >= SIM_STEP_SEQUENCE.length - 1) {
+          stopAutoPlaySimulation();
+          return;
+        }
+        goToSimStep(simIndex + 1);
+      }, 2800);
+    }
+
+    function stopAutoPlaySimulation() {
+      simPlaying = false;
+      if (simTimer) {
+        clearInterval(simTimer);
+        simTimer = null;
+      }
+      updatePlaySimButton();
+    }
+
+    function updatePlaySimButton() {
+      const btn = document.getElementById('btnPlaySim');
+      if (!btn) return;
+      btn.innerHTML = simPlaying ? '⏸ Pause' : '▶ Simulate';
+    }
+
+    function simulateFromModal() {
+      if (!activeAlertForModal) return;
+      const targetAlertId = activeAlertForModal.id;
+      closeDeepDiveModal();
+      switchTab('graph');
+      renderBlastGraph(targetAlertId, 'actor');
+      startAutoPlaySimulation();
     }
 
     // ==========================================
