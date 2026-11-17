@@ -637,13 +637,7 @@
 
             <!-- Triage Actions -->
             <div class="flex items-center gap-2 pt-2 flex-wrap">
-              <button onclick="executeModalAction('isolate')" class="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-mono text-sm font-semibold shadow-lg shadow-rose-900/40 transition">
-                🛡️ Isolate Host via EDR
-              </button>
-              <button onclick="executeModalAction('waf')" class="flex-1 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-sm font-semibold shadow-lg shadow-cyan-900/40 transition">
-                ⚡ Deploy WAF Virtual Patch
-              </button>
-              <button onclick="executeModalAction('jira')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-sm transition">
+              <button onclick="executeModalAction('jira')" class="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-sm font-semibold transition">
                 🎫 Sync to Jira
               </button>
               <button onclick="openThreatMemoModal(activeAlertForModal.id)" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-sm font-semibold shadow-lg shadow-indigo-900/40 transition">
@@ -1433,11 +1427,11 @@
           <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white mb-2 flex items-center justify-center gap-1.5">
             <span>📊 Open Spider Chart & Metrics</span>
           </button>
-          <button onclick="takeAction('${alert.id}', 'waf', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-cyan-600 hover:bg-cyan-500 text-white">
-            ⚡ Push Virtual Patch for ${alert.cve}
+          <button onclick="openThreatMemoModal('${alert.id}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-1.5">
+            <span>📋 Generate Threat Memo</span>
           </button>
         `;
-      } 
+      }
       else if (nodeType === 'actor') {
         typeLabel.textContent = 'THREAT ACTOR GROUP';
         body.innerHTML = `
@@ -1453,8 +1447,7 @@
         `;
 
         actions.innerHTML = `
-          <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white mb-2">View Full Attack Profile</button>
-          <button onclick="showMockModal('Pivot Threat Actor', 'Extracting known IP ranges, ASN blocks, and hashes for ${alert.actor} to perimeter firewalls...')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-rose-600 hover:bg-rose-500 text-white">Extract IOCs to Firewall</button>
+          <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white">View Full Attack Profile</button>
         `;
       }
       else if (nodeType === 'asset') {
@@ -1468,15 +1461,13 @@
             <div class="text-slate-400">Software: <span class="text-rose-400 font-bold">${alert.software}</span></div>
             <div class="text-slate-400">Exposure: <span class="${alert.internetFacing ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${alert.internetFacing ? 'Direct Internet Facing' : 'Private Only'}</span></div>
             <div class="text-slate-400">Pivot Route: <span class="text-purple-300">${alert.crownJewelPath}</span></div>
+            <div class="text-slate-400">Owning Team: <span class="text-amber-300">${alert.owningTeam || 'Unassigned'}</span></div>
           </div>
         `;
 
         actions.innerHTML = `
-          <button onclick="takeAction('${alert.id}', 'isolate', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-rose-600 hover:bg-rose-500 text-white mb-2">
-            🚨 Isolate Host (${alert.hostIp})
-          </button>
           <button onclick="takeAction('${alert.id}', 'jira', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">
-            🎫 Create Remediation Ticket
+            🎫 Notify Owning Team via Jira
           </button>
         `;
       }
@@ -1504,7 +1495,7 @@
         `;
 
         actions.innerHTML = `
-          <button onclick="showMockModal('Sever Route', 'Severing ingress network routes and VPC peering to ${alert.crownJewel} to prevent lateral movement.')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white">Sever Inbound Ingress Route</button>
+          <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white">View Full Impact & Threat Memo</button>
         `;
       }
     }
@@ -1847,9 +1838,6 @@
               </button>
               <button onclick="event.stopPropagation(); openDeepDive('${alert.id}')" title="Open 6-Axis Spider Chart & Full Metrics" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-mono transition flex items-center gap-1">
                 <span>📊 Spider Chart</span>
-              </button>
-              <button onclick="event.stopPropagation(); takeAction('${alert.id}', 'isolate', '${alert.targetHost}')" class="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-sm transition">
-                🛡️ Isolate
               </button>
               <button onclick="event.stopPropagation(); openThreatMemoModal('${alert.id}')" title="Generate a pre-built Threat Memo for leadership" class="px-2.5 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm transition">
                 📋 Memo
@@ -2267,7 +2255,7 @@
     const CHANGE_TYPE_ICON = {
       'Connector Added': '🔌', 'Connector Enabled': '🟢', 'Connector Disabled': '⚪',
       'Feed Subscribed': '📡', 'Feed Updated': '✏️', 'Feed Enabled': '🟢', 'Feed Disabled': '⚪', 'Feed Removed': '🗑️',
-      'Alert Status Updated': '🛡️', 'New 0-Day Alert Ingested': '🚨'
+      'New 0-Day Alert Ingested': '🚨'
     };
 
     function timeAgo(timestamp) {
@@ -2530,28 +2518,10 @@ and will re-verify once remediation is reported complete.
     let pendingAction = null;
 
     function takeAction(alertId, actionType, host) {
-      if (actionType === 'isolate') {
-        showMockModal('Confirm EDR Host Isolation', `Are you sure you want to trigger CrowdStrike / Osquery network containment on ${host}? This will sever all TCP/UDP traffic except the security agent tunnel.`, () => {
-          updateAlertStatus(alertId, 'Mitigating');
-          showMockModal('✅ Isolation Successful', `Host ${host} has been placed in network containment! Alert ${alertId} updated to 'Mitigating'.`);
-        });
-      } else if (actionType === 'waf') {
-        showMockModal('Deploy Virtual Patch', `Deploying Layer 7 regex signature to AWS WAF and Cloudflare for ${host} to filter exploit payloads for this vulnerability.`, () => {
-          showMockModal('✅ Virtual Patch Deployed', 'Virtual patch deployed to Edge WAF. 0 false positives observed.');
-        });
-      } else if (actionType === 'jira') {
-        showMockModal('Sync to Jira Security Board', `Creating SEC-PRIORITY ticket with full threat intelligence context, MITRE TTPs, and remediation playbook for DevOps team.`, () => {
+      if (actionType === 'jira') {
+        showMockModal('Sync to Jira Security Board', `Creating SEC-PRIORITY ticket with full threat intelligence context, MITRE TTPs, and remediation playbook for the owning team.`, () => {
           showMockModal('✅ Jira Ticket Created', `Created Jira issue [SEC-4819]: Remediation required on ${host}.`);
         });
-      }
-    }
-
-    function updateAlertStatus(alertId, newStatus) {
-      const item = MOCK_ALERTS.find(a => a.id === alertId);
-      if (item) {
-        item.status = newStatus;
-        renderAlerts();
-        logChange('Alert Status Updated', `${alertId} → ${newStatus}`);
       }
     }
 
