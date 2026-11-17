@@ -587,6 +587,27 @@
               <p class="text-sm text-slate-300 leading-relaxed" id="modalCorrelationExplanation"></p>
             </div>
 
+            <!-- What This Is & Impact If Unremediated -->
+            <div class="p-4 rounded-xl bg-amber-950/10 border border-amber-900/50 space-y-3">
+              <div class="flex items-center gap-2 text-amber-400 font-mono text-sm font-bold">
+                <span>📖 WHAT THIS IS</span>
+              </div>
+              <p class="text-sm text-slate-300 leading-relaxed" id="modalWhatIsThis"></p>
+              <div class="pt-2 border-t border-amber-900/40">
+                <span class="text-[11px] font-mono text-amber-400 font-bold block mb-1">⚠️ IF LEFT UNREMEDIATED:</span>
+                <p class="text-sm text-slate-300 leading-relaxed" id="modalIfUnremediated"></p>
+              </div>
+            </div>
+
+            <!-- Indicators of Compromise -->
+            <div class="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+              <div class="p-2.5 bg-slate-950 border-b border-slate-800 text-[13px] font-mono text-slate-300 font-bold flex justify-between items-center">
+                <span>INDICATORS OF COMPROMISE (IoCs)</span>
+                <button onclick="copyIocsToClipboard()" id="btnCopyIocs" class="text-[11px] text-cyan-400 hover:underline font-normal">📋 Copy All</button>
+              </div>
+              <div class="p-3 text-sm font-mono space-y-2.5" id="modalIocsList"></div>
+            </div>
+
             <!-- Impacted Assets Table -->
             <div class="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
               <div class="p-2.5 bg-slate-950 border-b border-slate-800 text-[13px] font-mono text-slate-300 font-bold flex justify-between">
@@ -603,6 +624,7 @@
                   <div>IP Address: <span class="text-slate-200" id="modalHostIp">198.51.100.24</span></div>
                   <div>Running Software: <span class="text-rose-300" id="modalHostSw">HyperMesh Gateway 2.4.1</span></div>
                   <div>EDR Protection: <span class="text-emerald-300" id="modalHostEdr">CrowdStrike Online</span></div>
+                  <div class="col-span-2">Owning Team: <span class="text-amber-300" id="modalOwningTeam">—</span></div>
                 </div>
               </div>
             </div>
@@ -614,7 +636,7 @@
             </div>
 
             <!-- Triage Actions -->
-            <div class="flex items-center gap-2 pt-2">
+            <div class="flex items-center gap-2 pt-2 flex-wrap">
               <button onclick="executeModalAction('isolate')" class="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-mono text-sm font-semibold shadow-lg shadow-rose-900/40 transition">
                 🛡️ Isolate Host via EDR
               </button>
@@ -623,6 +645,9 @@
               </button>
               <button onclick="executeModalAction('jira')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-sm transition">
                 🎫 Sync to Jira
+              </button>
+              <button onclick="openThreatMemoModal(activeAlertForModal.id)" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-sm font-semibold shadow-lg shadow-indigo-900/40 transition">
+                📋 Generate Threat Memo
               </button>
             </div>
 
@@ -860,6 +885,34 @@
     </div>
   </div>
 
+  <!-- THREAT MEMO DRAFT MODAL -->
+  <div id="threatMemoModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-[#0b0f19] border border-indigo-800/60 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+        <div>
+          <h3 class="text-base font-bold text-white font-mono flex items-center gap-2">
+            <span>📋 THREAT MEMO DRAFT</span>
+            <span id="memoTlpBadge" class="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border">TLP:AMBER</span>
+          </h3>
+          <p class="text-[12px] text-slate-400 mt-0.5">Pre-built format — ready to copy into email, Slack, or your ticketing system.</p>
+        </div>
+        <button onclick="closeThreatMemoModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="p-5 overflow-y-auto font-mono text-sm leading-relaxed text-slate-200 whitespace-pre-wrap bg-[#0d1119]" id="memoBody"></div>
+
+      <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2 flex-wrap">
+        <span class="text-[11px] text-slate-500 font-mono" id="memoCopyStatus">Not copied yet.</span>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="downloadMemo()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">⬇️ Download .txt</button>
+          <button type="button" onclick="copyMemoToClipboard()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition">📋 Copy to Clipboard</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- GENERIC CONFIRMATION MODAL -->
   <div id="modalOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-[#0b0f19] border border-slate-700 w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4">
@@ -911,6 +964,14 @@
         summary: 'Internet-exposed Kubernetes Ingress running unpatched proxy filter. KEV confirmed in active botnet recruitment with direct traversal to Billing services.',
         mitreTtp: 'T1611 - Escape to Host',
         killChain: ['Initial Access (T1190)', 'Execution (T1059.004)', 'Privilege Escalation (T1611)', 'Lateral Movement to Billing API'],
+        owningTeam: 'Platform Engineering — Kubernetes / Cloud Infra Team',
+        whatIsThis: "This is an authorization bypass in Kubernetes' ingress proxy component (KubeProxy), letting unauthenticated requests reach backend services that should require a valid session. It needs no credentials and no user interaction, which is exactly what automated botnets scan the internet for at scale.",
+        ifUnremediated: 'An attacker can impersonate internal services, pivot from the ingress node into the worker pool, and reach the Customer Billing Microservice and its Stripe API vault — opening the door to fraudulent transactions, stolen payment credentials, or a full compute hijack for cryptomining at your cloud bill\'s expense.',
+        iocs: {
+          ips: ['185.220.101.47 (VoltSpider C2 relay)', '45.142.214.90 (scanning infrastructure)'],
+          domains: ['voltspider-c2.ru', 'k8s-miner-pool[.]top'],
+          hashes: ['a3f1c9b7...e821 (XMRig cryptominer variant)']
+        },
         radar: {
           exploitability: 90,
           exposure: 92,
@@ -952,6 +1013,14 @@
         summary: 'Target is public-facing and running unpatched HyperMesh v2.4.1. Ingested via CISA KEV connector; active in-the-wild PoC actively used by APT-88.',
         mitreTtp: 'T1190 - Exploit Public-Facing Application',
         killChain: ['Initial Access (T1190)', 'Execution (T1059)', 'Privilege Escalation (T1068)', 'Lateral Movement to PCI-DB'],
+        owningTeam: 'Network Engineering — Edge / Perimeter Team',
+        whatIsThis: 'A remote code execution vulnerability in the HyperMesh Edge Gateway, triggered by a single maliciously crafted HTTP request with no authentication required. It hands an attacker the same level of control as a local administrator on the gateway itself.',
+        ifUnremediated: 'APT-88 has a confirmed working exploit for this in the wild. Left unpatched, they keep a direct foothold on your public-facing gateway with a verified network path into the PCI-VAULT-DB cluster — meaning tokenized cardholder data and signing keys are one lateral hop away from exposure.',
+        iocs: {
+          ips: ['103.224.182.19 (APT-88 C2)', '194.26.29.133 (staging server)'],
+          domains: ['vanguard-viper-relay.net', 'hypermesh-updates[.]biz (typosquat)'],
+          hashes: ['7e2b84f1...f930 (HyperMesh RCE payload dropper)']
+        },
         radar: {
           exploitability: 98,
           exposure: 95,
@@ -993,6 +1062,14 @@
         summary: 'Cloudflare-fronted SSO endpoint matches vulnerable version. Active underground chatter selling access tokens.',
         mitreTtp: 'T1078 - Valid Accounts',
         killChain: ['Initial Access (T1078)', 'Credential Access (T1528)', 'Defense Evasion (T1550)', 'Lateral Movement to IAM Enclave'],
+        owningTeam: 'Identity & Access Management Team',
+        whatIsThis: "A session-validation flaw in AuthShield's SSO layer that lets an attacker forge or replay a privileged session token without ever needing the user's actual password.",
+        ifUnremediated: "Forged tokens grant access to the SAML signing certificates and delegation keys behind your IAM Root Admin Enclave — effectively organization-wide cloud administrative control, not just one compromised account.",
+        iocs: {
+          ips: ['91.219.237.14 (token marketplace relay)'],
+          domains: ['silverfox-market[.]onion-mirror.to'],
+          hashes: ['c91a4d6e...22ab (token-forging toolkit)']
+        },
         radar: {
           exploitability: 80,
           exposure: 85,
@@ -1034,6 +1111,14 @@
         summary: 'Memory leak vulnerability exists on internal dev node. Low blast radius because node is strictly air-gapped from production.',
         mitreTtp: 'T1005 - Data from Local System',
         killChain: ['Reconnaissance (T1046)', 'Initial Access (T1190)', 'Discovery (T1083)', 'Data Exfiltration (T1005)'],
+        owningTeam: 'Data Engineering — Analytics Platform Team',
+        whatIsThis: 'An unauthenticated memory-disclosure bug in NexusDB that lets a remote caller read small chunks of process memory, potentially leaking cached query fragments.',
+        ifUnremediated: 'Real-world impact is low here specifically because this host only holds synthetic staging data and is network-isolated from production — but the underlying binary is still vulnerable and should be patched before it is ever exposed anywhere closer to production.',
+        iocs: {
+          ips: ['Opportunistic mass-scanners — no single attributable IP'],
+          domains: [],
+          hashes: []
+        },
         radar: {
           exploitability: 60,
           exposure: 20,
@@ -1075,6 +1160,14 @@
         summary: 'Theoretical downgrade attack on SSH handshake. Deprioritized because host requires MFA and is private only.',
         mitreTtp: 'T1557 - Adversary-in-the-Middle',
         killChain: ['MitM Positioning (T1557)', 'Handshake Downgrade (T1562)', 'Session Interception (T1040)'],
+        owningTeam: 'IT Operations — Infrastructure Team',
+        whatIsThis: 'A cryptographic downgrade weakness in the SSH handshake (the "Terrapin" attack) that lets an attacker already positioned as a man-in-the-middle strip certain security extensions during connection setup.',
+        ifUnremediated: 'Exploitation requires an attacker already sitting on the network path between client and server — a high bar here since this bastion sits in a private management VPC behind hardware MFA. Impact stays low unless network segmentation changes.',
+        iocs: {
+          ips: [],
+          domains: [],
+          hashes: []
+        },
         radar: {
           exploitability: 25,
           exposure: 15,
@@ -1592,6 +1685,29 @@
         This vulnerability is prioritized at <strong class="text-rose-400">${alert.riskScore}/100</strong> because <strong class="text-white">${alert.actor}</strong> is weaponizing this exploit in real-world campaigns${alert.inKev ? ' (confirmed on CISA KEV)' : ''}, directly impacting your internal host <strong class="text-cyan-300">${alert.targetHost}</strong> (${alert.environment}) running unpatched software with lateral movement reachability to <strong class="text-purple-300">${alert.crownJewel}</strong>.
       `;
 
+      document.getElementById('modalWhatIsThis').textContent = alert.whatIsThis || 'No technical write-up available yet for this finding.';
+      document.getElementById('modalIfUnremediated').textContent = alert.ifUnremediated || 'Impact assessment pending further analysis.';
+      document.getElementById('modalOwningTeam').textContent = alert.owningTeam || 'Unassigned — needs triage owner';
+
+      const iocCategories = [
+        { label: 'IP Addresses', key: 'ips', color: 'text-rose-300' },
+        { label: 'Domains', key: 'domains', color: 'text-amber-300' },
+        { label: 'File Hashes', key: 'hashes', color: 'text-cyan-300' }
+      ];
+      const iocs = alert.iocs || { ips: [], domains: [], hashes: [] };
+      const hasAnyIocs = iocCategories.some(c => (iocs[c.key] || []).length > 0);
+      const iocsList = document.getElementById('modalIocsList');
+      if (!hasAnyIocs) {
+        iocsList.innerHTML = `<div class="text-slate-500 text-[13px]">No specific indicators attributed yet for this finding — see "What This Is" above for exploitation requirements.</div>`;
+      } else {
+        iocsList.innerHTML = iocCategories.filter(c => (iocs[c.key] || []).length > 0).map(c => `
+          <div>
+            <span class="text-slate-400 text-[11px] block mb-1">${c.label.toUpperCase()}:</span>
+            ${iocs[c.key].map(val => `<div class="${c.color} text-[13px]">${val}</div>`).join('')}
+          </div>
+        `).join('');
+      }
+
       const killChainContainer = document.getElementById('modalKillChain');
       killChainContainer.innerHTML = alert.killChain.map((step, idx) => `
         <span class="px-2 py-1 rounded ${idx === alert.killChain.length - 1 ? 'bg-purple-950 text-purple-200 border border-purple-800 font-bold' : 'bg-slate-800 text-slate-200 border border-slate-700'}">${step}</span>
@@ -1600,6 +1716,25 @@
 
       renderSpiderChart(alert.radar);
       document.getElementById('deepDiveModal').classList.remove('hidden');
+    }
+
+    function copyIocsToClipboard() {
+      if (!activeAlertForModal) return;
+      const iocs = activeAlertForModal.iocs || { ips: [], domains: [], hashes: [] };
+      const lines = [
+        ...(iocs.ips || []).map(v => `IP: ${v}`),
+        ...(iocs.domains || []).map(v => `Domain: ${v}`),
+        ...(iocs.hashes || []).map(v => `Hash: ${v}`)
+      ];
+      const text = lines.length ? lines.join('\n') : 'No indicators attributed yet.';
+      const btn = document.getElementById('btnCopyIocs');
+      navigator.clipboard.writeText(text).then(() => {
+        const original = btn.textContent;
+        btn.textContent = '✅ Copied';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      }).catch(() => {
+        btn.textContent = '❌ Copy failed';
+      });
     }
 
     function closeDeepDiveModal() {
@@ -1715,6 +1850,9 @@
               </button>
               <button onclick="event.stopPropagation(); takeAction('${alert.id}', 'isolate', '${alert.targetHost}')" class="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-sm transition">
                 🛡️ Isolate
+              </button>
+              <button onclick="event.stopPropagation(); openThreatMemoModal('${alert.id}')" title="Generate a pre-built Threat Memo for leadership" class="px-2.5 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm transition">
+                📋 Memo
               </button>
             </div>
           </div>
@@ -2201,6 +2339,118 @@
     }
 
     // ==========================================
+    // THREAT MEMO DRAFT (PREBUILT FORMAT FOR LEADERSHIP)
+    // ==========================================
+    let activeMemoAlertId = null;
+
+    function buildMemoText(alert) {
+      const tlp = (alert.inKev || alert.riskScore >= 85) ? 'TLP:AMBER' : 'TLP:GREEN';
+      const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const iocs = alert.iocs || { ips: [], domains: [], hashes: [] };
+      const iocLines = [
+        ...(iocs.ips || []).map(v => `  IP:     ${v}`),
+        ...(iocs.domains || []).map(v => `  Domain: ${v}`),
+        ...(iocs.hashes || []).map(v => `  Hash:   ${v}`)
+      ];
+
+      return `================================================================
+THREAT INTELLIGENCE MEMORANDUM                      ${tlp}
+================================================================
+DATE:           ${dateStr}
+RE:             ${alert.cve} — ${alert.title}
+PRIORITY:       ${alert.priority}   |   Correlated Risk: ${alert.riskScore}/100
+PREPARED BY:    AEGIS.INTEL Threat Correlation Team
+FOR:            Security Leadership / Steering Committee
+OWNING TEAM:    ${alert.owningTeam || 'Unassigned'}  (action required)
+
+----------------------------------------------------------------
+EXECUTIVE SUMMARY
+----------------------------------------------------------------
+${alert.summary}
+
+----------------------------------------------------------------
+WHAT THIS IS
+----------------------------------------------------------------
+${alert.whatIsThis || 'Technical write-up pending.'}
+
+----------------------------------------------------------------
+BUSINESS IMPACT IF NOT REMEDIATED
+----------------------------------------------------------------
+${alert.ifUnremediated || 'Impact assessment pending further analysis.'}
+
+----------------------------------------------------------------
+TECHNICAL DETAILS
+----------------------------------------------------------------
+CVE:              ${alert.cve}  (CVSS ${alert.cvss} | EPSS ${alert.epss}%)
+CISA KEV Status:  ${alert.inKev ? 'Listed — confirmed actively exploited' : 'Not listed'}
+Threat Actor:     ${alert.actor}
+Affected Asset:   ${alert.targetHost} (${alert.environment})
+MITRE ATT&CK:     ${alert.killChain.join(' -> ')}
+
+----------------------------------------------------------------
+INDICATORS OF COMPROMISE
+----------------------------------------------------------------
+${iocLines.length ? iocLines.join('\n') : '  No indicators attributed yet for this finding.'}
+
+----------------------------------------------------------------
+RECOMMENDED ACTION
+----------------------------------------------------------------
+This finding has been escalated to ${alert.owningTeam || 'the appropriate owning team'} for
+remediation. Recommended: patch/upgrade ${alert.software.split(' (')[0]} and
+validate closure against the MITRE ATT&CK chain above. The Threat
+Correlation Team will continue monitoring for exploitation signals
+and will re-verify once remediation is reported complete.
+================================================================`;
+    }
+
+    function openThreatMemoModal(alertId) {
+      const alert = MOCK_ALERTS.find(a => a.id === alertId);
+      if (!alert) return;
+      activeMemoAlertId = alertId;
+
+      const tlp = (alert.inKev || alert.riskScore >= 85) ? 'TLP:AMBER' : 'TLP:GREEN';
+      const tlpBadge = document.getElementById('memoTlpBadge');
+      tlpBadge.textContent = tlp;
+      tlpBadge.className = tlp === 'TLP:AMBER'
+        ? 'px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border bg-amber-950 text-amber-300 border-amber-700'
+        : 'px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border bg-emerald-950 text-emerald-300 border-emerald-700';
+
+      document.getElementById('memoBody').textContent = buildMemoText(alert);
+      document.getElementById('memoCopyStatus').textContent = 'Not copied yet.';
+      document.getElementById('threatMemoModal').classList.remove('hidden');
+    }
+
+    function closeThreatMemoModal() {
+      document.getElementById('threatMemoModal').classList.add('hidden');
+      activeMemoAlertId = null;
+    }
+
+    function copyMemoToClipboard() {
+      const text = document.getElementById('memoBody').textContent;
+      const status = document.getElementById('memoCopyStatus');
+      navigator.clipboard.writeText(text).then(() => {
+        status.textContent = '✅ Copied to clipboard — paste into email, Slack, or your ticketing system.';
+      }).catch(() => {
+        status.textContent = '❌ Copy failed — your browser may be blocking clipboard access.';
+      });
+    }
+
+    function downloadMemo() {
+      const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
+      const text = document.getElementById('memoBody').textContent;
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `threat-memo-${alert ? alert.cve : 'draft'}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      document.getElementById('memoCopyStatus').textContent = '⬇️ Download started.';
+    }
+
+    // ==========================================
     // FILTER CONTROLS & NAVIGATION
     // ==========================================
     function setFilter(type) {
@@ -2368,6 +2618,14 @@
           summary: 'Newly released advisory with weaponized proof-of-concept. Matched our edge VPN concentrator in us-west within 1.2 seconds of feed ingestion.',
           mitreTtp: 'T1190 - Exploit Public-Facing Application',
           killChain: ['Initial Access (T1190)', 'Execution (T1059)', 'Defense Evasion (T1562)', 'Lateral Movement to Active Directory'],
+          owningTeam: 'Network Engineering — Edge / Perimeter Team',
+          whatIsThis: "A remote, pre-authentication memory-corruption bug in OpenSSL's TLS engine — exploitable during the handshake itself, before any credentials are ever checked.",
+          ifUnremediated: 'VelvetChollima has a working proof-of-concept circulating already. An unpatched concentrator gives them a primary tunnel straight into Active Directory, risking full domain compromise via the NTDS.dit database.',
+          iocs: {
+            ips: ['175.45.178.22 (VelvetChollima infrastructure)'],
+            domains: ['chollima-relay-net[.]kp'],
+            hashes: ['f0a7e299...1cd4 (OpenSSL exploit shellcode loader)']
+          },
           radar: {
             exploitability: 99,
             exposure: 98,
