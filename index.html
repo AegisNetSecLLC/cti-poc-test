@@ -25,6 +25,48 @@
 </head>
 <body class="bg-[#07090e] text-slate-200 antialiased font-sans min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
 
+  <!-- LOGIN GATE (session-only — resets on refresh, no backend) -->
+  <div id="loginGate" class="fixed inset-0 z-[100] bg-[#07090e] flex items-center justify-center p-4">
+    <div class="absolute inset-0 grid-pattern opacity-60"></div>
+    <form onsubmit="attemptLogin(event)" class="relative w-full max-w-sm rounded-2xl border border-cyan-900/50 bg-[#0b0f19]/95 shadow-2xl shadow-cyan-950/40 p-6 space-y-5">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-bold tracking-tight text-white text-base">AEGIS<span class="text-cyan-400">.INTEL</span></div>
+          <p class="text-[12px] text-slate-400">Sign in to continue</p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-[12px] text-slate-400 font-mono block mb-1">Username</label>
+          <input id="loginUsernameInput" type="text" autocomplete="username" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="e.g. analyst1">
+        </div>
+        <div>
+          <label class="text-[12px] text-slate-400 font-mono block mb-1">Password</label>
+          <input id="loginPasswordInput" type="password" autocomplete="current-password" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="••••••••">
+        </div>
+      </div>
+
+      <div id="loginErrorMsg" class="hidden text-[13px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"></div>
+
+      <button type="submit" class="w-full px-3 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold text-sm shadow-lg shadow-purple-900/30 transition">
+        Sign In
+      </button>
+
+      <div class="text-[12px] text-slate-500 leading-relaxed border-t border-slate-800 pt-3">
+        Demo account: <span class="text-cyan-300 font-mono">analyst1</span> / <span class="text-cyan-300 font-mono">demo1234</span><br>
+        Session-only auth — accounts and logins reset on page refresh. Create more accounts under <span class="text-slate-300">Settings → User Setup</span> once signed in.
+      </div>
+    </form>
+  </div>
+
+  <div id="appShell" class="hidden flex flex-col flex-1 min-h-screen">
+
   <!-- TOP NAVIGATION HEADER -->
   <header class="min-h-14 border-b border-slate-800/80 bg-[#0b0f19]/90 backdrop-blur sticky top-0 z-50 px-4 py-2 flex items-center justify-between flex-wrap gap-y-2">
     <div class="flex items-center gap-3">
@@ -73,6 +115,15 @@
         <span>🚀 Activate</span>
         <span id="pendingChangesBadge" class="hidden absolute -top-1.5 -right-1.5 h-4 min-w-[1rem] px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center border border-[#0b0f19]">0</span>
       </button>
+      <div class="h-6 w-px bg-slate-800 mx-1"></div>
+      <div class="flex items-center gap-2 pl-1">
+        <div class="h-7 w-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[12px] font-mono font-bold text-cyan-300" id="headerUserAvatar">?</div>
+        <div class="hidden sm:block leading-tight">
+          <div class="text-[12px] font-semibold text-slate-200" id="headerUserName">—</div>
+          <div class="text-[11px] text-slate-500" id="headerUserRole">—</div>
+        </div>
+        <button onclick="logoutUser()" title="Log out" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition whitespace-nowrap">Log Out</button>
+      </div>
     </div>
   </header>
 
@@ -546,10 +597,50 @@
           <div class="p-4 space-y-2 text-sm font-mono" id="settingsStatusBody"></div>
         </div>
 
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden max-w-xl">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-200">User Setup <span class="text-[11px] text-slate-500 font-normal">(demo accounts — session only)</span></span>
+          </div>
+          <div class="p-4 space-y-4">
+            <form onsubmit="createMockUser(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Display Name</label>
+                <input id="newUserDisplayName" type="text" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="e.g. Jordan Reyes">
+              </div>
+              <div>
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Role</label>
+                <select id="newUserRole" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                  <option value="Analyst">Analyst</option>
+                  <option value="Senior Analyst">Senior Analyst</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Leadership (Read-Only)">Leadership (Read-Only)</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Username</label>
+                <input id="newUserUsername" type="text" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="e.g. jreyes">
+              </div>
+              <div>
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Password</label>
+                <input id="newUserPassword" type="password" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="••••••••">
+              </div>
+              <div id="newUserErrorMsg" class="hidden sm:col-span-2 text-[13px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"></div>
+              <div class="sm:col-span-2">
+                <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">+ Create Account</button>
+              </div>
+            </form>
+
+            <div class="border-t border-slate-800 pt-3 space-y-2" id="userSetupListWrap">
+              <div class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Demo Accounts This Session</div>
+              <div class="space-y-1.5" id="userSetupList"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="rounded-xl border border-dashed border-slate-700 bg-slate-900/20 overflow-hidden max-w-xl">
           <div class="p-3 border-b border-dashed border-slate-700 text-sm font-semibold text-slate-300">🚧 Coming Soon</div>
           <div class="p-4 space-y-2 text-sm text-slate-400">
-            <div>• Identity & SSO (Okta / Active Directory) — static login for now</div>
+            <div>• Real SSO (Okta / Active Directory) — this login screen is a static demo stand-in</div>
             <div>• Email & ticketing integrations wired to real accounts</div>
             <div>• Notification preferences per owning team</div>
             <div>• Data retention & audit export controls</div>
@@ -559,6 +650,7 @@
 
     </main>
   </div>
+  </div> <!-- /appShell -->
 
   <!-- CVE & ALERT DEEP DIVE MODAL -->
   <div id="deepDiveModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-5">
@@ -1287,6 +1379,102 @@
     ];
 
     let editingFeedId = null;
+
+    // ==========================================
+    // USERS & SESSION-ONLY AUTH (demo login — no backend, resets on refresh)
+    // ==========================================
+    const MOCK_USERS = [
+      { username: 'analyst1', password: 'demo1234', displayName: 'Alex Chen', role: 'Senior Analyst' }
+    ];
+    let currentUser = null;
+
+    function initials(name) {
+      return name.split(' ').filter(Boolean).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+    }
+
+    function attemptLogin(event) {
+      event.preventDefault();
+      const username = document.getElementById('loginUsernameInput').value.trim();
+      const password = document.getElementById('loginPasswordInput').value;
+      const errorBox = document.getElementById('loginErrorMsg');
+
+      const match = MOCK_USERS.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+      if (!match) {
+        errorBox.textContent = 'Invalid username or password.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      errorBox.classList.add('hidden');
+      currentUser = match;
+      document.getElementById('loginGate').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
+      document.getElementById('headerUserAvatar').textContent = initials(match.displayName);
+      document.getElementById('headerUserName').textContent = match.displayName;
+      document.getElementById('headerUserRole').textContent = match.role;
+    }
+
+    function logoutUser() {
+      currentUser = null;
+      document.getElementById('loginPasswordInput').value = '';
+      document.getElementById('loginErrorMsg').classList.add('hidden');
+      document.getElementById('appShell').classList.add('hidden');
+      document.getElementById('loginGate').classList.remove('hidden');
+    }
+
+    function createMockUser(event) {
+      event.preventDefault();
+      const displayName = document.getElementById('newUserDisplayName').value.trim();
+      const role = document.getElementById('newUserRole').value;
+      const username = document.getElementById('newUserUsername').value.trim();
+      const password = document.getElementById('newUserPassword').value;
+      const errorBox = document.getElementById('newUserErrorMsg');
+
+      if (!displayName || !username || !password) {
+        errorBox.textContent = 'Display name, username, and password are all required.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+      if (MOCK_USERS.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        errorBox.textContent = `Username "${username}" is already taken this session.`;
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      errorBox.classList.add('hidden');
+      MOCK_USERS.push({ username, password, displayName, role });
+      document.getElementById('newUserDisplayName').value = '';
+      document.getElementById('newUserUsername').value = '';
+      document.getElementById('newUserPassword').value = '';
+      renderUserSetupList();
+    }
+
+    function removeMockUser(username) {
+      if (currentUser && currentUser.username === username) {
+        showMockModal('Cannot Remove', 'You cannot remove the account you are currently logged in as.');
+        return;
+      }
+      const idx = MOCK_USERS.findIndex(u => u.username === username);
+      if (idx !== -1) MOCK_USERS.splice(idx, 1);
+      renderUserSetupList();
+    }
+
+    function renderUserSetupList() {
+      const wrap = document.getElementById('userSetupList');
+      if (!wrap) return;
+      wrap.innerHTML = MOCK_USERS.map(u => `
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-slate-950/60 border border-slate-800">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="h-6 w-6 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[11px] font-mono font-bold text-cyan-300">${initials(u.displayName)}</div>
+            <div class="min-w-0">
+              <div class="text-[13px] text-slate-200 truncate">${u.displayName} <span class="text-slate-500">· ${u.role}</span></div>
+              <div class="text-[11px] text-slate-500 font-mono truncate">${u.username} / ${'•'.repeat(Math.max(6, u.password.length))}</div>
+            </div>
+          </div>
+          <button onclick="removeMockUser('${u.username}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition shrink-0">Remove</button>
+        </div>
+      `).join('');
+    }
 
     let currentVersionMajor = 2;
     let currentVersionMinor = 6;
@@ -2594,8 +2782,11 @@
         <div class="flex justify-between"><span class="text-slate-400">Active Connectors</span><span class="text-emerald-300">${MOCK_CONNECTORS.filter(c => c.enabled).length} / ${MOCK_CONNECTORS.length}</span></div>
         <div class="flex justify-between"><span class="text-slate-400">Subscribed Feeds</span><span class="text-emerald-300">${MOCK_FEEDS.filter(f => f.enabled).length} / ${MOCK_FEEDS.length}</span></div>
         <div class="flex justify-between"><span class="text-slate-400">Memos Generated This Session</span><span class="text-indigo-300">${memoArchive.length}</span></div>
-        <div class="flex justify-between"><span class="text-slate-400">Authentication</span><span class="text-amber-300">None (prototype — no login)</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Authentication</span><span class="text-amber-300 text-right">Static demo login (session-only, no SSO yet)</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Signed In As</span><span class="text-cyan-300 text-right">${currentUser ? `${currentUser.displayName} (${currentUser.role})` : '—'}</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Demo Accounts This Session</span><span class="text-emerald-300 text-right">${MOCK_USERS.length}</span></div>
       `;
+      renderUserSetupList();
     }
     let activeMemoRiskRating = 'medium';
 
