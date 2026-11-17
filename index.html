@@ -24,7 +24,7 @@
 <body class="bg-[#07090e] text-slate-200 antialiased font-sans min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
 
   <!-- TOP NAVIGATION HEADER -->
-  <header class="h-14 border-b border-slate-800/80 bg-[#0b0f19]/90 backdrop-blur sticky top-0 z-50 px-4 flex items-center justify-between">
+  <header class="min-h-14 border-b border-slate-800/80 bg-[#0b0f19]/90 backdrop-blur sticky top-0 z-50 px-4 py-2 flex items-center justify-between flex-wrap gap-y-2">
     <div class="flex items-center gap-3">
       <div class="h-8 w-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -34,14 +34,14 @@
       <div>
         <div class="flex items-center gap-2">
           <span class="font-bold tracking-tight text-white text-base">AEGIS<span class="text-cyan-400">.INTEL</span></span>
-          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/50" id="platformVersionBadge">v2.6 DYNAMIC GRAPH</span>
+          <span class="text-[12px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/50" id="platformVersionBadge">v2.6 DYNAMIC GRAPH</span>
         </div>
-        <p class="text-[10px] text-slate-400 hidden sm:block">Automated Threat-to-Environment Correlation & Triage Engine</p>
+        <p class="text-[12px] text-slate-400 hidden sm:block">Automated Threat-to-Environment Correlation & Triage Engine</p>
       </div>
     </div>
 
     <!-- Active Ingestion Stats Ticker -->
-    <div class="hidden md:flex items-center gap-4 text-xs font-mono border-x border-slate-800 px-4 py-1">
+    <div class="hidden lg:flex items-center gap-3 text-xs font-mono border-x border-slate-800 px-4 py-1 whitespace-nowrap">
       <div class="flex items-center gap-1.5">
         <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span class="text-slate-400">CONNECTORS:</span>
@@ -59,17 +59,17 @@
 
     <!-- Right Actions -->
     <div class="flex items-center gap-2">
-      <button onclick="openAddConnectorModal()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      <button onclick="openAddConnectorModal()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         <span>Add Connector / API</span>
       </button>
-      <button onclick="triggerSimulation()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition">
-        <svg class="w-3.5 h-3.5 text-cyan-400 animate-spin" id="simSpinner" style="display:none;" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+      <button onclick="triggerSimulation()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 text-cyan-400 animate-spin shrink-0" id="simSpinner" style="display:none;" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
         <span id="simBtnText">⚡ Simulate 0-Day Feed Drop</span>
       </button>
-      <button onclick="openActivateModal()" class="relative text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold shadow-lg shadow-purple-900/30 transition">
+      <button onclick="openActivateModal()" class="relative text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold shadow-lg shadow-purple-900/30 transition whitespace-nowrap">
         <span>🚀 Activate</span>
-        <span id="pendingChangesBadge" class="hidden absolute -top-1.5 -right-1.5 h-4 min-w-[1rem] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center border border-[#0b0f19]">0</span>
+        <span id="pendingChangesBadge" class="hidden absolute -top-1.5 -right-1.5 h-4 min-w-[1rem] px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center border border-[#0b0f19]">0</span>
       </button>
     </div>
   </header>
@@ -81,52 +81,52 @@
     <aside class="w-60 border-r border-slate-800/80 bg-[#090d16] flex flex-col justify-between shrink-0 hidden lg:flex">
       <div class="p-3 space-y-6">
         <div>
-          <div class="text-[10px] font-semibold text-slate-400 tracking-wider uppercase px-2 mb-2 font-mono">Navigation</div>
+          <div class="text-[12px] font-semibold text-slate-400 tracking-wider uppercase px-2 mb-2 font-mono">Navigation</div>
           <nav class="space-y-1">
-            <button onclick="switchTab('triage')" id="nav-triage" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-white bg-slate-800/90 border border-slate-700/60 shadow-sm transition">
+            <button onclick="switchTab('triage')" id="nav-triage" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-white bg-slate-800/90 border border-slate-700/60 shadow-sm transition">
               <span class="flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 Correlated Triage
               </span>
-              <span id="badgeTriageCount" class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30">3</span>
+              <span id="badgeTriageCount" class="px-1.5 py-0.5 rounded text-[12px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30">3</span>
             </button>
-            <button onclick="switchTab('graph')" id="nav-graph" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+            <button onclick="switchTab('graph')" id="nav-graph" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M7.5 7.5L10.5 16.5M16.5 7.5L13.5 16.5"/></svg>
                 Blast Radius Graph
               </span>
-              <span class="text-[10px] font-mono text-purple-400">Dynamic</span>
+              <span class="text-[12px] font-mono text-purple-400">Dynamic</span>
             </button>
-            <button onclick="switchTab('connectors')" id="nav-connectors" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+            <button onclick="switchTab('connectors')" id="nav-connectors" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 Connectors & APIs
               </span>
-              <span id="badgeConnectorsCount" class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-1.5 py-0.5 rounded">16</span>
+              <span id="badgeConnectorsCount" class="text-[12px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-1.5 py-0.5 rounded">16</span>
             </button>
-            <button onclick="switchTab('intel')" id="nav-intel" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+            <button onclick="switchTab('intel')" id="nav-intel" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                 Threat Intel & KEV
               </span>
-              <span class="text-[10px] font-mono text-slate-400">Feeds</span>
+              <span class="text-[12px] font-mono text-slate-400">Feeds</span>
             </button>
-            <button onclick="switchTab('assets')" id="nav-assets" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+            <button onclick="switchTab('assets')" id="nav-assets" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
                 Internal Inventory
               </span>
-              <span class="text-[10px] font-mono text-slate-400">CMDB/EDR</span>
+              <span class="text-[12px] font-mono text-slate-400">CMDB/EDR</span>
             </button>
           </nav>
         </div>
 
         <!-- Quick Help Tip -->
-        <div class="rounded-xl p-3 bg-gradient-to-b from-slate-900 to-[#0e1424] border border-cyan-900/40 text-xs space-y-2">
-          <div class="flex items-center gap-1.5 text-cyan-400 font-semibold text-[11px] font-mono">
+        <div class="rounded-xl p-3 bg-gradient-to-b from-slate-900 to-[#0e1424] border border-cyan-900/40 text-sm space-y-2">
+          <div class="flex items-center gap-1.5 text-cyan-400 font-semibold text-[13px] font-mono">
             <span>💡 DYNAMIC BLAST GRAPHS</span>
           </div>
-          <p class="text-[11px] text-slate-400 leading-relaxed">
+          <p class="text-[13px] text-slate-400 leading-relaxed">
             Clicking any CVE card (e.g., <strong class="text-cyan-300">CVE-2026-10332</strong>) dynamically maps its specific threat actor, target host, and crown jewels on the graph.
           </p>
         </div>
@@ -134,14 +134,14 @@
 
       <!-- Environment Health -->
       <div class="p-3 border-t border-slate-800/80 bg-slate-950/40">
-        <div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between">
+        <div class="text-[12px] font-mono text-slate-400 mb-1 flex justify-between">
           <span>ENV EXPOSURE INDEX</span>
           <span class="text-rose-400 font-bold">78 / 100</span>
         </div>
         <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
           <div class="bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 h-full w-[78%]"></div>
         </div>
-        <div class="flex justify-between text-[9px] text-slate-400 font-mono mt-1">
+        <div class="flex justify-between text-[11px] text-slate-400 font-mono mt-1">
           <span>Target: &lt; 25</span>
           <span>Elevated Alert</span>
         </div>
@@ -157,45 +157,45 @@
         <!-- Summary Cards Row -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div class="p-3.5 rounded-xl bg-slate-900/60 border border-rose-500/30 hover:border-rose-500/50 transition">
-            <div class="flex items-center justify-between text-slate-400 text-xs">
+            <div class="flex items-center justify-between text-slate-400 text-sm">
               <span>Active Correlated Exploits</span>
               <span class="p-1 rounded bg-rose-500/10 text-rose-400">🔥 P0/P1</span>
             </div>
             <div class="text-2xl font-bold font-mono text-rose-400 mt-2" id="statP0Count">3</div>
-            <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1">
               <span class="text-rose-400">●</span> 100% matched to exposed assets
             </div>
           </div>
 
           <div class="p-3.5 rounded-xl bg-slate-900/60 border border-amber-500/30 hover:border-amber-500/50 transition">
-            <div class="flex items-center justify-between text-slate-400 text-xs">
+            <div class="flex items-center justify-between text-slate-400 text-sm">
               <span>In CISA KEV (Known Exploited)</span>
               <span class="p-1 rounded bg-amber-500/10 text-amber-400">Catalog</span>
             </div>
             <div class="text-2xl font-bold font-mono text-amber-300 mt-2">12</div>
-            <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1">
               <span class="text-amber-400">●</span> 3 actively reachable in prod
             </div>
           </div>
 
           <div class="p-3.5 rounded-xl bg-slate-900/60 border border-cyan-500/30 hover:border-cyan-500/50 transition">
-            <div class="flex items-center justify-between text-slate-400 text-xs">
+            <div class="flex items-center justify-between text-slate-400 text-sm">
               <span>High EPSS Probability (&gt;75%)</span>
               <span class="p-1 rounded bg-cyan-500/10 text-cyan-400">Weaponized</span>
             </div>
             <div class="text-2xl font-bold font-mono text-cyan-300 mt-2">19</div>
-            <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1">
               <span class="text-cyan-400">●</span> 82.4% avg exploit velocity
             </div>
           </div>
 
           <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition">
-            <div class="flex items-center justify-between text-slate-400 text-xs">
+            <div class="flex items-center justify-between text-slate-400 text-sm">
               <span>Connected Data Sources</span>
               <span class="p-1 rounded bg-slate-800 text-slate-400 font-mono">Pipelines</span>
             </div>
             <div class="text-2xl font-bold font-mono text-emerald-400 mt-2" id="statConnectedSources">16</div>
-            <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1">
               <span class="text-emerald-400">●</span> All APIs healthy & polling
             </div>
           </div>
@@ -204,13 +204,13 @@
         <!-- Filter Bar & Search -->
         <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/40 border border-slate-800">
           <div class="flex flex-wrap items-center gap-2">
-            <button onclick="setFilter('all')" id="filter-all" class="filter-chip px-3 py-1 rounded-md text-xs font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">All (<span id="countFilterAll">5</span>)</button>
-            <button onclick="setFilter('p1')" id="filter-p1" class="filter-chip px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Critical P1 (<span id="countFilterP1">3</span>)</button>
-            <button onclick="setFilter('kev')" id="filter-kev" class="filter-chip px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">CISA KEV Only</button>
-            <button onclick="setFilter('internet')" id="filter-internet" class="filter-chip px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Internet Exposed Only</button>
+            <button onclick="setFilter('all')" id="filter-all" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">All (<span id="countFilterAll">5</span>)</button>
+            <button onclick="setFilter('p1')" id="filter-p1" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Critical P1 (<span id="countFilterP1">3</span>)</button>
+            <button onclick="setFilter('kev')" id="filter-kev" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">CISA KEV Only</button>
+            <button onclick="setFilter('internet')" id="filter-internet" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Internet Exposed Only</button>
           </div>
           <div class="relative w-full sm:w-64">
-            <input type="text" id="triageSearchInput" onkeyup="filterAlerts()" placeholder="Filter CVE, Host, or Actor..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+            <input type="text" id="triageSearchInput" onkeyup="filterAlerts()" placeholder="Filter CVE, Host, or Actor..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500">
           </div>
         </div>
 
@@ -224,15 +224,15 @@
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-base font-semibold text-white">Attack Path & Blast Radius Correlation Visualizer</h2>
-              <span class="text-xs font-normal text-purple-400 font-mono px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800">Dynamic Multi-Threat Engine</span>
+              <span class="text-sm font-normal text-purple-400 font-mono px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800">Dynamic Multi-Threat Engine</span>
             </div>
-            <p class="text-xs text-slate-400 mt-0.5">Showing exact traversal path: Threat Actor ➔ Weaponized CVE ➔ Exposed Asset ➔ Crown Jewel Enclave.</p>
+            <p class="text-sm text-slate-400 mt-0.5">Showing exact traversal path: Threat Actor ➔ Weaponized CVE ➔ Exposed Asset ➔ Crown Jewel Enclave.</p>
           </div>
 
           <!-- Incident Selector & Canvas Zoom Controls -->
           <div class="flex flex-wrap items-center gap-2">
             <!-- Dynamic Incident Picker -->
-            <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs font-mono">
+            <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-mono">
               <span class="text-slate-400">Incident:</span>
               <select id="graphIncidentSelect" onchange="renderBlastGraph(this.value, 'cve')" class="bg-transparent text-cyan-300 font-bold focus:outline-none cursor-pointer">
                 <!-- Dynamically populated -->
@@ -240,11 +240,11 @@
             </div>
 
             <!-- Zoom Controls -->
-            <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-mono text-slate-300">
+            <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-sm font-mono text-slate-300">
               <button onclick="zoomGraph(1.2)" class="px-2.5 py-1 hover:bg-slate-800 rounded text-cyan-300" title="Zoom In">+</button>
               <button onclick="zoomGraph(0.8)" class="px-2.5 py-1 hover:bg-slate-800 rounded text-cyan-300" title="Zoom Out">−</button>
               <button onclick="resetGraphView()" class="px-2.5 py-1 hover:bg-slate-800 rounded text-slate-400" title="Reset View">Reset</button>
-              <span class="px-2 text-[10px] text-slate-500 border-l border-slate-800" id="zoomLevelIndicator">100%</span>
+              <span class="px-2 text-[12px] text-slate-500 border-l border-slate-800" id="zoomLevelIndicator">100%</span>
             </div>
           </div>
         </div>
@@ -253,7 +253,7 @@
         <div class="relative flex-1 min-h-[520px] rounded-xl border border-slate-800 bg-[#06080e] grid-pattern overflow-hidden flex items-center justify-center select-none" id="graphContainer">
           
           <!-- Graph Legend -->
-          <div class="absolute top-3 left-3 z-10 bg-slate-900/85 backdrop-blur p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono space-y-1 pointer-events-none">
+          <div class="absolute top-3 left-3 z-10 bg-slate-900/85 backdrop-blur p-2.5 rounded-lg border border-slate-800 text-[13px] font-mono space-y-1 pointer-events-none">
             <div class="text-slate-400 font-bold mb-1">GRAPH ENTITIES:</div>
             <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Threat Actor Group</div>
             <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Weaponized CVE / Exploit</div>
@@ -296,10 +296,10 @@
             <div>
               <div class="flex items-center justify-between pb-2 border-b border-slate-800">
                 <div class="flex items-center gap-1.5 overflow-hidden">
-                  <span class="text-xs font-mono text-cyan-400 font-bold" id="drawerType">NODE DETAILS</span>
-                  <span class="text-[10px] font-mono text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80 truncate" id="drawerAlertId"></span>
+                  <span class="text-sm font-mono text-cyan-400 font-bold" id="drawerType">NODE DETAILS</span>
+                  <span class="text-[12px] font-mono text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80 truncate" id="drawerAlertId"></span>
                 </div>
-                <button onclick="closeGraphDrawer()" class="text-slate-400 hover:text-white text-xs p-1">✕</button>
+                <button onclick="closeGraphDrawer()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
               </div>
               <div class="mt-3 space-y-3" id="drawerBody"></div>
             </div>
@@ -314,12 +314,12 @@
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-base font-semibold text-white">Connectors & Integrations Management</h2>
-              <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">Bi-Directional Engine</span>
+              <span class="text-sm font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">Bi-Directional Engine</span>
             </div>
-            <p class="text-xs text-slate-400 mt-0.5">Plug in Open Source feeds, commercial intelligence, internal CMDBs, cloud providers, and custom enterprise APIs.</p>
+            <p class="text-sm text-slate-400 mt-0.5">Plug in Open Source feeds, commercial intelligence, internal CMDBs, cloud providers, and custom enterprise APIs.</p>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="openAddConnectorModal()" class="px-3.5 py-1.5 rounded-lg text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-900/40 transition">
+            <button onclick="openAddConnectorModal()" class="px-3.5 py-1.5 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-900/40 transition">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               <span>+ Add Connector / Custom API</span>
             </button>
@@ -329,13 +329,13 @@
         <!-- Category Tabs -->
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div class="flex flex-wrap items-center gap-2">
-            <button onclick="filterConnectors('all')" id="connTab-all" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">All Connectors (<span id="countConnAll">16</span>)</button>
-            <button onclick="filterConnectors('intel')" id="connTab-intel" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Threat Intel Feeds (<span id="countConnIntel">5</span>)</button>
-            <button onclick="filterConnectors('asset')" id="connTab-asset" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Asset & Telemetry (<span id="countConnAsset">4</span>)</button>
-            <button onclick="filterConnectors('soar')" id="connTab-soar" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Triage, SIEM & SOAR (<span id="countConnSoar">4</span>)</button>
-            <button onclick="filterConnectors('custom')" id="connTab-custom" class="conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Custom Internal APIs (<span id="countConnCustom">3</span>)</button>
+            <button onclick="filterConnectors('all')" id="connTab-all" class="conn-filter-tab px-3 py-1 rounded-md text-sm font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">All Connectors (<span id="countConnAll">16</span>)</button>
+            <button onclick="filterConnectors('intel')" id="connTab-intel" class="conn-filter-tab px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Threat Intel Feeds (<span id="countConnIntel">5</span>)</button>
+            <button onclick="filterConnectors('asset')" id="connTab-asset" class="conn-filter-tab px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Asset & Telemetry (<span id="countConnAsset">4</span>)</button>
+            <button onclick="filterConnectors('soar')" id="connTab-soar" class="conn-filter-tab px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Triage, SIEM & SOAR (<span id="countConnSoar">4</span>)</button>
+            <button onclick="filterConnectors('custom')" id="connTab-custom" class="conn-filter-tab px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Custom Internal APIs (<span id="countConnCustom">3</span>)</button>
           </div>
-          <div class="text-xs font-mono text-slate-400 flex items-center gap-2">
+          <div class="text-sm font-mono text-slate-400 flex items-center gap-2">
             <span>Protocol Support:</span>
             <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">REST</span>
             <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">TAXII 2.1</span>
@@ -353,9 +353,9 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-base font-semibold text-white">Threat Intelligence Ingestion Feeds</h2>
-            <p class="text-xs text-slate-400">Real-time ingestion pipelines: CISA KEV, EPSS Daily Scores, TAXII 2.1 Feeds & Threat Actors</p>
+            <p class="text-sm text-slate-400">Real-time ingestion pipelines: CISA KEV, EPSS Daily Scores, TAXII 2.1 Feeds & Threat Actors</p>
           </div>
-          <button onclick="openAddFeedModal()" class="px-3 py-1.5 rounded-lg text-xs bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition">
+          <button onclick="openAddFeedModal()" class="px-3 py-1.5 rounded-lg text-sm bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition">
             + Connect New Feed
           </button>
         </div>
@@ -364,35 +364,35 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="h-9 w-9 rounded-lg bg-rose-950/60 border border-rose-800/60 flex items-center justify-center text-rose-400 font-mono font-bold text-xs">KEV</div>
+              <div class="h-9 w-9 rounded-lg bg-rose-950/60 border border-rose-800/60 flex items-center justify-center text-rose-400 font-mono font-bold text-sm">KEV</div>
               <div>
-                <div class="text-xs font-semibold text-white">CISA KEV Catalog</div>
-                <div class="text-[11px] text-slate-400">1,280 Known Exploits</div>
+                <div class="text-sm font-semibold text-white">CISA KEV Catalog</div>
+                <div class="text-[13px] text-slate-400">1,280 Known Exploits</div>
               </div>
             </div>
-            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">SYNCED (5m ago)</span>
+            <span class="text-[12px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">SYNCED (5m ago)</span>
           </div>
 
           <div class="p-3.5 rounded-xl bg-slate-900/60 border border-blue-800 flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="h-9 w-9 rounded-lg bg-blue-950/60 border border-blue-800/60 flex items-center justify-center text-blue-400 font-mono font-bold text-xs">EPSS</div>
+              <div class="h-9 w-9 rounded-lg bg-blue-950/60 border border-blue-800/60 flex items-center justify-center text-blue-400 font-mono font-bold text-sm">EPSS</div>
               <div>
-                <div class="text-xs font-semibold text-white">FIRST.org EPSS v3</div>
-                <div class="text-[11px] text-slate-400">240k Exploit Predictions</div>
+                <div class="text-sm font-semibold text-white">FIRST.org EPSS v3</div>
+                <div class="text-[13px] text-slate-400">240k Exploit Predictions</div>
               </div>
             </div>
-            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">SYNCED (Daily)</span>
+            <span class="text-[12px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">SYNCED (Daily)</span>
           </div>
 
           <div class="p-3.5 rounded-xl bg-slate-900/60 border border-purple-800 flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="h-9 w-9 rounded-lg bg-purple-950/60 border border-purple-800/60 flex items-center justify-center text-purple-400 font-mono font-bold text-xs">ATT&CK</div>
+              <div class="h-9 w-9 rounded-lg bg-purple-950/60 border border-purple-800/60 flex items-center justify-center text-purple-400 font-mono font-bold text-sm">ATT&CK</div>
               <div>
-                <div class="text-xs font-semibold text-white">MITRE ATT&CK v15</div>
-                <div class="text-[11px] text-slate-400">Enterprise Tactics & TTPs</div>
+                <div class="text-sm font-semibold text-white">MITRE ATT&CK v15</div>
+                <div class="text-[13px] text-slate-400">Enterprise Tactics & TTPs</div>
               </div>
             </div>
-            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">LOADED</span>
+            <span class="text-[12px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">LOADED</span>
           </div>
         </div>
 
@@ -400,10 +400,10 @@
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex flex-wrap justify-between items-center gap-2">
             <div>
-              <span class="text-xs font-semibold text-slate-200">OpenCTI-Compatible Feed Subscriptions</span>
-              <p class="text-[10px] text-slate-400 mt-0.5">Subscribe directly to any STIX 2.1 bundle URL, TAXII 2.1 collection, or RSS/Atom security feed.</p>
+              <span class="text-sm font-semibold text-slate-200">OpenCTI-Compatible Feed Subscriptions</span>
+              <p class="text-[12px] text-slate-400 mt-0.5">Subscribe directly to any STIX 2.1 bundle URL, TAXII 2.1 collection, or RSS/Atom security feed.</p>
             </div>
-            <button onclick="openAddFeedModal()" class="px-2.5 py-1 rounded-lg text-[11px] bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-medium transition">
+            <button onclick="openAddFeedModal()" class="px-2.5 py-1 rounded-lg text-[13px] bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-medium transition">
               + Add STIX / TAXII / RSS Feed
             </button>
           </div>
@@ -413,22 +413,22 @@
         <!-- Threat Actor Library -->
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex justify-between items-center">
-            <span class="text-xs font-semibold text-slate-200">Tracked Threat Actors Targeting Our Sector</span>
-            <span class="text-[10px] font-mono text-slate-400">Financial & Cloud Infra</span>
+            <span class="text-sm font-semibold text-slate-200">Tracked Threat Actors Targeting Our Sector</span>
+            <span class="text-[12px] font-mono text-slate-400">Financial & Cloud Infra</span>
           </div>
-          <div class="divide-y divide-slate-800/60 text-xs">
+          <div class="divide-y divide-slate-800/60 text-sm">
             <div class="p-3 flex items-center justify-between hover:bg-slate-800/30 transition">
               <div class="space-y-1">
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-white">APT-88 (Vanguard Viper)</span>
-                  <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono text-[10px]">Active Campaign</span>
+                  <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono text-[12px]">Active Campaign</span>
                 </div>
-                <p class="text-[11px] text-slate-400">State-sponsored group exploiting perimeter VPNs & gateway edge software (HyperMesh, Citrix, Fortinet).</p>
+                <p class="text-[13px] text-slate-400">State-sponsored group exploiting perimeter VPNs & gateway edge software (HyperMesh, Citrix, Fortinet).</p>
               </div>
-              <div class="text-right font-mono text-[11px] space-y-1">
+              <div class="text-right font-mono text-[13px] space-y-1">
                 <div class="text-rose-400 font-semibold">T1190 (Exploit Public App)</div>
                 <div class="flex items-center gap-2 justify-end">
-                  <button onclick="openGraphForAlert('CORR-2026-091')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-200 text-[10px] font-mono">🕸️ Graph</button>
+                  <button onclick="openGraphForAlert('CORR-2026-091')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-200 text-[12px] font-mono">🕸️ Graph</button>
                   <button onclick="openDeepDive('CORR-2026-091')" class="text-cyan-400 hover:underline">Inspect Details →</button>
                 </div>
               </div>
@@ -438,14 +438,14 @@
               <div class="space-y-1">
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-white">VoltSpider / CryptoMining botnet</span>
-                  <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono text-[10px]">Active Botnet</span>
+                  <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono text-[12px]">Active Botnet</span>
                 </div>
-                <p class="text-[11px] text-slate-400">Targeting Kubernetes API and KubeProxy filters for cluster hijack and billing API compromise.</p>
+                <p class="text-[13px] text-slate-400">Targeting Kubernetes API and KubeProxy filters for cluster hijack and billing API compromise.</p>
               </div>
-              <div class="text-right font-mono text-[11px] space-y-1">
+              <div class="text-right font-mono text-[13px] space-y-1">
                 <div class="text-rose-400 font-semibold">T1611 (Escape to Host)</div>
                 <div class="flex items-center gap-2 justify-end">
-                  <button onclick="openGraphForAlert('CORR-2026-065')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-200 text-[10px] font-mono">🕸️ Graph</button>
+                  <button onclick="openGraphForAlert('CORR-2026-065')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-200 text-[12px] font-mono">🕸️ Graph</button>
                   <button onclick="openDeepDive('CORR-2026-065')" class="text-cyan-400 hover:underline">Inspect Details →</button>
                 </div>
               </div>
@@ -455,14 +455,14 @@
               <div class="space-y-1">
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-white">FIN-12 (Silver Fox)</span>
-                  <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px]">Opportunistic</span>
+                  <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[12px]">Opportunistic</span>
                 </div>
-                <p class="text-[11px] text-slate-400">Ransomware broker targeting unpatched authentication proxies and healthcare/fintech APIs.</p>
+                <p class="text-[13px] text-slate-400">Ransomware broker targeting unpatched authentication proxies and healthcare/fintech APIs.</p>
               </div>
-              <div class="text-right font-mono text-[11px] space-y-1">
+              <div class="text-right font-mono text-[13px] space-y-1">
                 <div class="text-amber-400 font-semibold">T1078 (Valid Accounts)</div>
                 <div class="flex items-center gap-2 justify-end">
-                  <button onclick="openGraphForAlert('CORR-2026-088')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-200 text-[10px] font-mono">🕸️ Graph</button>
+                  <button onclick="openGraphForAlert('CORR-2026-088')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-200 text-[12px] font-mono">🕸️ Graph</button>
                   <button onclick="openDeepDive('CORR-2026-088')" class="text-cyan-400 hover:underline">Inspect Details →</button>
                 </div>
               </div>
@@ -476,9 +476,9 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-base font-semibold text-white">Internal Asset & Software Inventory</h2>
-            <p class="text-xs text-slate-400">Synced via AWS/Azure Cloud Connectors, Osquery, and CrowdStrike EDR Agent Telemetry</p>
+            <p class="text-sm text-slate-400">Synced via AWS/Azure Cloud Connectors, Osquery, and CrowdStrike EDR Agent Telemetry</p>
           </div>
-          <div class="flex items-center gap-2 text-xs font-mono">
+          <div class="flex items-center gap-2 text-sm font-mono">
             <span class="px-2 py-1 rounded bg-slate-800 text-slate-300">1,420 Total Hosts</span>
             <span class="px-2 py-1 rounded bg-rose-950 text-rose-300 border border-rose-800">42 Internet-Exposed</span>
           </div>
@@ -486,8 +486,8 @@
 
         <!-- Asset Table -->
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-950/80 text-slate-400 font-mono text-[11px] border-b border-slate-800">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-950/80 text-slate-400 font-mono text-[13px] border-b border-slate-800">
               <tr>
                 <th class="p-3">Asset Name & IP</th>
                 <th class="p-3">Environment / Cloud</th>
@@ -512,23 +512,23 @@
       <!-- Modal Header -->
       <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
         <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-xl bg-rose-950 border border-rose-700/80 flex items-center justify-center text-rose-400 font-bold font-mono text-sm" id="modalRiskBadge">
+          <div class="h-10 w-10 rounded-xl bg-rose-950 border border-rose-700/80 flex items-center justify-center text-rose-400 font-bold font-mono text-base" id="modalRiskBadge">
             99
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <span class="text-sm font-bold text-white font-mono" id="modalCveId">CVE-2026-44201</span>
-              <span id="modalKevBadge" class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[10px] font-mono font-bold">CISA KEV</span>
-              <span id="modalPriorityBadge" class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold">P1-CRITICAL</span>
+              <span class="text-base font-bold text-white font-mono" id="modalCveId">CVE-2026-44201</span>
+              <span id="modalKevBadge" class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[12px] font-mono font-bold">CISA KEV</span>
+              <span id="modalPriorityBadge" class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[12px] font-mono font-bold">P1-CRITICAL</span>
             </div>
-            <h3 class="text-sm font-semibold text-slate-200 mt-0.5" id="modalCveTitle">HyperMesh Edge Gateway Remote Code Execution</h3>
+            <h3 class="text-base font-semibold text-slate-200 mt-0.5" id="modalCveTitle">HyperMesh Edge Gateway Remote Code Execution</h3>
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="pivotToGraphFromModal()" class="px-3 py-1.5 rounded-lg bg-purple-950/80 hover:bg-purple-900 border border-purple-700 text-purple-200 text-xs font-mono flex items-center gap-1.5 transition">
+          <button onclick="pivotToGraphFromModal()" class="px-3 py-1.5 rounded-lg bg-purple-950/80 hover:bg-purple-900 border border-purple-700 text-purple-200 text-sm font-mono flex items-center gap-1.5 transition">
             <span>🕸️ View in Blast Radius Graph</span>
           </button>
-          <button onclick="closeDeepDiveModal()" class="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-sm">✕</button>
+          <button onclick="closeDeepDiveModal()" class="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-base">✕</button>
         </div>
       </div>
 
@@ -540,8 +540,8 @@
           <div class="lg:col-span-5 space-y-4">
             <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
               <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                <span class="text-xs font-mono font-bold text-cyan-400">RISK FACTOR SPIDER CHART</span>
-                <span class="text-[10px] font-mono text-slate-400">Composite Dimensions</span>
+                <span class="text-sm font-mono font-bold text-cyan-400">RISK FACTOR SPIDER CHART</span>
+                <span class="text-[12px] font-mono text-slate-400">Composite Dimensions</span>
               </div>
 
               <!-- DYNAMIC SVG SPIDER / RADAR CHART -->
@@ -549,7 +549,7 @@
                 <svg id="spiderChartSvg" width="280" height="260" viewBox="0 0 280 260"></svg>
               </div>
 
-              <div class="grid grid-cols-2 gap-2 text-[10px] font-mono pt-1 border-t border-slate-800/80 text-slate-400">
+              <div class="grid grid-cols-2 gap-2 text-[12px] font-mono pt-1 border-t border-slate-800/80 text-slate-400">
                 <div class="flex items-center gap-1.5">
                   <span class="h-2 w-2 rounded-full bg-rose-500"></span>
                   <span>Active Incident Risk</span>
@@ -562,16 +562,16 @@
             </div>
 
             <!-- CVSS & EPSS Metric Breakdown -->
-            <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+            <div class="grid grid-cols-2 gap-3 font-mono text-sm">
               <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
-                <span class="text-slate-400 text-[10px] block">CVSS v3.1 BASE</span>
+                <span class="text-slate-400 text-[12px] block">CVSS v3.1 BASE</span>
                 <span class="text-rose-400 font-bold text-lg" id="modalCvssVal">9.8</span>
-                <span class="text-[10px] text-slate-500 block truncate" id="modalCvssVector">CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</span>
+                <span class="text-[12px] text-slate-500 block truncate" id="modalCvssVector">CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</span>
               </div>
               <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
-                <span class="text-slate-400 text-[10px] block">EPSS PREDICTION</span>
+                <span class="text-slate-400 text-[12px] block">EPSS PREDICTION</span>
                 <span class="text-cyan-400 font-bold text-lg" id="modalEpssVal">96.4%</span>
-                <span class="text-[10px] text-emerald-400 block" id="modalEpssSub">Top 0.5% weaponized</span>
+                <span class="text-[12px] text-emerald-400 block" id="modalEpssSub">Top 0.5% weaponized</span>
               </div>
             </div>
           </div>
@@ -581,24 +581,24 @@
             
             <!-- Contextual Correlation Verdict -->
             <div class="p-4 rounded-xl bg-gradient-to-r from-rose-950/40 via-slate-900 to-slate-900 border border-rose-900/60 space-y-2">
-              <div class="flex items-center gap-2 text-rose-400 font-mono text-xs font-bold">
+              <div class="flex items-center gap-2 text-rose-400 font-mono text-sm font-bold">
                 <span>🔥 WHY THIS IS PRIORITIZED (CORRELATION REASONING)</span>
               </div>
-              <p class="text-xs text-slate-300 leading-relaxed" id="modalCorrelationExplanation"></p>
+              <p class="text-sm text-slate-300 leading-relaxed" id="modalCorrelationExplanation"></p>
             </div>
 
             <!-- Impacted Assets Table -->
             <div class="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-              <div class="p-2.5 bg-slate-950 border-b border-slate-800 text-[11px] font-mono text-slate-300 font-bold flex justify-between">
+              <div class="p-2.5 bg-slate-950 border-b border-slate-800 text-[13px] font-mono text-slate-300 font-bold flex justify-between">
                 <span>INTERNAL ENVIRONMENT MATCH</span>
                 <span class="text-cyan-400" id="modalHostBadge">1 Host Reached</span>
               </div>
-              <div class="p-3 text-xs space-y-2 font-mono">
+              <div class="p-3 text-sm space-y-2 font-mono">
                 <div class="flex justify-between items-center text-slate-300">
                   <span class="text-white font-bold" id="modalHostName">gw-prod-east-01.company.net</span>
-                  <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]" id="modalExposureBadge">Internet Exposed</span>
+                  <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[12px]" id="modalExposureBadge">Internet Exposed</span>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-400 pt-1">
+                <div class="grid grid-cols-2 gap-2 text-[13px] text-slate-400 pt-1">
                   <div>Cloud/VPC: <span class="text-slate-200" id="modalHostEnv">AWS us-east-1</span></div>
                   <div>IP Address: <span class="text-slate-200" id="modalHostIp">198.51.100.24</span></div>
                   <div>Running Software: <span class="text-rose-300" id="modalHostSw">HyperMesh Gateway 2.4.1</span></div>
@@ -609,19 +609,19 @@
 
             <!-- MITRE ATT&CK Kill Chain -->
             <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-3 space-y-2">
-              <div class="text-[11px] font-mono text-slate-400 font-bold">ATTACKER EXECUTION CHAIN (MITRE ATT&CK)</div>
-              <div class="flex flex-wrap items-center gap-1.5 text-xs font-mono" id="modalKillChain"></div>
+              <div class="text-[13px] font-mono text-slate-400 font-bold">ATTACKER EXECUTION CHAIN (MITRE ATT&CK)</div>
+              <div class="flex flex-wrap items-center gap-1.5 text-sm font-mono" id="modalKillChain"></div>
             </div>
 
             <!-- Triage Actions -->
             <div class="flex items-center gap-2 pt-2">
-              <button onclick="executeModalAction('isolate')" class="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-mono text-xs font-semibold shadow-lg shadow-rose-900/40 transition">
+              <button onclick="executeModalAction('isolate')" class="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-mono text-sm font-semibold shadow-lg shadow-rose-900/40 transition">
                 🛡️ Isolate Host via EDR
               </button>
-              <button onclick="executeModalAction('waf')" class="flex-1 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-semibold shadow-lg shadow-cyan-900/40 transition">
+              <button onclick="executeModalAction('waf')" class="flex-1 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-sm font-semibold shadow-lg shadow-cyan-900/40 transition">
                 ⚡ Deploy WAF Virtual Patch
               </button>
-              <button onclick="executeModalAction('jira')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs transition">
+              <button onclick="executeModalAction('jira')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-sm transition">
                 🎫 Sync to Jira
               </button>
             </div>
@@ -641,47 +641,47 @@
       
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
-          <h3 class="text-sm font-bold text-white font-mono flex items-center gap-2">
+          <h3 class="text-base font-bold text-white font-mono flex items-center gap-2">
             <span>PLUG IN NEW CONNECTOR OR CUSTOM API</span>
-            <span class="text-[10px] text-emerald-400 px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800">WIZARD</span>
+            <span class="text-[12px] text-emerald-400 px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800">WIZARD</span>
           </h3>
-          <p class="text-xs text-slate-400 mt-0.5">Integrate open source, commercial vendors, or custom in-house REST/GraphQL endpoints.</p>
+          <p class="text-sm text-slate-400 mt-0.5">Integrate open source, commercial vendors, or custom in-house REST/GraphQL endpoints.</p>
         </div>
         <button onclick="closeAddConnectorModal()" class="text-slate-400 hover:text-white">✕</button>
       </div>
 
       <!-- Quick Template Selector -->
       <div class="space-y-1.5">
-        <label class="text-[11px] font-mono text-slate-300 uppercase tracking-wide">Quick Preset Templates</label>
+        <label class="text-[13px] font-mono text-slate-300 uppercase tracking-wide">Quick Preset Templates</label>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <button type="button" onclick="applyPreset('crowdstrike')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-cyan-500/60 text-left text-xs transition">
+          <button type="button" onclick="applyPreset('crowdstrike')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-cyan-500/60 text-left text-sm transition">
             <div class="font-bold text-white flex items-center gap-1.5">🦅 CrowdStrike</div>
-            <div class="text-[10px] text-slate-400">Falcon Intel & EDR</div>
+            <div class="text-[12px] text-slate-400">Falcon Intel & EDR</div>
           </button>
-          <button type="button" onclick="applyPreset('aws')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-amber-500/60 text-left text-xs transition">
+          <button type="button" onclick="applyPreset('aws')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-amber-500/60 text-left text-sm transition">
             <div class="font-bold text-white flex items-center gap-1.5">☁️ AWS Cloud</div>
-            <div class="text-[10px] text-slate-400">Config & Security Hub</div>
+            <div class="text-[12px] text-slate-400">Config & Security Hub</div>
           </button>
-          <button type="button" onclick="applyPreset('misp')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-purple-500/60 text-left text-xs transition">
+          <button type="button" onclick="applyPreset('misp')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-purple-500/60 text-left text-sm transition">
             <div class="font-bold text-white flex items-center gap-1.5">🛡️ MISP / TAXII</div>
-            <div class="text-[10px] text-slate-400">Open Source Threat Feed</div>
+            <div class="text-[12px] text-slate-400">Open Source Threat Feed</div>
           </button>
-          <button type="button" onclick="applyPreset('custom')" class="p-2 rounded-lg border border-emerald-500/60 bg-emerald-950/20 text-left text-xs transition">
+          <button type="button" onclick="applyPreset('custom')" class="p-2 rounded-lg border border-emerald-500/60 bg-emerald-950/20 text-left text-sm transition">
             <div class="font-bold text-emerald-400 flex items-center gap-1.5">⚙️ Custom API</div>
-            <div class="text-[10px] text-slate-400">Internal REST / Webhook</div>
+            <div class="text-[12px] text-slate-400">Internal REST / Webhook</div>
           </button>
         </div>
       </div>
 
       <!-- Form Inputs -->
-      <form id="connectorForm" onsubmit="handleSaveConnector(event)" class="space-y-4 text-xs font-sans">
+      <form id="connectorForm" onsubmit="handleSaveConnector(event)" class="space-y-4 text-sm font-sans">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Connector Name *</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Connector Name *</label>
             <input type="text" id="connName" required placeholder="e.g. Internal Microservices CMDB" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500">
           </div>
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Connector Category *</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Connector Category *</label>
             <select id="connCategory" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
               <option value="intel">Threat Intelligence (OSINT / Commercial Feed)</option>
               <option value="asset">Internal Asset & Telemetry (CMDB / EDR / Cloud)</option>
@@ -692,16 +692,16 @@
         </div>
 
         <div>
-          <label class="block text-[11px] font-mono text-slate-300 mb-1">Base Endpoint URL or Webhook *</label>
+          <label class="block text-[13px] font-mono text-slate-300 mb-1">Base Endpoint URL or Webhook *</label>
           <div class="flex">
-            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-800 bg-slate-900 text-slate-400 font-mono text-[11px]">HTTPS://</span>
+            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-800 bg-slate-900 text-slate-400 font-mono text-[13px]">HTTPS://</span>
             <input type="text" id="connUrl" required placeholder="api.security.internal.corp/v1/telemetry" class="w-full bg-slate-950 border border-slate-800 rounded-r-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Authentication Method</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Authentication Method</label>
             <select id="connAuthType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
               <option value="bearer">Bearer Token / JWT</option>
               <option value="apikey">API Key (X-API-KEY Header)</option>
@@ -711,14 +711,14 @@
             </select>
           </div>
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Secret / Token Value</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Secret / Token Value</label>
             <input type="password" id="connToken" placeholder="••••••••••••••••••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Sync Cadence / Ingestion Mode</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Sync Cadence / Ingestion Mode</label>
             <select id="connCadence" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
               <option value="Real-time Webhook">Real-time Webhook (Event-Driven Push)</option>
               <option value="Every 5 Minutes">Continuous Polling (Every 5 Minutes)</option>
@@ -727,7 +727,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Schema Parser / Normalization</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Schema Parser / Normalization</label>
             <select id="connParser" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
               <option value="STIX 2.1 Standard">STIX 2.1 Standard Format</option>
               <option value="Generic JSON (Auto-Map CPE/CVE)">Generic JSON (Auto-Map IP/Host/CVE)</option>
@@ -737,15 +737,15 @@
           </div>
         </div>
 
-        <div id="testResultBanner" class="p-2.5 rounded-lg border text-xs font-mono hidden"></div>
+        <div id="testResultBanner" class="p-2.5 rounded-lg border text-sm font-mono hidden"></div>
 
         <div class="flex items-center justify-between pt-3 border-t border-slate-800">
-          <button type="button" onclick="testConnectionHandshake()" id="btnTestConn" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs flex items-center gap-1.5 transition">
+          <button type="button" onclick="testConnectionHandshake()" id="btnTestConn" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-sm flex items-center gap-1.5 transition">
             <span>🧪 Test Connection Handshake</span>
           </button>
           <div class="flex items-center gap-2">
-            <button type="button" onclick="closeAddConnectorModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">Cancel</button>
-            <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition">Save & Activate Connector</button>
+            <button type="button" onclick="closeAddConnectorModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition">Save & Activate Connector</button>
           </div>
         </div>
       </form>
@@ -759,23 +759,23 @@
 
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
-          <h3 class="text-sm font-bold text-white font-mono flex items-center gap-2">
+          <h3 class="text-base font-bold text-white font-mono flex items-center gap-2">
             <span id="feedModalTitle">SUBSCRIBE TO STIX / TAXII / RSS FEED</span>
-            <span class="text-[10px] text-cyan-400 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800">OpenCTI Compatible</span>
+            <span class="text-[12px] text-cyan-400 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800">OpenCTI Compatible</span>
           </h3>
-          <p class="text-xs text-slate-400 mt-0.5">Point directly at a STIX 2.1 bundle, TAXII 2.1 collection, or an RSS/Atom security feed URL.</p>
+          <p class="text-sm text-slate-400 mt-0.5">Point directly at a STIX 2.1 bundle, TAXII 2.1 collection, or an RSS/Atom security feed URL.</p>
         </div>
         <button onclick="closeAddFeedModal()" class="text-slate-400 hover:text-white">✕</button>
       </div>
 
-      <form id="feedForm" onsubmit="handleSaveFeed(event)" class="space-y-4 text-xs font-sans">
+      <form id="feedForm" onsubmit="handleSaveFeed(event)" class="space-y-4 text-sm font-sans">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Feed Name *</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Feed Name *</label>
             <input type="text" id="feedName" required placeholder="e.g. OpenCTI OpenSource STIX Bundle" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
           </div>
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Feed Type *</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Feed Type *</label>
             <select id="feedType" onchange="updateFeedUrlPlaceholder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
               <option value="stix">STIX 2.1 Bundle (JSON over HTTPS)</option>
               <option value="taxii">TAXII 2.1 Collection</option>
@@ -785,21 +785,21 @@
         </div>
 
         <div>
-          <label class="block text-[11px] font-mono text-slate-300 mb-1">Feed URL *</label>
+          <label class="block text-[13px] font-mono text-slate-300 mb-1">Feed URL *</label>
           <div class="flex">
-            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-800 bg-slate-900 text-slate-400 font-mono text-[11px]">HTTPS://</span>
+            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-800 bg-slate-900 text-slate-400 font-mono text-[13px]">HTTPS://</span>
             <input type="text" id="feedUrl" required placeholder="opencti.example.org/taxii2/collections/..." class="w-full bg-slate-950 border border-slate-800 rounded-r-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
           </div>
         </div>
 
         <div>
-          <label class="block text-[11px] font-mono text-slate-300 mb-1">Source / Description</label>
+          <label class="block text-[13px] font-mono text-slate-300 mb-1">Source / Description</label>
           <textarea id="feedDesc" rows="2" placeholder="e.g. Community OpenCTI connector re-publishing MISP galaxy clusters as a public STIX bundle." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 resize-none"></textarea>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Poll Cadence</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Poll Cadence</label>
             <select id="feedCadence" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
               <option value="Every 5 Minutes">Continuous Polling (Every 5 Minutes)</option>
               <option value="Hourly Sync">Batch Sync (Hourly)</option>
@@ -807,20 +807,20 @@
             </select>
           </div>
           <div>
-            <label class="block text-[11px] font-mono text-slate-300 mb-1">Auth Token (optional, TAXII only)</label>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Auth Token (optional, TAXII only)</label>
             <input type="password" id="feedToken" placeholder="••••••••••••••••••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
           </div>
         </div>
 
-        <div id="feedTestResultBanner" class="p-2.5 rounded-lg border text-xs font-mono hidden"></div>
+        <div id="feedTestResultBanner" class="p-2.5 rounded-lg border text-sm font-mono hidden"></div>
 
         <div class="flex items-center justify-between pt-3 border-t border-slate-800">
-          <button type="button" onclick="testFeedHandshake()" id="btnTestFeed" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs flex items-center gap-1.5 transition">
+          <button type="button" onclick="testFeedHandshake()" id="btnTestFeed" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-sm flex items-center gap-1.5 transition">
             <span>🧪 Test Feed Handshake</span>
           </button>
           <div class="flex items-center gap-2">
-            <button type="button" onclick="closeAddFeedModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">Cancel</button>
-            <button type="submit" id="btnSaveFeed" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition">Subscribe to Feed</button>
+            <button type="button" onclick="closeAddFeedModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Cancel</button>
+            <button type="submit" id="btnSaveFeed" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-sm transition">Subscribe to Feed</button>
           </div>
         </div>
       </form>
@@ -834,10 +834,10 @@
 
       <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
         <div>
-          <h3 class="text-sm font-bold text-white font-mono flex items-center gap-2">
+          <h3 class="text-base font-bold text-white font-mono flex items-center gap-2">
             <span>🚀 ACTIVATE PENDING CHANGES</span>
           </h3>
-          <p class="text-[11px] text-slate-400 mt-0.5 font-mono">
+          <p class="text-[13px] text-slate-400 mt-0.5 font-mono">
             <span id="activateVersionFrom">v2.6</span> <span class="text-slate-500">➔</span> <span id="activateVersionTo" class="text-cyan-300 font-bold">v2.7</span>
           </p>
         </div>
@@ -847,10 +847,10 @@
       <div class="p-4 overflow-y-auto space-y-2" id="pendingChangesList"></div>
 
       <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2">
-        <span class="text-[10px] text-slate-500 font-mono">Session-only staging — nothing is pushed to GitHub by this button.</span>
+        <span class="text-[12px] text-slate-500 font-mono">Session-only staging — nothing is pushed to GitHub by this button.</span>
         <div class="flex items-center gap-2 shrink-0">
-          <button type="button" onclick="closeActivateModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">Cancel</button>
-          <button type="button" onclick="confirmActivateDeploy()" id="btnConfirmActivate" class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold text-xs transition flex items-center gap-1.5">
+          <button type="button" onclick="closeActivateModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Cancel</button>
+          <button type="button" onclick="confirmActivateDeploy()" id="btnConfirmActivate" class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold text-sm transition flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 animate-spin" id="activateSpinner" style="display:none;" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
             <span id="btnConfirmActivateText">Activate & Deploy</span>
           </button>
@@ -864,13 +864,13 @@
   <div id="modalOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-[#0b0f19] border border-slate-700 w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h3 class="text-sm font-semibold text-white font-mono" id="modalTitle">ACTION CONFIRMATION</h3>
+        <h3 class="text-base font-semibold text-white font-mono" id="modalTitle">ACTION CONFIRMATION</h3>
         <button onclick="closeModal()" class="text-slate-400 hover:text-white">✕</button>
       </div>
-      <p class="text-xs text-slate-300 leading-relaxed" id="modalMessage"></p>
+      <p class="text-sm text-slate-300 leading-relaxed" id="modalMessage"></p>
       <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeModal()" class="px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700">Dismiss</button>
-        <button onclick="confirmModalAction()" id="modalConfirmBtn" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white">Execute</button>
+        <button onclick="closeModal()" class="px-3 py-1.5 rounded-lg text-sm bg-slate-800 text-slate-300 hover:bg-slate-700">Dismiss</button>
+        <button onclick="confirmModalAction()" id="modalConfirmBtn" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white">Execute</button>
       </div>
     </div>
   </div>
@@ -1309,38 +1309,38 @@
         typeLabel.textContent = 'CORRELATED VULNERABILITY';
         body.innerHTML = `
           <div class="text-base font-bold text-amber-400 font-mono">${alert.cve}</div>
-          <div class="text-xs text-white font-semibold">${alert.title}</div>
+          <div class="text-sm text-white font-semibold">${alert.title}</div>
           
-          <div class="grid grid-cols-2 gap-2 mt-2 font-mono text-xs">
+          <div class="grid grid-cols-2 gap-2 mt-2 font-mono text-sm">
             <div class="p-2 bg-slate-900 rounded border border-slate-800">
-              <span class="text-slate-400 block text-[10px]">CVSS BASE</span>
-              <span class="${cvssColor} font-bold text-sm">${alert.cvss} ${cvssSeverity}</span>
+              <span class="text-slate-400 block text-[12px]">CVSS BASE</span>
+              <span class="${cvssColor} font-bold text-base">${alert.cvss} ${cvssSeverity}</span>
             </div>
             <div class="p-2 bg-slate-900 rounded border border-slate-800">
-              <span class="text-slate-400 block text-[10px]">EPSS PROBABILITY</span>
-              <span class="text-cyan-400 font-bold text-sm">${alert.epss}%</span>
+              <span class="text-slate-400 block text-[12px]">EPSS PROBABILITY</span>
+              <span class="text-cyan-400 font-bold text-base">${alert.epss}%</span>
             </div>
           </div>
 
           ${alert.inKev ? `
-            <div class="p-2 rounded bg-rose-950/40 border border-rose-800 text-[11px] text-rose-300 font-mono mt-2 flex items-center gap-1.5">
+            <div class="p-2 rounded bg-rose-950/40 border border-rose-800 text-[13px] text-rose-300 font-mono mt-2 flex items-center gap-1.5">
               <span>🚨</span>
               <span>Listed on CISA KEV (Known Exploited Vulnerabilities)</span>
             </div>
           ` : `
-            <div class="p-2 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-400 font-mono mt-2">
+            <div class="p-2 rounded bg-slate-900 border border-slate-800 text-[13px] text-slate-400 font-mono mt-2">
               Not listed on CISA KEV (Monitored via EPSS)
             </div>
           `}
 
-          <p class="text-xs text-slate-300 leading-relaxed mt-2">${alert.summary}</p>
+          <p class="text-sm text-slate-300 leading-relaxed mt-2">${alert.summary}</p>
         `;
 
         actions.innerHTML = `
-          <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-purple-600 hover:bg-purple-500 text-white mb-2 flex items-center justify-center gap-1.5">
+          <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white mb-2 flex items-center justify-center gap-1.5">
             <span>📊 Open Spider Chart & Metrics</span>
           </button>
-          <button onclick="takeAction('${alert.id}', 'waf', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-cyan-600 hover:bg-cyan-500 text-white">
+          <button onclick="takeAction('${alert.id}', 'waf', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-cyan-600 hover:bg-cyan-500 text-white">
             ⚡ Push Virtual Patch for ${alert.cve}
           </button>
         `;
@@ -1349,10 +1349,10 @@
         typeLabel.textContent = 'THREAT ACTOR GROUP';
         body.innerHTML = `
           <div class="text-base font-bold text-white">${alert.actor}</div>
-          <div class="text-xs text-rose-400 font-mono">${alert.actorType}</div>
-          <p class="text-xs text-slate-300 leading-relaxed mt-2">${alert.actorDesc}</p>
+          <div class="text-sm text-rose-400 font-mono">${alert.actorType}</div>
+          <p class="text-sm text-slate-300 leading-relaxed mt-2">${alert.actorDesc}</p>
           
-          <div class="space-y-1 text-xs font-mono pt-2 border-t border-slate-800">
+          <div class="space-y-1 text-sm font-mono pt-2 border-t border-slate-800">
             <div class="text-slate-400">Weaponized CVE: <span class="text-amber-400 font-bold">${alert.cve}</span></div>
             <div class="text-slate-400">Primary TTP: <span class="text-white">${alert.actorTtp}</span></div>
             <div class="text-slate-400">Campaign Target: <span class="text-cyan-300">${alert.targetHost}</span></div>
@@ -1360,17 +1360,17 @@
         `;
 
         actions.innerHTML = `
-          <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-purple-600 hover:bg-purple-500 text-white mb-2">View Full Attack Profile</button>
-          <button onclick="showMockModal('Pivot Threat Actor', 'Extracting known IP ranges, ASN blocks, and hashes for ${alert.actor} to perimeter firewalls...')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-rose-600 hover:bg-rose-500 text-white">Extract IOCs to Firewall</button>
+          <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white mb-2">View Full Attack Profile</button>
+          <button onclick="showMockModal('Pivot Threat Actor', 'Extracting known IP ranges, ASN blocks, and hashes for ${alert.actor} to perimeter firewalls...')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-rose-600 hover:bg-rose-500 text-white">Extract IOCs to Firewall</button>
         `;
       }
       else if (nodeType === 'asset') {
         typeLabel.textContent = 'EXPOSED INTERNAL HOST';
         body.innerHTML = `
           <div class="text-base font-bold text-cyan-300 truncate">${alert.targetHost}</div>
-          <div class="text-xs text-slate-400 font-mono">IP: ${alert.hostIp} ${alert.internetFacing ? '(Public Route)' : '(Private Subnet)'}</div>
+          <div class="text-sm text-slate-400 font-mono">IP: ${alert.hostIp} ${alert.internetFacing ? '(Public Route)' : '(Private Subnet)'}</div>
           
-          <div class="space-y-1.5 text-xs font-mono pt-2 border-t border-slate-800">
+          <div class="space-y-1.5 text-sm font-mono pt-2 border-t border-slate-800">
             <div class="text-slate-400">Cloud / Subnet: <span class="text-white">${alert.environment}</span></div>
             <div class="text-slate-400">Software: <span class="text-rose-400 font-bold">${alert.software}</span></div>
             <div class="text-slate-400">Exposure: <span class="${alert.internetFacing ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${alert.internetFacing ? 'Direct Internet Facing' : 'Private Only'}</span></div>
@@ -1379,10 +1379,10 @@
         `;
 
         actions.innerHTML = `
-          <button onclick="takeAction('${alert.id}', 'isolate', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-rose-600 hover:bg-rose-500 text-white mb-2">
+          <button onclick="takeAction('${alert.id}', 'isolate', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-rose-600 hover:bg-rose-500 text-white mb-2">
             🚨 Isolate Host (${alert.hostIp})
           </button>
-          <button onclick="takeAction('${alert.id}', 'jira', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">
+          <button onclick="takeAction('${alert.id}', 'jira', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">
             🎫 Create Remediation Ticket
           </button>
         `;
@@ -1392,26 +1392,26 @@
         typeLabel.textContent = 'INTERMEDIATE INFRASTRUCTURE';
         body.innerHTML = `
           <div class="text-base font-bold text-white">${sec.name}</div>
-          <div class="text-xs text-cyan-400 font-mono">${sec.type} // ${sec.sw}</div>
-          <p class="text-xs text-slate-300 leading-relaxed mt-2">${sec.desc}</p>
+          <div class="text-sm text-cyan-400 font-mono">${sec.type} // ${sec.sw}</div>
+          <p class="text-sm text-slate-300 leading-relaxed mt-2">${sec.desc}</p>
         `;
         actions.innerHTML = `
-          <button onclick="showMockModal('Inspect Route', 'Inspecting network policy routes from ${alert.targetHost} to ${sec.name}... 0 unauthorized open ports.')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">Inspect Network Route</button>
+          <button onclick="showMockModal('Inspect Route', 'Inspecting network policy routes from ${alert.targetHost} to ${sec.name}... 0 unauthorized open ports.')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">Inspect Network Route</button>
         `;
       }
       else if (nodeType === 'crownJewel') {
         typeLabel.textContent = 'CROWN JEWEL / TARGET';
         body.innerHTML = `
           <div class="text-base font-bold text-purple-300">${alert.crownJewel}</div>
-          <div class="text-xs text-rose-400 font-mono font-bold">TIER-0 CRITICAL ENTERPRISE ASSET</div>
-          <p class="text-xs text-slate-300 leading-relaxed mt-2">${alert.crownJewelDesc}</p>
-          <div class="p-2 rounded bg-rose-950/40 border border-rose-800 text-[10px] text-rose-300 font-mono mt-2">
+          <div class="text-sm text-rose-400 font-mono font-bold">TIER-0 CRITICAL ENTERPRISE ASSET</div>
+          <p class="text-sm text-slate-300 leading-relaxed mt-2">${alert.crownJewelDesc}</p>
+          <div class="p-2 rounded bg-rose-950/40 border border-rose-800 text-[12px] text-rose-300 font-mono mt-2">
             ⚠️ Threat path connects unpatched edge directly to this database with no intermediate zero-trust gateway.
           </div>
         `;
 
         actions.innerHTML = `
-          <button onclick="showMockModal('Sever Route', 'Severing ingress network routes and VPC peering to ${alert.crownJewel} to prevent lateral movement.')" class="w-full py-1.5 rounded-lg text-xs font-mono bg-purple-600 hover:bg-purple-500 text-white">Sever Inbound Ingress Route</button>
+          <button onclick="showMockModal('Sever Route', 'Severing ingress network routes and VPC peering to ${alert.crownJewel} to prevent lateral movement.')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white">Sever Inbound Ingress Route</button>
         `;
       }
     }
@@ -1577,16 +1577,16 @@
 
       const kevBadge = document.getElementById('modalKevBadge');
       if (alert.inKev) {
-        kevBadge.className = 'px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[10px] font-mono font-bold';
+        kevBadge.className = 'px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[12px] font-mono font-bold';
         kevBadge.textContent = '🚨 IN CISA KEV';
       } else {
-        kevBadge.className = 'px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-mono';
+        kevBadge.className = 'px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[12px] font-mono';
         kevBadge.textContent = 'NOT IN KEV';
       }
 
       document.getElementById('modalPriorityBadge').textContent = alert.priority;
       document.getElementById('modalExposureBadge').textContent = alert.internetFacing ? 'Internet Exposed' : 'Internal VPC';
-      document.getElementById('modalExposureBadge').className = alert.internetFacing ? 'px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]' : 'px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]';
+      document.getElementById('modalExposureBadge').className = alert.internetFacing ? 'px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[12px]' : 'px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[12px]';
 
       document.getElementById('modalCorrelationExplanation').innerHTML = `
         This vulnerability is prioritized at <strong class="text-rose-400">${alert.riskScore}/100</strong> because <strong class="text-white">${alert.actor}</strong> is weaponizing this exploit in real-world campaigns${alert.inKev ? ' (confirmed on CISA KEV)' : ''}, directly impacting your internal host <strong class="text-cyan-300">${alert.targetHost}</strong> (${alert.environment}) running unpatched software with lateral movement reachability to <strong class="text-purple-300">${alert.crownJewel}</strong>.
@@ -1640,7 +1640,7 @@
 
       if (filtered.length === 0) {
         container.innerHTML = `
-          <div class="p-8 text-center border border-slate-800 rounded-xl bg-slate-900/20 text-slate-400 text-xs font-mono">
+          <div class="p-8 text-center border border-slate-800 rounded-xl bg-slate-900/20 text-slate-400 text-sm font-mono">
             No matching correlated threats found.
           </div>
         `;
@@ -1659,61 +1659,61 @@
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="space-y-1">
               <div class="flex flex-wrap items-center gap-2">
-                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${badgeColor}">${alert.priority}</span>
-                <span onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Click to view Attack Path & Blast Radius Graph for ${alert.cve}" class="font-mono text-xs font-bold text-cyan-400 hover:text-cyan-200 hover:underline bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/80 cursor-pointer flex items-center gap-1 shadow-sm">
+                <span class="px-2 py-0.5 rounded text-[12px] font-mono font-bold border ${badgeColor}">${alert.priority}</span>
+                <span onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Click to view Attack Path & Blast Radius Graph for ${alert.cve}" class="font-mono text-sm font-bold text-cyan-400 hover:text-cyan-200 hover:underline bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/80 cursor-pointer flex items-center gap-1 shadow-sm">
                   ${alert.cve}
-                  <span class="text-[10px] text-purple-400">🕸️</span>
+                  <span class="text-[12px] text-purple-400">🕸️</span>
                 </span>
-                ${alert.inKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[9px] font-mono font-bold">🚨 IN CISA KEV</span>' : ''}
-                ${alert.internetFacing ? '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 text-[9px] font-mono">🌐 INTERNET-FACING</span>' : '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-mono">🔒 INTERNAL ONLY</span>'}
-                <span class="text-[10px] font-mono text-slate-400">${alert.id}</span>
-                <span class="text-[10px] text-cyan-400 font-mono ml-1 group-hover:inline hidden" onclick="openDeepDive('${alert.id}')">🔍 Inspect Spider Chart ➔</span>
+                ${alert.inKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[11px] font-mono font-bold">🚨 IN CISA KEV</span>' : ''}
+                ${alert.internetFacing ? '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 text-[11px] font-mono">🌐 INTERNET-FACING</span>' : '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-mono">🔒 INTERNAL ONLY</span>'}
+                <span class="text-[12px] font-mono text-slate-400">${alert.id}</span>
+                <span class="text-[12px] text-cyan-400 font-mono ml-1 group-hover:inline hidden" onclick="openDeepDive('${alert.id}')">🔍 Inspect Spider Chart ➔</span>
               </div>
-              <h3 onclick="openDeepDive('${alert.id}')" class="text-sm font-semibold text-white tracking-tight group-hover:text-cyan-200 transition cursor-pointer">${alert.title}</h3>
+              <h3 onclick="openDeepDive('${alert.id}')" class="text-base font-semibold text-white tracking-tight group-hover:text-cyan-200 transition cursor-pointer">${alert.title}</h3>
             </div>
 
             <!-- Risk Score Widget -->
             <div class="flex items-center gap-3" onclick="openDeepDive('${alert.id}')">
               <div class="text-right">
-                <div class="text-[10px] font-mono text-slate-400">CORRELATED RISK</div>
-                <div class="text-lg font-mono font-bold ${scoreColor.split(' ')[0]}">${alert.riskScore} <span class="text-xs text-slate-400">/ 100</span></div>
+                <div class="text-[12px] font-mono text-slate-400">CORRELATED RISK</div>
+                <div class="text-lg font-mono font-bold ${scoreColor.split(' ')[0]}">${alert.riskScore} <span class="text-sm text-slate-400">/ 100</span></div>
               </div>
-              <div class="h-9 w-9 rounded-lg border flex items-center justify-center font-mono font-bold text-sm ${scoreColor}">
+              <div class="h-9 w-9 rounded-lg border flex items-center justify-center font-mono font-bold text-base ${scoreColor}">
                 ${alert.riskScore}
               </div>
             </div>
           </div>
 
           <!-- Correlation Proof Box -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 p-2.5 rounded-lg bg-slate-950/70 border border-slate-800/70 text-[11px] font-mono cursor-pointer" onclick="openDeepDive('${alert.id}')">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 p-2.5 rounded-lg bg-slate-950/70 border border-slate-800/70 text-[13px] font-mono cursor-pointer" onclick="openDeepDive('${alert.id}')">
             <div>
-              <span class="text-slate-400 block text-[9px]">MATCHED ENVIRONMENT ASSET:</span>
-              <span class="text-cyan-300 font-semibold truncate block">${alert.targetHost}</span>
-              <span class="text-slate-400 text-[10px]">${alert.software}</span>
+              <span class="text-slate-400 block text-[11px]">MATCHED ENVIRONMENT ASSET:</span>
+              <span class="text-cyan-300 font-semibold block">${alert.targetHost}</span>
+              <span class="text-slate-400 text-[12px]">${alert.software}</span>
             </div>
             <div>
-              <span class="text-slate-400 block text-[9px]">EXTERNAL THREAT SIGNAL:</span>
-              <span class="text-rose-300 font-semibold block truncate">${alert.actor}</span>
-              <span class="text-slate-400 text-[10px]">EPSS: ${alert.epss}% | CVSS: ${alert.cvss}</span>
+              <span class="text-slate-400 block text-[11px]">EXTERNAL THREAT SIGNAL:</span>
+              <span class="text-rose-300 font-semibold block">${alert.actor}</span>
+              <span class="text-slate-400 text-[12px]">EPSS: ${alert.epss}% | CVSS: ${alert.cvss}</span>
             </div>
             <div>
-              <span class="text-slate-400 block text-[9px]">BLAST RADIUS / IMPACT:</span>
-              <span class="text-purple-300 font-semibold block truncate">${alert.crownJewelPath}</span>
-              <span class="text-slate-400 text-[10px]">${alert.mitreTtp}</span>
+              <span class="text-slate-400 block text-[11px]">BLAST RADIUS / IMPACT:</span>
+              <span class="text-purple-300 font-semibold block">${alert.crownJewelPath}</span>
+              <span class="text-slate-400 text-[12px]">${alert.mitreTtp}</span>
             </div>
           </div>
 
           <!-- Summary and Fast Triage Actions -->
           <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <p class="text-xs text-slate-400 max-w-xl leading-relaxed">${alert.summary}</p>
+            <p class="text-sm text-slate-400 max-w-xl leading-relaxed">${alert.summary}</p>
             <div class="flex items-center gap-2">
-              <button onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Open Attack Path in Blast Radius Graph" class="px-2.5 py-1 rounded bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-800 text-xs font-mono transition flex items-center gap-1.5 shadow-sm">
+              <button onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Open Attack Path in Blast Radius Graph" class="px-2.5 py-1 rounded bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-800 text-sm font-mono transition flex items-center gap-1.5 shadow-sm">
                 <span>🕸️ View in Graph</span>
               </button>
-              <button onclick="event.stopPropagation(); openDeepDive('${alert.id}')" title="Open 6-Axis Spider Chart & Full Metrics" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-mono transition flex items-center gap-1">
+              <button onclick="event.stopPropagation(); openDeepDive('${alert.id}')" title="Open 6-Axis Spider Chart & Full Metrics" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-mono transition flex items-center gap-1">
                 <span>📊 Spider Chart</span>
               </button>
-              <button onclick="event.stopPropagation(); takeAction('${alert.id}', 'isolate', '${alert.targetHost}')" class="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs transition">
+              <button onclick="event.stopPropagation(); takeAction('${alert.id}', 'isolate', '${alert.targetHost}')" class="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-sm transition">
                 🛡️ Isolate
               </button>
             </div>
@@ -1753,8 +1753,8 @@
               <div class="flex items-center gap-2.5">
                 <span class="text-xl p-1.5 rounded-lg bg-slate-900 border border-slate-800">${conn.icon}</span>
                 <div>
-                  <h4 class="text-xs font-bold text-white leading-tight">${conn.name}</h4>
-                  <span class="text-[10px] font-mono text-cyan-400">${conn.type}</span>
+                  <h4 class="text-sm font-bold text-white leading-tight">${conn.name}</h4>
+                  <span class="text-[12px] font-mono text-cyan-400">${conn.type}</span>
                 </div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
@@ -1762,11 +1762,11 @@
                 <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
               </label>
             </div>
-            <p class="text-[11px] text-slate-400 leading-relaxed">${conn.desc}</p>
+            <p class="text-[13px] text-slate-400 leading-relaxed">${conn.desc}</p>
           </div>
 
           <div class="pt-2 border-t border-slate-800/70 space-y-2">
-            <div class="flex items-center justify-between text-[10px] font-mono">
+            <div class="flex items-center justify-between text-[12px] font-mono">
               <div class="flex items-center gap-1.5 text-slate-400">
                 <span class="h-1.5 w-1.5 rounded-full ${conn.enabled ? 'bg-emerald-400' : 'bg-slate-600'}"></span>
                 <span>${conn.sync}</span>
@@ -1775,10 +1775,10 @@
             </div>
 
             <div class="flex items-center gap-2 pt-1">
-              <button onclick="testExistingConnector('${conn.name}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition">
+              <button onclick="testExistingConnector('${conn.name}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 🧪 Test Sync
               </button>
-              <button onclick="editConnector('${conn.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition">
+              <button onclick="editConnector('${conn.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 ⚙️ Config
               </button>
             </div>
@@ -1791,9 +1791,9 @@
     function filterConnectors(category) {
       currentConnFilter = category;
       document.querySelectorAll('.conn-filter-tab').forEach(b => {
-        b.className = 'conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent';
+        b.className = 'conn-filter-tab px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent';
       });
-      document.getElementById('connTab-' + category).className = 'conn-filter-tab px-3 py-1 rounded-md text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+      document.getElementById('connTab-' + category).className = 'conn-filter-tab px-3 py-1 rounded-md text-sm font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
       renderConnectors(category);
     }
 
@@ -1876,18 +1876,18 @@
       const banner = document.getElementById('testResultBanner');
       const url = document.getElementById('connUrl').value;
       if (!url) {
-        banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-rose-950/60 border-rose-800 text-rose-300';
+        banner.className = 'p-2.5 rounded-lg border text-sm font-mono bg-rose-950/60 border-rose-800 text-rose-300';
         banner.textContent = '❌ Please enter a valid base URL first.';
         banner.classList.remove('hidden');
         return;
       }
 
-      banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-cyan-950/60 border-cyan-800 text-cyan-300';
+      banner.className = 'p-2.5 rounded-lg border text-sm font-mono bg-cyan-950/60 border-cyan-800 text-cyan-300';
       banner.textContent = '⏳ Probing endpoint TLS certificate & handshake...';
       banner.classList.remove('hidden');
 
       setTimeout(() => {
-        banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-emerald-950/60 border-emerald-800 text-emerald-300';
+        banner.className = 'p-2.5 rounded-lg border text-sm font-mono bg-emerald-950/60 border-emerald-800 text-emerald-300';
         banner.innerHTML = `✅ <strong>HANDSHAKE SUCCESSFUL (HTTP 200 OK)</strong><br>Endpoint reached in 82ms. Valid JSON schema payload received.`;
       }, 700);
     }
@@ -1950,8 +1950,8 @@
               <div class="flex items-center gap-2">
                 <span class="text-lg p-1.5 rounded-lg bg-slate-900 border border-slate-800">${meta.icon}</span>
                 <div>
-                  <h4 class="text-xs font-bold text-white leading-tight">${feed.name}</h4>
-                  <span class="text-[10px] font-mono text-${meta.color}-400">${meta.label}</span>
+                  <h4 class="text-sm font-bold text-white leading-tight">${feed.name}</h4>
+                  <span class="text-[12px] font-mono text-${meta.color}-400">${meta.label}</span>
                 </div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
@@ -1959,12 +1959,12 @@
                 <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
               </label>
             </div>
-            <div class="text-[10px] font-mono text-slate-500 truncate" title="https://${feed.url}">https://${feed.url}</div>
-            <p class="text-[11px] text-slate-400 leading-relaxed">${feed.desc || 'No source description provided.'}</p>
+            <div class="text-[12px] font-mono text-slate-500 truncate" title="https://${feed.url}">https://${feed.url}</div>
+            <p class="text-[13px] text-slate-400 leading-relaxed">${feed.desc || 'No source description provided.'}</p>
           </div>
 
           <div class="pt-2 border-t border-slate-800/70 space-y-2">
-            <div class="flex items-center justify-between text-[10px] font-mono">
+            <div class="flex items-center justify-between text-[12px] font-mono">
               <div class="flex items-center gap-1.5 text-slate-400">
                 <span class="h-1.5 w-1.5 rounded-full ${feed.enabled ? 'bg-emerald-400' : 'bg-slate-600'}"></span>
                 <span>${feed.lastSync}</span>
@@ -1972,13 +1972,13 @@
               <span class="text-slate-400">${feed.cadence}</span>
             </div>
             <div class="flex items-center gap-2 pt-1">
-              <button onclick="testExistingFeed('${feed.id}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition">
+              <button onclick="testExistingFeed('${feed.id}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 🧪 Test
               </button>
-              <button onclick="openEditFeedModal('${feed.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition">
+              <button onclick="openEditFeedModal('${feed.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 ✏️ Edit
               </button>
-              <button onclick="removeFeed('${feed.id}')" class="px-2.5 py-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-900 text-[11px] font-mono transition">
+              <button onclick="removeFeed('${feed.id}')" class="px-2.5 py-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-900 text-[13px] font-mono transition">
                 🗑️
               </button>
             </div>
@@ -2064,18 +2064,18 @@
       const banner = document.getElementById('feedTestResultBanner');
       const url = document.getElementById('feedUrl').value;
       if (!url) {
-        banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-rose-950/60 border-rose-800 text-rose-300';
+        banner.className = 'p-2.5 rounded-lg border text-sm font-mono bg-rose-950/60 border-rose-800 text-rose-300';
         banner.textContent = '❌ Please enter a feed URL first.';
         banner.classList.remove('hidden');
         return;
       }
 
-      banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-cyan-950/60 border-cyan-800 text-cyan-300';
+      banner.className = 'p-2.5 rounded-lg border text-sm font-mono bg-cyan-950/60 border-cyan-800 text-cyan-300';
       banner.textContent = '⏳ Fetching feed source and validating schema...';
       banner.classList.remove('hidden');
 
       setTimeout(() => {
-        banner.className = 'p-2.5 rounded-lg border text-xs font-mono bg-emerald-950/60 border-emerald-800 text-emerald-300';
+        banner.className = 'p-2.5 rounded-lg border text-sm font-mono bg-emerald-950/60 border-emerald-800 text-emerald-300';
         banner.innerHTML = `✅ <strong>FEED REACHABLE (HTTP 200 OK)</strong><br>Valid ${document.getElementById('feedType').value.toUpperCase()} payload parsed successfully.`;
       }, 700);
     }
@@ -2145,18 +2145,18 @@
 
       const list = document.getElementById('pendingChangesList');
       if (pendingChanges.length === 0) {
-        list.innerHTML = `<div class="p-6 text-center text-xs font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">No pending changes this session. Add a connector, subscribe to a feed, or take a triage action to stage something here.</div>`;
+        list.innerHTML = `<div class="p-6 text-center text-sm font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">No pending changes this session. Add a connector, subscribe to a feed, or take a triage action to stage something here.</div>`;
       } else {
         list.innerHTML = pendingChanges.map(change => `
-          <div class="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
+          <div class="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-sm">
             <div class="flex items-center gap-2 overflow-hidden">
               <span>${CHANGE_TYPE_ICON[change.type] || '•'}</span>
               <div class="overflow-hidden">
                 <div class="text-slate-200 font-semibold truncate">${change.type}</div>
-                <div class="text-slate-400 text-[11px] truncate">${change.summary}</div>
+                <div class="text-slate-400 text-[13px] truncate">${change.summary}</div>
               </div>
             </div>
-            <span class="text-[10px] text-slate-500 font-mono shrink-0">${timeAgo(change.at)}</span>
+            <span class="text-[12px] text-slate-500 font-mono shrink-0">${timeAgo(change.at)}</span>
           </div>
         `).join('');
       }
@@ -2206,9 +2206,9 @@
     function setFilter(type) {
       currentFilter = type;
       document.querySelectorAll('.filter-chip').forEach(btn => {
-        btn.className = 'filter-chip px-3 py-1 rounded-md text-xs font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent';
+        btn.className = 'filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent';
       });
-      document.getElementById('filter-' + type).className = 'filter-chip px-3 py-1 rounded-md text-xs font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40';
+      document.getElementById('filter-' + type).className = 'filter-chip px-3 py-1 rounded-md text-sm font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40';
       renderAlerts(type, document.getElementById('triageSearchInput').value);
     }
 
@@ -2225,25 +2225,25 @@
         tr.className = 'hover:bg-slate-800/30 transition';
         tr.innerHTML = `
           <td class="p-3">
-            <div class="font-bold text-white text-xs">${asset.name}</div>
-            <div class="text-[10px] text-slate-400">${asset.ip}</div>
+            <div class="font-bold text-white text-sm">${asset.name}</div>
+            <div class="text-[12px] text-slate-400">${asset.ip}</div>
           </td>
-          <td class="p-3 text-slate-300 text-xs">${asset.cloud}</td>
+          <td class="p-3 text-slate-300 text-sm">${asset.cloud}</td>
           <td class="p-3">
-            <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 text-xs">${asset.sw}</span>
+            <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 text-sm">${asset.sw}</span>
           </td>
           <td class="p-3">
-            ${asset.exposed ? '<span class="text-rose-400 text-xs font-bold">● Public Ingress</span>' : '<span class="text-emerald-400 text-xs">● Private VPC</span>'}
+            ${asset.exposed ? '<span class="text-rose-400 text-sm font-bold">● Public Ingress</span>' : '<span class="text-emerald-400 text-sm">● Private VPC</span>'}
           </td>
           <td class="p-3">
             ${asset.cves.map(c => {
               const matchedAlert = MOCK_ALERTS.find(a => c.includes(a.cve));
               const alertId = matchedAlert ? matchedAlert.id : 'CORR-2026-065';
-              return `<button onclick="openGraphForAlert('${alertId}')" title="View Blast Radius Graph for ${c}" class="px-1.5 py-0.5 rounded ${c.includes('P1') ? 'bg-rose-950 text-rose-300 border border-rose-800 hover:underline' : 'bg-slate-800 text-slate-300'} text-[10px]">${c}</button>`;
+              return `<button onclick="openGraphForAlert('${alertId}')" title="View Blast Radius Graph for ${c}" class="px-1.5 py-0.5 rounded ${c.includes('P1') ? 'bg-rose-950 text-rose-300 border border-rose-800 hover:underline' : 'bg-slate-800 text-slate-300'} text-[12px]">${c}</button>`;
             }).join(' ')}
           </td>
           <td class="p-3 text-right">
-            <span class="text-[10px] text-emerald-400 font-mono">${asset.edr}</span>
+            <span class="text-[12px] text-emerald-400 font-mono">${asset.edr}</span>
           </td>
         `;
         tbody.appendChild(tr);
@@ -2256,7 +2256,7 @@
         if (view) view.classList.add('hidden');
         const nav = document.getElementById('nav-' + t);
         if (nav) {
-          nav.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition';
+          nav.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition';
         }
       });
 
@@ -2265,7 +2265,7 @@
 
       const activeNav = document.getElementById('nav-' + tabName);
       if (activeNav) {
-        activeNav.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-white bg-slate-800/90 border border-slate-700/60 shadow-sm transition';
+        activeNav.className = 'nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-white bg-slate-800/90 border border-slate-700/60 shadow-sm transition';
       }
 
       if (tabName === 'graph') {
