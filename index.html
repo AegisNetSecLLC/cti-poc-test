@@ -59,8 +59,7 @@
       </button>
 
       <div class="text-[12px] text-slate-500 leading-relaxed border-t border-slate-800 pt-3">
-        Demo account: <span class="text-cyan-300 font-mono">analyst1</span> / <span class="text-cyan-300 font-mono">demo1234</span><br>
-        Session-only auth — accounts and logins reset on page refresh. Create more accounts under <span class="text-slate-300">Settings → User Setup</span> once signed in.
+        Session-only auth — accounts and logins reset on page refresh. Manage accounts under <span class="text-slate-300">Settings → User Setup</span> once signed in.
       </div>
     </form>
   </div>
@@ -602,6 +601,9 @@
             <span class="text-sm font-semibold text-slate-200">User Setup <span class="text-[11px] text-slate-500 font-normal">(demo accounts — session only)</span></span>
           </div>
           <div class="p-4 space-y-4">
+            <div id="userFormModeBanner" class="hidden text-[12px] text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-3 py-2">
+              Editing <span id="userFormModeName" class="font-semibold"></span> — changes save to this account.
+            </div>
             <form onsubmit="createMockUser(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="text-[12px] text-slate-400 font-mono block mb-1">Display Name</label>
@@ -625,8 +627,9 @@
                 <input id="newUserPassword" type="password" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="••••••••">
               </div>
               <div id="newUserErrorMsg" class="hidden sm:col-span-2 text-[13px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"></div>
-              <div class="sm:col-span-2">
-                <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">+ Create Account</button>
+              <div class="sm:col-span-2 flex items-center gap-2">
+                <button type="submit" id="userFormSubmitBtn" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">+ Create Account</button>
+                <button type="button" id="userFormCancelBtn" onclick="cancelEditMockUser()" class="hidden px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-sm font-semibold transition">Cancel</button>
               </div>
             </form>
 
@@ -1422,6 +1425,8 @@
       document.getElementById('loginGate').classList.remove('hidden');
     }
 
+    let editingUsername = null;
+
     function createMockUser(event) {
       event.preventDefault();
       const displayName = document.getElementById('newUserDisplayName').value.trim();
@@ -1435,17 +1440,63 @@
         errorBox.classList.remove('hidden');
         return;
       }
-      if (MOCK_USERS.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+
+      const editingUser = editingUsername ? MOCK_USERS.find(u => u.username === editingUsername) : null;
+      const usernameTaken = MOCK_USERS.some(u => u !== editingUser && u.username.toLowerCase() === username.toLowerCase());
+      if (usernameTaken) {
         errorBox.textContent = `Username "${username}" is already taken this session.`;
         errorBox.classList.remove('hidden');
         return;
       }
 
       errorBox.classList.add('hidden');
-      MOCK_USERS.push({ username, password, displayName, role });
+
+      if (editingUser) {
+        editingUser.displayName = displayName;
+        editingUser.role = role;
+        editingUser.username = username;
+        editingUser.password = password;
+        if (currentUser === editingUser) {
+          document.getElementById('headerUserAvatar').textContent = initials(currentUser.displayName);
+          document.getElementById('headerUserName').textContent = currentUser.displayName;
+          document.getElementById('headerUserRole').textContent = currentUser.role;
+        }
+        cancelEditMockUser();
+        renderSettingsPanel();
+      } else {
+        MOCK_USERS.push({ username, password, displayName, role });
+        document.getElementById('newUserDisplayName').value = '';
+        document.getElementById('newUserUsername').value = '';
+        document.getElementById('newUserPassword').value = '';
+        renderUserSetupList();
+      }
+    }
+
+    function editMockUser(username) {
+      const user = MOCK_USERS.find(u => u.username === username);
+      if (!user) return;
+      editingUsername = username;
+      document.getElementById('newUserDisplayName').value = user.displayName;
+      document.getElementById('newUserRole').value = user.role;
+      document.getElementById('newUserUsername').value = user.username;
+      document.getElementById('newUserPassword').value = user.password;
+      document.getElementById('newUserErrorMsg').classList.add('hidden');
+      document.getElementById('userFormModeBanner').classList.remove('hidden');
+      document.getElementById('userFormModeName').textContent = user.displayName;
+      document.getElementById('userFormSubmitBtn').textContent = 'Save Changes';
+      document.getElementById('userFormCancelBtn').classList.remove('hidden');
+      document.getElementById('newUserDisplayName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function cancelEditMockUser() {
+      editingUsername = null;
       document.getElementById('newUserDisplayName').value = '';
       document.getElementById('newUserUsername').value = '';
       document.getElementById('newUserPassword').value = '';
+      document.getElementById('newUserErrorMsg').classList.add('hidden');
+      document.getElementById('userFormModeBanner').classList.add('hidden');
+      document.getElementById('userFormSubmitBtn').textContent = '+ Create Account';
+      document.getElementById('userFormCancelBtn').classList.add('hidden');
       renderUserSetupList();
     }
 
@@ -1454,6 +1505,7 @@
         showMockModal('Cannot Remove', 'You cannot remove the account you are currently logged in as.');
         return;
       }
+      if (editingUsername === username) cancelEditMockUser();
       const idx = MOCK_USERS.findIndex(u => u.username === username);
       if (idx !== -1) MOCK_USERS.splice(idx, 1);
       renderUserSetupList();
@@ -1471,7 +1523,10 @@
               <div class="text-[11px] text-slate-500 font-mono truncate">${u.username} / ${'•'.repeat(Math.max(6, u.password.length))}</div>
             </div>
           </div>
-          <button onclick="removeMockUser('${u.username}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition shrink-0">Remove</button>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="editMockUser('${u.username}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-cyan-900/60 text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-700/60 transition">Edit</button>
+            <button onclick="removeMockUser('${u.username}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition">Remove</button>
+          </div>
         </div>
       `).join('');
     }
