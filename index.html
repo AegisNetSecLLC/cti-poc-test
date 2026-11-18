@@ -1180,6 +1180,7 @@
     const MOCK_ALERTS = [
       {
         id: 'CORR-2026-065',
+        graphTopology: 'diamond',
         title: 'KubeProxy Ingress Filter Authorization Bypass',
         cve: 'CVE-2026-10332',
         cvss: 9.1,
@@ -1230,6 +1231,7 @@
       },
       {
         id: 'CORR-2026-091',
+        graphTopology: 'longchain',
         title: 'Active Exploitation: HyperMesh Gateway Remote Code Execution',
         cve: 'CVE-2026-44201',
         cvss: 9.8,
@@ -1253,6 +1255,12 @@
           type: 'AUTH PROXY',
           sw: 'Cloudflare Tunnel Daemon',
           desc: 'Internal single-sign-on routing proxy.'
+        },
+        hop2: {
+          name: 'pci-db-proxy-02.internal',
+          type: 'DB PROXY',
+          sw: 'PgBouncer 1.21',
+          desc: 'Connection pooler sitting directly in front of the PCI vault database — the last hop before the data itself.'
         },
         crownJewel: 'PCI-VAULT-DB Production Cluster',
         crownJewelPath: 'Connects directly to PCI-VAULT-DB via VPC Peering',
@@ -1280,6 +1288,7 @@
       },
       {
         id: 'CORR-2026-088',
+        graphTopology: 'direct',
         title: 'SSO Session Bypass & Privileged Token Impersonation',
         cve: 'CVE-2026-21890',
         cvss: 8.7,
@@ -1330,6 +1339,7 @@
       },
       {
         id: 'CORR-2026-074',
+        graphTopology: 'contained',
         title: 'NexusDB Remote Unauthenticated Memory Disclosure',
         cve: 'CVE-2025-99411',
         cvss: 7.5,
@@ -1380,6 +1390,7 @@
       },
       {
         id: 'CORR-2026-051',
+        graphTopology: 'sparse',
         title: 'OpenSSH Terrapin Prefix Truncation Weakness',
         cve: 'CVE-2023-48795',
         cvss: 5.9,
@@ -1779,6 +1790,246 @@
       return str.length > max ? str.slice(0, max - 1).trim() + '…' : str;
     }
 
+    // ==========================================
+    // ATTACK GRAPH ENGINE — shape varies per alert
+    // (branching, long chains, direct hits, sparse/
+    // low-confidence paths, dense mesh) instead of a
+    // single fixed template, so severity reads in the
+    // graph's shape, not just its labels.
+    // ==========================================
+    const NODE_ROLE_STYLE = {
+      actor:           { radius: 50, fill: '#1e1022', stroke: '#f43f5e', glow: true,  dashed: false },
+      mutedActor:      { radius: 42, fill: '#171b24', stroke: '#64748b', glow: false, dashed: true  },
+      cve:             { radius: 58, fill: '#251608', stroke: '#f59e0b', glow: true,  dashed: false },
+      asset:           { radius: 54, fill: '#082029', stroke: '#06b6d4', glow: true,  dashed: false },
+      asset2:          { radius: 50, fill: '#082029', stroke: '#06b6d4', glow: true,  dashed: false },
+      hop:             { radius: 48, fill: '#0c1822', stroke: '#0284c7', glow: false, dashed: false },
+      hop2:            { radius: 46, fill: '#0c1822', stroke: '#0284c7', glow: false, dashed: false },
+      crownJewel:      { radius: 54, fill: '#1c0f2b', stroke: '#a855f7', glow: true,  dashed: false },
+      mutedCrownJewel: { radius: 42, fill: '#171b24', stroke: '#64748b', glow: false, dashed: true  }
+    };
+
+    function actorRoleFor(alert) {
+      return /No Active|Known Exploit Kit/.test(alert.actor) ? 'mutedActor' : 'actor';
+    }
+
+    // Builds a {nodes, edges} graph whose shape depends on alert.graphTopology:
+    //  - 'sparse'    : cve -> asset -> crownJewel (no actor; low-confidence findings)
+    //  - 'direct'    : actor -> cve -> asset -> crownJewel (short, no lateral hop)
+    //  - 'contained' : actor -> cve -> asset -> hop -> crownJewel (single path, low-value target)
+    //  - 'diamond'   : actor -> cve -> asset -> {hop, crownJewel} -> crownJewel (branching/converging)
+    //  - 'longchain' : actor -> cve -> asset -> hop -> hop2 -> crownJewel (extra lateral hop)
+    //  - 'mesh'      : actor -> cve -> asset -> {hop, asset2} -> crownJewel, plus a direct bypass (densest)
+    function buildAttackGraph(alert) {
+      const topology = alert.graphTopology || 'diamond';
+      const actorRole = actorRoleFor(alert);
+      const crownRole = (topology === 'contained' || topology === 'sparse') ? 'mutedCrownJewel' : 'crownJewel';
+      const nodes = [];
+      const edges = [];
+      const addNode = (id, role) => nodes.push({ id, role });
+      const addEdge = (from, to, style) => edges.push({ from, to, style: style || 'default' });
+
+      if (topology === 'sparse') {
+        addNode('cve', 'cve');
+        addNode('asset', 'asset');
+        addNode('crownJewel', crownRole);
+        addEdge('cve', 'asset');
+        addEdge('asset', 'crownJewel');
+      } else if (topology === 'direct') {
+        addNode('actor', actorRole);
+        addNode('cve', 'cve');
+        addNode('asset', 'asset');
+        addNode('crownJewel', crownRole);
+        addEdge('actor', 'cve'); addEdge('cve', 'asset'); addEdge('asset', 'crownJewel');
+      } else if (topology === 'contained') {
+        addNode('actor', actorRole);
+        addNode('cve', 'cve');
+        addNode('asset', 'asset');
+        addNode('hop', 'hop');
+        addNode('crownJewel', crownRole);
+        addEdge('actor', 'cve'); addEdge('cve', 'asset'); addEdge('asset', 'hop'); addEdge('hop', 'crownJewel');
+      } else if (topology === 'longchain') {
+        addNode('actor', actorRole);
+        addNode('cve', 'cve');
+        addNode('asset', 'asset');
+        addNode('hop', 'hop');
+        addNode('hop2', 'hop2');
+        addNode('crownJewel', crownRole);
+        addEdge('actor', 'cve'); addEdge('cve', 'asset'); addEdge('asset', 'hop'); addEdge('hop', 'hop2'); addEdge('hop2', 'crownJewel');
+      } else if (topology === 'mesh') {
+        addNode('actor', actorRole);
+        addNode('cve', 'cve');
+        addNode('asset', 'asset');
+        addNode('hop', 'hop');
+        addNode('asset2', 'asset2');
+        addNode('crownJewel', crownRole);
+        addEdge('actor', 'cve'); addEdge('cve', 'asset');
+        addEdge('asset', 'hop'); addEdge('asset', 'asset2');
+        addEdge('hop', 'crownJewel'); addEdge('asset2', 'crownJewel');
+        addEdge('asset', 'crownJewel', 'bypass');
+      } else { // 'diamond' (default)
+        addNode('actor', actorRole);
+        addNode('cve', 'cve');
+        addNode('asset', 'asset');
+        addNode('hop', 'hop');
+        addNode('crownJewel', crownRole);
+        addEdge('actor', 'cve'); addEdge('cve', 'asset');
+        addEdge('asset', 'hop'); addEdge('hop', 'crownJewel');
+        addEdge('asset', 'crownJewel', 'bypass');
+      }
+
+      return { nodes, edges, topology };
+    }
+
+    // Longest-path (Sugiyama-style) layering: columns by depth, rows centered
+    // within each column. Generalizes to any node count / branching shape.
+    function layoutAttackGraph(nodes, edges) {
+      const adj = {};
+      nodes.forEach(n => { adj[n.id] = []; });
+      const indeg = {};
+      nodes.forEach(n => { indeg[n.id] = 0; });
+      edges.forEach(e => { adj[e.from].push(e.to); indeg[e.to]++; });
+
+      const queue = nodes.filter(n => indeg[n.id] === 0).map(n => n.id);
+      const indegWork = Object.assign({}, indeg);
+      const order = [];
+      while (queue.length) {
+        const id = queue.shift();
+        order.push(id);
+        adj[id].forEach(next => {
+          indegWork[next]--;
+          if (indegWork[next] === 0) queue.push(next);
+        });
+      }
+
+      const depth = {};
+      order.forEach(id => { if (!(id in depth)) depth[id] = 0; });
+      order.forEach(id => {
+        adj[id].forEach(next => {
+          depth[next] = Math.max(depth[next] || 0, depth[id] + 1);
+        });
+      });
+
+      const byDepth = {};
+      nodes.forEach(n => {
+        const d = depth[n.id] || 0;
+        (byDepth[d] = byDepth[d] || []).push(n);
+      });
+
+      const depths = Object.keys(byDepth).map(Number);
+      const maxDepth = Math.max(...depths);
+      const maxCol = Math.max(...Object.values(byDepth).map(c => c.length));
+
+      const marginX = 170;
+      const colSpacing = 190;
+      const width = marginX * 2 + maxDepth * colSpacing;
+
+      const rowSpacing = 170;
+      const marginY = 150;
+      const height = Math.max(600, marginY * 2 + (maxCol - 1) * rowSpacing);
+
+      Object.keys(byDepth).forEach(dStr => {
+        const d = Number(dStr);
+        const col = byDepth[d];
+        const totalH = (col.length - 1) * rowSpacing;
+        const centerY = height / 2;
+        col.forEach((node, i) => {
+          node.x = marginX + d * colSpacing;
+          node.y = centerY - totalH / 2 + i * rowSpacing;
+        });
+      });
+
+      return { width, height, order };
+    }
+
+    const ROLE_EDGE_COLOR = {
+      actor: '#f43f5e', mutedActor: '#64748b', cve: '#f59e0b',
+      asset: '#06b6d4', asset2: '#06b6d4', hop: '#0284c7', hop2: '#0284c7',
+      crownJewel: '#a855f7', mutedCrownJewel: '#64748b'
+    };
+
+    function renderEdgeSvg(edge, nodesById, idx) {
+      const a = nodesById[edge.from];
+      const b = nodesById[edge.to];
+      if (!a || !b) return '';
+      const bend = (idx % 2 === 0 ? 1 : -1) * (16 + (idx * 3 % 12));
+      const midX = (a.x + b.x) / 2;
+      const midY = (a.y + b.y) / 2 + bend;
+      const isBypass = edge.style === 'bypass';
+      const stroke = isBypass ? '#f59e0b' : (ROLE_EDGE_COLOR[b.role] || '#06b6d4');
+      const dashed = isBypass || NODE_ROLE_STYLE[a.role].dashed;
+      const dashAttr = dashed ? ' stroke-dasharray="6,4"' : '';
+      const width = isBypass ? 1.8 : 2.6;
+      const glow = (!isBypass && (NODE_ROLE_STYLE[b.role].glow)) ? ' filter="url(#glow)"' : '';
+      return `<path id="edge-${idx}" d="M ${a.x} ${a.y} Q ${midX} ${midY} ${b.x} ${b.y}" stroke="${stroke}" stroke-width="${width}" fill="none"${dashAttr}${glow}/>`;
+    }
+
+    function renderNodeSvg(node, alert) {
+      const style = NODE_ROLE_STYLE[node.role];
+      const r = style.radius;
+      const dashAttr = style.dashed ? ' stroke-dasharray="6,4"' : '';
+      const filterAttr = style.glow ? ' filter="url(#glow)"' : '';
+      let inner = '';
+
+      if (node.role === 'actor' || node.role === 'mutedActor') {
+        const muted = node.role === 'mutedActor';
+        const label = fitLabel(alert.actor.split('/')[0].trim(), muted ? 11 : 13);
+        inner = `
+          <text y="-10" text-anchor="middle" fill="${style.stroke}" font-size="9" font-weight="bold" font-family="monospace">${muted ? 'UNATTRIBUTED' : 'THREAT ACTOR'}</text>
+          <text y="8" text-anchor="middle" fill="#ffffff" font-size="10.5" font-weight="600">${label}</text>
+          <text y="23" text-anchor="middle" fill="#94a3b8" font-size="8">${muted ? 'No Confirmed Actor' : 'Active Campaign'}</text>`;
+      } else if (node.role === 'cve') {
+        inner = `
+          <text y="-12" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="bold" font-family="monospace">${alert.inKev ? 'IN CISA KEV' : 'EXPLOIT'}</text>
+          <text y="6" text-anchor="middle" fill="#ffffff" font-size="11.5" font-weight="bold">${alert.cve}</text>
+          <text y="24" text-anchor="middle" fill="#f59e0b" font-size="9.5">EPSS: ${alert.epss}%</text>`;
+      } else if (node.role === 'asset' || node.role === 'asset2') {
+        const data = node.role === 'asset'
+          ? { name: alert.targetHost, sw: alert.software, internetFacing: alert.internetFacing }
+          : (alert.asset2 || { name: 'secondary-host', sw: 'Unknown Software', internetFacing: false });
+        const hostLabel = fitLabel(data.name.split('.')[0], node.role === 'asset' ? 15 : 13);
+        const swLabel = fitLabel(data.sw.split(' ')[0], node.role === 'asset' ? 14 : 12);
+        const badgeLabel = data.internetFacing ? 'INTERNET-FACING' : 'INTERNAL VPC';
+        inner = `
+          <rect x="-50" y="-${r + 12}" width="100" height="16" rx="3" fill="${data.internetFacing ? '#dc2626' : '#059669'}"/>
+          <text y="-${r}" text-anchor="middle" fill="#ffffff" font-size="7.5" font-weight="bold" font-family="monospace">${badgeLabel}</text>
+          <text y="-8" text-anchor="middle" fill="#06b6d4" font-size="8.5" font-family="monospace">${node.role === 'asset2' ? 'SECOND ROUTE' : 'EXPOSED HOST'}</text>
+          <text y="9" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="bold">${hostLabel}</text>
+          <text y="24" text-anchor="middle" fill="#67e8f9" font-size="8.5">${swLabel}</text>`;
+      } else if (node.role === 'hop' || node.role === 'hop2') {
+        const data = node.role === 'hop' ? alert.secondaryNode : alert.hop2;
+        const typeLabel = fitLabel(data ? data.type : 'INTERNAL NODE', node.role === 'hop' ? 16 : 15);
+        const nameLabel = fitLabel(data ? data.name.split('.')[0] : 'proxy-node', node.role === 'hop' ? 15 : 14);
+        inner = `
+          <text y="-6" text-anchor="middle" fill="#38bdf8" font-size="8.5" font-family="monospace">${typeLabel}</text>
+          <text y="11" text-anchor="middle" fill="#ffffff" font-size="9.5">${nameLabel}</text>`;
+      } else if (node.role === 'crownJewel' || node.role === 'mutedCrownJewel') {
+        const contained = node.role === 'mutedCrownJewel';
+        const crownLabel = fitLabel(alert.crownJewel.split(' ')[0], contained ? 11 : 14);
+        const badgeText = contained ? 'LOW-VALUE TARGET' : 'TIER-0 ASSET';
+        const badgeFill = contained ? '#475569' : '#9333ea';
+        const subLabel = contained ? 'CONTAINED' : 'CROWN JEWEL';
+        const subColor = contained ? '#94a3b8' : '#c084fc';
+        const footerText = contained ? 'ISOLATED / LOW IMPACT' : 'DIRECT EXPOSURE';
+        const footerColor = contained ? '#64748b' : '#f43f5e';
+        inner = `
+          <rect x="-48" y="-${r + 14}" width="96" height="16" rx="3" fill="${badgeFill}"/>
+          <text y="-${r + 2}" text-anchor="middle" fill="#ffffff" font-size="8" font-weight="bold" font-family="monospace">${badgeText}</text>
+          <text y="-6" text-anchor="middle" fill="${subColor}" font-size="9" font-family="monospace">${subLabel}</text>
+          <text y="12" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="bold">${crownLabel}</text>
+          <text y="26" text-anchor="middle" fill="${footerColor}" font-size="7.5">${footerText}</text>`;
+      }
+
+      return `
+        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('${node.id}')" transform="translate(${node.x}, ${node.y})">
+          <circle r="${r}" fill="${style.fill}" stroke="${style.stroke}" stroke-width="${style.glow ? 3 : 1.5}"${dashAttr}${filterAttr}/>
+          ${inner}
+        </g>`;
+    }
+
+    let currentGraphNodesById = {};
+    let currentGraphOrder = [];
+
     function renderBlastGraph(alertId, focusEntity = 'cve') {
       currentGraphAlertId = alertId;
       const alert = MOCK_ALERTS.find(a => a.id === alertId);
@@ -1787,71 +2038,34 @@
       stopAutoPlaySimulation();
       simIndex = 0;
       document.getElementById('simCaptionBanner').classList.add('hidden');
-
       document.getElementById('graphIncidentSelect').value = alertId;
 
+      const { nodes, edges } = buildAttackGraph(alert);
+      nodes.forEach(n => { n.r = NODE_ROLE_STYLE[n.role].radius; });
+      const { width, height, order } = layoutAttackGraph(nodes, edges);
+
+      const nodesById = {};
+      nodes.forEach(n => { nodesById[n.id] = n; });
+      currentGraphNodesById = nodesById;
+      currentGraphOrder = order;
+
+      document.getElementById('blastSvg').setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+      const firstNode = nodesById[order[0]];
+      const edgesSvg = edges.map((e, i) => renderEdgeSvg(e, nodesById, i)).join('');
+      const nodesSvg = nodes.map(n => renderNodeSvg(n, alert)).join('');
+
       const viewport = document.getElementById('graphViewport');
-      viewport.innerHTML = '';
-
-      const actorLabel = fitLabel(alert.actor.split('/')[0].trim(), 13);
-      const hostLabel = fitLabel(alert.targetHost.split('.')[0], 15);
-      const softwareLabel = fitLabel(alert.software.split(' ')[0], 14);
-      const secondaryTypeLabel = fitLabel(alert.secondaryNode ? alert.secondaryNode.type : 'INTERNAL NODE', 16);
-      const secondaryNameLabel = fitLabel(alert.secondaryNode ? alert.secondaryNode.name.split('.')[0] : 'proxy-node', 15);
-      const crownJewelLabel = fitLabel(alert.crownJewel.split(' ')[0], 14);
-      const exposureBadgeLabel = alert.internetFacing ? 'INTERNET-FACING' : 'INTERNAL VPC';
-
       viewport.innerHTML = `
-        <g id="simHighlightG" transform="translate(170, 280)" opacity="0" style="transition: transform 0.6s ease, opacity 0.3s;">
-          <circle r="60" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="10,6" class="animate-pulse"/>
+        <g id="simHighlightG" transform="translate(${firstNode.x}, ${firstNode.y})" opacity="0" style="transition: transform 0.6s ease, opacity 0.3s;">
+          <circle r="${firstNode.r + 10}" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="10,6" class="animate-pulse"/>
         </g>
-
-        <path id="dyn-link-1" d="M 170 280 Q 310 215 460 210" stroke="url(#edgeGradRose)" stroke-width="2.5" stroke-dasharray="6,4" fill="none" class="animate-pulse"/>
-        <path id="dyn-link-2" d="M 460 210 Q 610 170 760 155" stroke="url(#edgeGradCyan)" stroke-width="3" fill="none" filter="url(#glow)"/>
-        <path id="dyn-link-3" d="M 460 210 Q 610 290 760 365" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4" fill="none"/>
-        <path id="dyn-link-4" d="M 760 155 Q 900 190 1030 280" stroke="url(#edgeGradPurple)" stroke-width="2.5" stroke-dasharray="5,3" fill="none"/>
-        <path id="dyn-link-5" d="M 760 365 Q 900 330 1030 280" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="4,4" fill="none"/>
-
-        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('actor')" transform="translate(170, 280)">
-          <circle r="50" fill="#1e1022" stroke="#f43f5e" stroke-width="2.5" filter="url(#glow)"/>
-          <text y="-10" text-anchor="middle" fill="#f43f5e" font-size="9" font-weight="bold" font-family="monospace">THREAT ACTOR</text>
-          <text y="8" text-anchor="middle" fill="#ffffff" font-size="10.5" font-weight="600">${actorLabel}</text>
-          <text y="23" text-anchor="middle" fill="#94a3b8" font-size="8">Active Campaign</text>
-        </g>
-
-        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('cve')" transform="translate(460, 210)">
-          <circle r="58" fill="#251608" stroke="#f59e0b" stroke-width="3" filter="url(#glow)"/>
-          <text y="-12" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="bold" font-family="monospace">${alert.inKev ? 'IN CISA KEV' : 'EXPLOIT'}</text>
-          <text y="6" text-anchor="middle" fill="#ffffff" font-size="11.5" font-weight="bold">${alert.cve}</text>
-          <text y="24" text-anchor="middle" fill="#f59e0b" font-size="9.5">EPSS: ${alert.epss}%</text>
-        </g>
-
-        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('asset')" transform="translate(760, 155)">
-          <circle r="54" fill="#082029" stroke="#06b6d4" stroke-width="3" filter="url(#glow)"/>
-          <rect x="-50" y="-66" width="100" height="16" rx="3" fill="${alert.internetFacing ? '#dc2626' : '#059669'}"/>
-          <text y="-54" text-anchor="middle" fill="#ffffff" font-size="7.5" font-weight="bold" font-family="monospace">${exposureBadgeLabel}</text>
-          <text y="-8" text-anchor="middle" fill="#06b6d4" font-size="8.5" font-family="monospace">EXPOSED HOST</text>
-          <text y="9" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="bold">${hostLabel}</text>
-          <text y="24" text-anchor="middle" fill="#67e8f9" font-size="8.5">${softwareLabel}</text>
-        </g>
-
-        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('secondary')" transform="translate(760, 365)">
-          <circle r="48" fill="#0c1822" stroke="#0284c7" stroke-width="1.5"/>
-          <text y="-6" text-anchor="middle" fill="#38bdf8" font-size="8.5" font-family="monospace">${secondaryTypeLabel}</text>
-          <text y="11" text-anchor="middle" fill="#ffffff" font-size="9.5">${secondaryNameLabel}</text>
-        </g>
-
-        <g class="cursor-pointer group" onclick="showDynamicNodeDetails('crownJewel')" transform="translate(1030, 280)">
-          <circle r="54" fill="#1c0f2b" stroke="#a855f7" stroke-width="3" filter="url(#glow)"/>
-          <rect x="-48" y="-68" width="96" height="16" rx="3" fill="#9333ea"/>
-          <text y="-56" text-anchor="middle" fill="#ffffff" font-size="8" font-weight="bold" font-family="monospace">TIER-0 ASSET</text>
-          <text y="-6" text-anchor="middle" fill="#c084fc" font-size="9" font-family="monospace">CROWN JEWEL</text>
-          <text y="12" text-anchor="middle" fill="#ffffff" font-size="9.5" font-weight="bold">${crownJewelLabel}</text>
-          <text y="26" text-anchor="middle" fill="#f43f5e" font-size="7.5">DIRECT EXPOSURE</text>
-        </g>
+        ${edgesSvg}
+        ${nodesSvg}
       `;
 
-      showDynamicNodeDetails(focusEntity);
+      const defaultFocus = nodesById[focusEntity] ? focusEntity : (nodesById['cve'] ? 'cve' : order[0]);
+      showDynamicNodeDetails(defaultFocus);
 
       graphScale = 1;
       graphPanX = -60;
@@ -1859,9 +2073,11 @@
       applyGraphTransform();
     }
 
-    function showDynamicNodeDetails(nodeType) {
+    function showDynamicNodeDetails(nodeId) {
       const alert = MOCK_ALERTS.find(a => a.id === currentGraphAlertId);
       if (!alert) return;
+      const node = currentGraphNodesById[nodeId];
+      if (!node) return;
 
       const drawer = document.getElementById('graphDrawer');
       const typeLabel = document.getElementById('drawerType');
@@ -1878,12 +2094,12 @@
       const cvssSeverity = alert.cvss >= 9.0 ? 'CRITICAL' : (alert.cvss >= 7.0 ? 'HIGH' : 'MEDIUM');
       const cvssColor = alert.cvss >= 9.0 ? 'text-rose-400' : (alert.cvss >= 7.0 ? 'text-amber-400' : 'text-yellow-400');
 
-      if (nodeType === 'cve') {
+      if (node.role === 'cve') {
         typeLabel.textContent = 'CORRELATED VULNERABILITY';
         body.innerHTML = `
           <div class="text-base font-bold text-amber-400 font-mono">${alert.cve}</div>
           <div class="text-sm text-white font-semibold">${alert.title}</div>
-          
+
           <div class="grid grid-cols-2 gap-2 mt-2 font-mono text-sm">
             <div class="p-2 bg-slate-900 rounded border border-slate-800">
               <span class="text-slate-400 block text-[12px]">CVSS BASE</span>
@@ -1918,13 +2134,19 @@
           </button>
         `;
       }
-      else if (nodeType === 'actor') {
-        typeLabel.textContent = 'THREAT ACTOR GROUP';
+      else if (node.role === 'actor' || node.role === 'mutedActor') {
+        const muted = node.role === 'mutedActor';
+        typeLabel.textContent = muted ? 'UNATTRIBUTED ACTIVITY' : 'THREAT ACTOR GROUP';
         body.innerHTML = `
           <div class="text-base font-bold text-white">${alert.actor}</div>
           <div class="text-sm text-rose-400 font-mono">${alert.actorType}</div>
           <p class="text-sm text-slate-300 leading-relaxed mt-2">${alert.actorDesc}</p>
-          
+          ${muted ? `
+            <div class="p-2 rounded bg-slate-900 border border-slate-800 text-[12px] text-slate-400 font-mono mt-2">
+              No named, sophisticated group attributed yet — treat as commodity/automated activity until further signal arrives.
+            </div>
+          ` : ''}
+
           <div class="space-y-1 text-sm font-mono pt-2 border-t border-slate-800">
             <div class="text-slate-400">Weaponized CVE: <span class="text-amber-400 font-bold">${alert.cve}</span></div>
             <div class="text-slate-400">Primary TTP: <span class="text-white">${alert.actorTtp}</span></div>
@@ -1936,29 +2158,37 @@
           <button onclick="openDeepDive('${alert.id}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-purple-600 hover:bg-purple-500 text-white">View Full Attack Profile</button>
         `;
       }
-      else if (nodeType === 'asset') {
-        typeLabel.textContent = 'EXPOSED INTERNAL HOST';
+      else if (node.role === 'asset' || node.role === 'asset2') {
+        const isPrimary = node.role === 'asset';
+        const data = isPrimary
+          ? { name: alert.targetHost, ip: alert.hostIp, sw: alert.software, internetFacing: alert.internetFacing, env: alert.environment, desc: null }
+          : Object.assign({ ip: 'N/A (internal service, no public IP)', env: alert.environment }, alert.asset2 || {});
+        typeLabel.textContent = isPrimary ? 'EXPOSED INTERNAL HOST' : 'SECONDARY EXPOSURE ROUTE';
         body.innerHTML = `
-          <div class="text-base font-bold text-cyan-300 truncate">${alert.targetHost}</div>
-          <div class="text-sm text-slate-400 font-mono">IP: ${alert.hostIp} ${alert.internetFacing ? '(Public Route)' : '(Private Subnet)'}</div>
-          
+          <div class="text-base font-bold text-cyan-300 truncate">${data.name}</div>
+          <div class="text-sm text-slate-400 font-mono">IP: ${data.ip} ${data.internetFacing ? '(Public Route)' : '(Private Subnet)'}</div>
+
           <div class="space-y-1.5 text-sm font-mono pt-2 border-t border-slate-800">
-            <div class="text-slate-400">Cloud / Subnet: <span class="text-white">${alert.environment}</span></div>
-            <div class="text-slate-400">Software: <span class="text-rose-400 font-bold">${alert.software}</span></div>
-            <div class="text-slate-400">Exposure: <span class="${alert.internetFacing ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${alert.internetFacing ? 'Direct Internet Facing' : 'Private Only'}</span></div>
-            <div class="text-slate-400">Pivot Route: <span class="text-purple-300">${alert.crownJewelPath}</span></div>
+            <div class="text-slate-400">Cloud / Subnet: <span class="text-white">${data.env}</span></div>
+            <div class="text-slate-400">Software: <span class="text-rose-400 font-bold">${data.sw}</span></div>
+            <div class="text-slate-400">Exposure: <span class="${data.internetFacing ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${data.internetFacing ? 'Direct Internet Facing' : 'Private Only'}</span></div>
+            ${isPrimary
+              ? `<div class="text-slate-400">Pivot Route: <span class="text-purple-300">${alert.crownJewelPath}</span></div>`
+              : `<div class="text-slate-400">Why It Matters: <span class="text-purple-300">${data.desc || 'A second, independent path into the same target.'}</span></div>`
+            }
             <div class="text-slate-400">Owning Team: <span class="text-amber-300">${alert.owningTeam || 'Unassigned'}</span></div>
           </div>
         `;
 
         actions.innerHTML = `
-          <button onclick="takeAction('${alert.id}', 'jira', '${alert.targetHost}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">
+          <button onclick="takeAction('${alert.id}', 'jira', '${data.name}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">
             Notify Owning Team via Jira
           </button>
         `;
       }
-      else if (nodeType === 'secondary') {
-        const sec = alert.secondaryNode || { name: 'Internal Hop', type: 'NODE', sw: 'Standard', desc: 'Internal network route.' };
+      else if (node.role === 'hop' || node.role === 'hop2') {
+        const fallback = { name: 'Internal Hop', type: 'NODE', sw: 'Standard', desc: 'Internal network route.' };
+        const sec = (node.role === 'hop' ? alert.secondaryNode : alert.hop2) || fallback;
         typeLabel.textContent = 'INTERMEDIATE INFRASTRUCTURE';
         body.innerHTML = `
           <div class="text-base font-bold text-white">${sec.name}</div>
@@ -1966,18 +2196,20 @@
           <p class="text-sm text-slate-300 leading-relaxed mt-2">${sec.desc}</p>
         `;
         actions.innerHTML = `
-          <button onclick="showMockModal('Inspect Route', 'Inspecting network policy routes from ${alert.targetHost} to ${sec.name}... 0 unauthorized open ports.')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">Inspect Network Route</button>
+          <button onclick="showMockModal('Inspect Route', 'Inspecting network policy routes to ${sec.name}... 0 unauthorized open ports.')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">Inspect Network Route</button>
         `;
       }
-      else if (nodeType === 'crownJewel') {
-        typeLabel.textContent = 'CROWN JEWEL / TARGET';
+      else if (node.role === 'crownJewel' || node.role === 'mutedCrownJewel') {
+        const contained = node.role === 'mutedCrownJewel';
+        typeLabel.textContent = contained ? 'CONTAINED / LOW-VALUE ASSET' : 'CROWN JEWEL / TARGET';
         body.innerHTML = `
-          <div class="text-base font-bold text-purple-300">${alert.crownJewel}</div>
-          <div class="text-sm text-rose-400 font-mono font-bold">TIER-0 CRITICAL ENTERPRISE ASSET</div>
+          <div class="text-base font-bold ${contained ? 'text-slate-300' : 'text-purple-300'}">${alert.crownJewel}</div>
+          <div class="text-sm ${contained ? 'text-emerald-400' : 'text-rose-400'} font-mono font-bold">${contained ? 'ISOLATED — NOT A REAL CROWN JEWEL' : 'TIER-0 CRITICAL ENTERPRISE ASSET'}</div>
           <p class="text-sm text-slate-300 leading-relaxed mt-2">${alert.crownJewelDesc}</p>
-          <div class="p-2 rounded bg-rose-950/40 border border-rose-800 text-[12px] text-rose-300 font-mono mt-2">
-            Threat path connects unpatched edge directly to this database with no intermediate zero-trust gateway.
-          </div>
+          ${contained
+            ? `<div class="p-2 rounded bg-emerald-950/30 border border-emerald-800 text-[12px] text-emerald-300 font-mono mt-2">${alert.crownJewelPath}</div>`
+            : `<div class="p-2 rounded bg-rose-950/40 border border-rose-800 text-[12px] text-rose-300 font-mono mt-2">Threat path connects unpatched edge directly to this asset with no intermediate zero-trust gateway.</div>`
+          }
         `;
 
         actions.innerHTML = `
@@ -1985,7 +2217,7 @@
         `;
       }
 
-      syncSimulationUI(nodeType, alert);
+      syncSimulationUI(nodeId, alert);
     }
 
     function closeGraphDrawer() {
@@ -2009,60 +2241,61 @@
 
     // ==========================================
     // ATTACK SIMULATION ENGINE (STEP-THROUGH + AUTO-PLAY)
+    // Step order comes from the graph's own topological
+    // order (currentGraphOrder), so it adapts to whatever
+    // shape that alert's attack graph actually has.
     // ==========================================
-    const SIM_STEP_SEQUENCE = ['actor', 'cve', 'asset', 'secondary', 'crownJewel'];
-    const SIM_STEP_LABELS = {
-      actor: 'THREAT ACTOR',
+    const SIM_ROLE_LABELS = {
+      actor: 'THREAT ACTOR', mutedActor: 'UNATTRIBUTED ACTIVITY',
       cve: 'WEAPONIZED EXPLOIT',
-      asset: 'EXPOSED ASSET',
-      secondary: 'LATERAL HOP',
-      crownJewel: 'CROWN JEWEL'
-    };
-    const SIM_NODE_COORDS = {
-      actor: [170, 280],
-      cve: [460, 210],
-      asset: [760, 155],
-      secondary: [760, 365],
-      crownJewel: [1030, 280]
+      asset: 'EXPOSED ASSET', asset2: 'SECOND EXPOSURE ROUTE',
+      hop: 'LATERAL HOP', hop2: 'SECOND LATERAL HOP',
+      crownJewel: 'CROWN JEWEL', mutedCrownJewel: 'CONTAINED TARGET'
     };
 
     let simIndex = 0;
     let simPlaying = false;
     let simTimer = null;
 
-    function simCaptionFor(nodeType, alert) {
-      if (nodeType === 'actor') return alert.actorDesc;
-      if (nodeType === 'cve') return alert.exploitDetails || alert.whatIsThis;
-      if (nodeType === 'asset') return `The exploit lands on ${alert.targetHost}, running ${alert.software}${alert.internetFacing ? ' and directly reachable from the internet.' : '.'}`;
-      if (nodeType === 'secondary') return alert.secondaryNode ? alert.secondaryNode.desc : 'The attacker pivots through an intermediate internal hop.';
-      if (nodeType === 'crownJewel') return alert.ifUnremediated;
+    function simCaptionFor(node, alert) {
+      if (node.role === 'actor') return alert.actorDesc;
+      if (node.role === 'mutedActor') return `No confirmed, named threat group behind this — ${alert.actorDesc}`;
+      if (node.role === 'cve') return alert.exploitDetails || alert.whatIsThis;
+      if (node.role === 'asset') return `The exploit lands on ${alert.targetHost}, running ${alert.software}${alert.internetFacing ? ' and directly reachable from the internet.' : '.'}`;
+      if (node.role === 'asset2') return alert.asset2 ? alert.asset2.desc : 'A second, independent exposure route into the same target.';
+      if (node.role === 'hop') return alert.secondaryNode ? alert.secondaryNode.desc : 'The attacker pivots through an intermediate internal hop.';
+      if (node.role === 'hop2') return alert.hop2 ? alert.hop2.desc : 'The attacker pivots through a second intermediate hop.';
+      if (node.role === 'crownJewel') return alert.ifUnremediated;
+      if (node.role === 'mutedCrownJewel') return `${alert.ifUnremediated} Real-world impact stays limited here: ${alert.crownJewelPath}.`;
       return '';
     }
 
-    function syncSimulationUI(nodeType, alert) {
-      const idx = SIM_STEP_SEQUENCE.indexOf(nodeType);
+    function syncSimulationUI(nodeId, alert) {
+      const idx = currentGraphOrder.indexOf(nodeId);
       if (idx === -1) return;
       simIndex = idx;
 
-      document.getElementById('simStepIndicator').textContent = `Step ${idx + 1} / ${SIM_STEP_SEQUENCE.length}`;
+      const node = currentGraphNodesById[nodeId];
+      document.getElementById('simStepIndicator').textContent = `Step ${idx + 1} / ${currentGraphOrder.length}`;
 
       const ring = document.getElementById('simHighlightG');
-      if (ring) {
-        const [x, y] = SIM_NODE_COORDS[nodeType];
-        ring.setAttribute('transform', `translate(${x}, ${y})`);
+      if (ring && node) {
+        ring.setAttribute('transform', `translate(${node.x}, ${node.y})`);
         ring.setAttribute('opacity', '1');
+        const ringCircle = ring.querySelector('circle');
+        if (ringCircle) ringCircle.setAttribute('r', node.r + 10);
       }
 
       const banner = document.getElementById('simCaptionBanner');
-      document.getElementById('simCaptionLabel').textContent = `STEP ${idx + 1} / ${SIM_STEP_SEQUENCE.length} — ${SIM_STEP_LABELS[nodeType]}`;
-      document.getElementById('simCaptionText').textContent = simCaptionFor(nodeType, alert);
+      document.getElementById('simCaptionLabel').textContent = `STEP ${idx + 1} / ${currentGraphOrder.length} — ${SIM_ROLE_LABELS[node.role] || node.role.toUpperCase()}`;
+      document.getElementById('simCaptionText').textContent = simCaptionFor(node, alert);
       banner.classList.remove('hidden');
     }
 
     function goToSimStep(idx) {
-      const clamped = Math.max(0, Math.min(SIM_STEP_SEQUENCE.length - 1, idx));
-      showDynamicNodeDetails(SIM_STEP_SEQUENCE[clamped]);
-      if (clamped === SIM_STEP_SEQUENCE.length - 1) {
+      const clamped = Math.max(0, Math.min(currentGraphOrder.length - 1, idx));
+      showDynamicNodeDetails(currentGraphOrder[clamped]);
+      if (clamped === currentGraphOrder.length - 1) {
         stopAutoPlaySimulation();
       }
     }
@@ -2081,13 +2314,13 @@
     }
 
     function startAutoPlaySimulation() {
-      if (simIndex >= SIM_STEP_SEQUENCE.length - 1) {
+      if (simIndex >= currentGraphOrder.length - 1) {
         goToSimStep(0);
       }
       simPlaying = true;
       updatePlaySimButton();
       simTimer = setInterval(() => {
-        if (simIndex >= SIM_STEP_SEQUENCE.length - 1) {
+        if (simIndex >= currentGraphOrder.length - 1) {
           stopAutoPlaySimulation();
           return;
         }
@@ -2115,7 +2348,8 @@
       const targetAlertId = activeAlertForModal.id;
       closeDeepDiveModal();
       switchTab('graph');
-      renderBlastGraph(targetAlertId, 'actor');
+      renderBlastGraph(targetAlertId, 'cve');
+      goToSimStep(0);
       startAutoPlaySimulation();
     }
 
@@ -3387,6 +3621,7 @@ and will re-verify once remediation is reported complete.
 
         const newAlert = {
           id: 'CORR-2026-099',
+          graphTopology: 'mesh',
           title: 'ZERO-DAY INGESTION: OpenSSL Remote Memory Corruption',
           cve: 'CVE-2026-55901',
           cvss: 9.9,
@@ -3410,6 +3645,13 @@ and will re-verify once remediation is reported complete.
             type: 'IDENTITY BRIDGE',
             sw: 'Samba / Winbind',
             desc: 'Authentication sync tunnel into domain controller.'
+          },
+          asset2: {
+            name: 'cloud-federation-token-cache',
+            type: 'TOKEN CACHE',
+            sw: 'Azure AD Connect Cache',
+            internetFacing: false,
+            desc: 'Caches federation tokens used for single sign-on into Microsoft 365 and Azure — a second, independent route into identity infrastructure that does not require the AD sync tunnel at all.'
           },
           crownJewel: 'Corporate Active Directory Domain Controller',
           crownJewelPath: 'Primary IPsec Tunnel into Corporate Active Directory',
