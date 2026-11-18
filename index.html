@@ -934,6 +934,62 @@
     </div>
   </div>
 
+  <!-- EXISTING CONNECTOR: POLLING & INGESTION CONFIG MODAL -->
+  <div id="connectorConfigModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0b0f19] border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-5">
+
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white font-mono" id="connConfigTitle">Configure Connector</h3>
+          <p class="text-sm text-slate-400 mt-0.5" id="connConfigSubtitle">REST API · Active</p>
+        </div>
+        <button onclick="closeConnectorConfigModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form onsubmit="saveConnectorConfig(event)" class="space-y-4 text-sm font-sans">
+        <div>
+          <label class="block text-[13px] font-mono text-slate-300 mb-1">Poll Cadence</label>
+          <select id="connConfigCadence" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+            <option value="Real-time Webhook">Real-time Webhook (Event-Driven Push)</option>
+            <option value="Every 5 Minutes">Every 5 Minutes</option>
+            <option value="Every 15 Minutes">Every 15 Minutes</option>
+            <option value="Every 30 Minutes">Every 30 Minutes</option>
+            <option value="Hourly Sync">Hourly Sync</option>
+            <option value="Daily Sync">Daily Sync (Midnight UTC)</option>
+          </select>
+          <p class="text-[12px] text-slate-500 mt-1">How often this connector polls its source for new data.</p>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 space-y-1">
+          <label class="block text-[13px] font-mono text-slate-300">Ingestion Filter — what gets pulled in</label>
+          <p class="text-[12px] text-slate-500">Narrow what this connector ingests, so only relevant findings reach correlation and triage.</p>
+        </div>
+
+        <div>
+          <label class="block text-[13px] font-mono text-slate-300 mb-1">Minimum Severity to Ingest</label>
+          <select id="connConfigSeverity" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+            <option value="all">All Severities</option>
+            <option value="medium">Medium and above</option>
+            <option value="high">High and above</option>
+            <option value="critical">Critical only</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[13px] font-mono text-slate-300 mb-1">Keyword / Tag Include Filter</label>
+          <input type="text" id="connConfigKeywords" placeholder="e.g. ransomware, perimeter, RCE (comma-separated, leave blank for no filter)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono text-[13px]">
+          <p class="text-[12px] text-slate-500 mt-1">Only findings matching at least one term are ingested. Leave blank to accept everything at the chosen severity.</p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeConnectorConfigModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition">Save Config</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
   <!-- ADD STIX / TAXII / RSS FEED MODAL -->
   <div id="addFeedModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-[#0b0f19] border border-slate-700 w-full max-w-xl rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
@@ -983,8 +1039,10 @@
             <label class="block text-[13px] font-mono text-slate-300 mb-1">Poll Cadence</label>
             <select id="feedCadence" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
               <option value="Every 5 Minutes">Continuous Polling (Every 5 Minutes)</option>
+              <option value="Every 15 Minutes">Every 15 Minutes</option>
+              <option value="Every 30 Minutes">Every 30 Minutes</option>
               <option value="Hourly Sync">Batch Sync (Hourly)</option>
-              <option value="Daily Sync">Daily Sync (Midnight UTC)</option>
+              <option value="Daily Sync">Daily Sync (Every 24 Hours, Midnight UTC)</option>
             </select>
           </div>
           <div>
@@ -992,6 +1050,28 @@
             <input type="password" id="feedToken" placeholder="••••••••••••••••••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
           </div>
         </div>
+
+        <div class="pt-3 border-t border-slate-800 space-y-1">
+          <label class="block text-[13px] font-mono text-slate-300">Ingestion Filter — what gets pulled in</label>
+          <p class="text-[12px] text-slate-500">Narrow what this feed ingests, so only relevant items reach correlation and triage.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Minimum Severity to Ingest</label>
+            <select id="feedMinSeverity" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
+              <option value="all">All Severities</option>
+              <option value="medium">Medium and above</option>
+              <option value="high">High and above</option>
+              <option value="critical">Critical only</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[13px] font-mono text-slate-300 mb-1">Keyword / Tag Include Filter</label>
+            <input type="text" id="feedKeywords" placeholder="e.g. ransomware, zero-day" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono text-[13px]">
+          </div>
+        </div>
+        <p class="text-[12px] text-slate-500 -mt-2">Only items matching at least one keyword are ingested. Leave blank to accept everything at the chosen severity.</p>
 
         <div id="feedTestResultBanner" class="p-2.5 rounded-lg border text-sm font-mono hidden"></div>
 
@@ -1351,22 +1431,22 @@
     ];
 
     const MOCK_CONNECTORS = [
-      { id: 'conn-1', name: 'CISA Known Exploited Vulns (KEV)', category: 'intel', type: 'REST JSON', status: 'Active', latency: '120ms', sync: 'Synced 5m ago', icon: 'KEV', enabled: true, desc: 'Official federal catalog of vulnerabilities actively weaponized in the wild.' },
-      { id: 'conn-2', name: 'FIRST.org EPSS v3 Predictor', category: 'intel', type: 'REST API', status: 'Active', latency: '340ms', sync: 'Synced 1h ago', icon: 'EPSS', enabled: true, desc: 'Machine learning model predicting 30-day weaponization probability for all CVEs.' },
-      { id: 'conn-3', name: 'MISP TAXII 2.1 Threat Exchange', category: 'intel', type: 'TAXII 2.1', status: 'Active', latency: '480ms', sync: 'Real-time Streaming', icon: 'MISP', enabled: true, desc: 'Community-driven open source STIX 2.1 threat indicators and campaign clusters.' },
-      { id: 'conn-4', name: 'AlienVault OTX (Open Threat Exchange)', category: 'intel', type: 'REST API', status: 'Active', latency: '210ms', sync: 'Synced 12m ago', icon: 'OTX', enabled: true, desc: 'Crowdsourced pulses covering emerging malware hashes, domains, and C2 IPs.' },
-      { id: 'conn-5', name: 'Recorded Future Intelligence API', category: 'intel', type: 'Commercial API', status: 'Active', latency: '180ms', sync: 'Continuous', icon: 'RF', enabled: true, desc: 'Dark web forum chatter, ransomware extortion leak monitoring, and brand defense.' },
-      { id: 'conn-6', name: 'AWS CloudTrail & Config Inventory', category: 'asset', type: 'AWS IAM / SQS', status: 'Active', latency: '95ms', sync: 'Synced 2m ago', icon: 'AWS', enabled: true, desc: 'Auto-discovers EC2 instances, public ALBs, RDS databases, and exposed S3 buckets across 4 accounts.' },
-      { id: 'conn-7', name: 'CrowdStrike Falcon Sensor Telemetry', category: 'asset', type: 'OAuth2 REST', status: 'Active', latency: '150ms', sync: 'Real-time Event Stream', icon: 'CS', enabled: true, desc: '1,420 active host agents providing installed package versions, CPEs, and active process trees.' },
-      { id: 'conn-8', name: 'ServiceNow CMDB Production Sync', category: 'asset', type: 'REST API', status: 'Active', latency: '610ms', sync: 'Synced 30m ago', icon: 'SNOW', enabled: true, desc: 'Imports service ownership tags, criticality tiers (P0/P1), and business unit boundaries.' },
-      { id: 'conn-9', name: 'Wiz.io Cloud Security Posture (CSPM)', category: 'asset', type: 'GraphQL', status: 'Active', latency: '290ms', sync: 'Synced 8m ago', icon: 'WIZ', enabled: true, desc: 'Correlates network reachability and IAM privilege escalation pathways in multi-cloud.' },
-      { id: 'conn-10', name: 'Jira Software & Service Management', category: 'soar', type: 'Webhook / REST', status: 'Active', latency: '110ms', sync: 'Bi-Directional', icon: 'JIRA', enabled: true, desc: 'Creates enriched remediation tickets with MITRE ATT&CK tags and tracks SLA closure.' },
-      { id: 'conn-11', name: 'Slack SOC Security War Room', category: 'soar', type: 'Incoming Webhook', status: 'Active', latency: '80ms', sync: 'Instant Push', icon: 'SLACK', enabled: true, desc: 'Sends immediate interactive alert cards to #soc-tier1-alerts with 1-click isolate buttons.' },
-      { id: 'conn-12', name: 'AWS WAF & Cloudflare Virtual Patching', category: 'soar', type: 'Edge API', status: 'Active', latency: '220ms', sync: 'Active Orchestration', icon: 'WAF', enabled: true, desc: 'Automates deployment of URI regex blocks to perimeter WAFs when weaponized 0-days hit KEV.' },
-      { id: 'conn-13', name: 'Splunk Enterprise SIEM Forwarder', category: 'soar', type: 'HEC', status: 'Active', latency: '90ms', sync: 'Streaming', icon: 'SPL', enabled: true, desc: 'Streams correlated risk incidents and contextual telemetry directly into internal security data lake.' },
-      { id: 'conn-14', name: 'internal-k8s-sbom-collector.prod', category: 'custom', type: 'Internal REST', status: 'Active', latency: '45ms', sync: 'Synced 1m ago', icon: 'K8S', enabled: true, desc: 'Internal Go daemon scanning Kubernetes pod container image manifests and Syft SBOMs.' },
-      { id: 'conn-15', name: 'corp-pci-network-mapper.internal', category: 'custom', type: 'mTLS Private', status: 'Active', latency: '60ms', sync: 'Synced 15m ago', icon: 'NET', enabled: true, desc: 'Internal network scanner verifying VPC peering routes and security group ingress limits.' },
-      { id: 'conn-16', name: 'ad-identity-privilege-audit-api', category: 'custom', type: 'Kerberos API', status: 'Active', latency: '190ms', sync: 'Hourly Sync', icon: 'AD', enabled: true, desc: 'Correlates compromised service accounts and domain admin privileges from Active Directory.' }
+      { id: 'conn-1', name: 'CISA Known Exploited Vulns (KEV)', category: 'intel', type: 'REST JSON', status: 'Active', latency: '120ms', sync: 'Synced 5m ago', icon: 'KEV', enabled: true, desc: 'Official federal catalog of vulnerabilities actively weaponized in the wild.' , pollCadence: 'Every 5 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'conn-2', name: 'FIRST.org EPSS v3 Predictor', category: 'intel', type: 'REST API', status: 'Active', latency: '340ms', sync: 'Synced 1h ago', icon: 'EPSS', enabled: true, desc: 'Machine learning model predicting 30-day weaponization probability for all CVEs.' , pollCadence: 'Hourly Sync', ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'conn-3', name: 'MISP TAXII 2.1 Threat Exchange', category: 'intel', type: 'TAXII 2.1', status: 'Active', latency: '480ms', sync: 'Real-time Streaming', icon: 'MISP', enabled: true, desc: 'Community-driven open source STIX 2.1 threat indicators and campaign clusters.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'medium', keywords: 'ransomware, APT' } },
+      { id: 'conn-4', name: 'AlienVault OTX (Open Threat Exchange)', category: 'intel', type: 'REST API', status: 'Active', latency: '210ms', sync: 'Synced 12m ago', icon: 'OTX', enabled: true, desc: 'Crowdsourced pulses covering emerging malware hashes, domains, and C2 IPs.' , pollCadence: 'Every 15 Minutes', ingestFilter: { minSeverity: 'all', keywords: 'malware, C2' } },
+      { id: 'conn-5', name: 'Recorded Future Intelligence API', category: 'intel', type: 'Commercial API', status: 'Active', latency: '180ms', sync: 'Continuous', icon: 'RF', enabled: true, desc: 'Dark web forum chatter, ransomware extortion leak monitoring, and brand defense.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'high', keywords: 'ransomware, extortion, dark web' } },
+      { id: 'conn-6', name: 'AWS CloudTrail & Config Inventory', category: 'asset', type: 'AWS IAM / SQS', status: 'Active', latency: '95ms', sync: 'Synced 2m ago', icon: 'AWS', enabled: true, desc: 'Auto-discovers EC2 instances, public ALBs, RDS databases, and exposed S3 buckets across 4 accounts.' , pollCadence: 'Every 5 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'conn-7', name: 'CrowdStrike Falcon Sensor Telemetry', category: 'asset', type: 'OAuth2 REST', status: 'Active', latency: '150ms', sync: 'Real-time Event Stream', icon: 'CS', enabled: true, desc: '1,420 active host agents providing installed package versions, CPEs, and active process trees.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'conn-8', name: 'ServiceNow CMDB Production Sync', category: 'asset', type: 'REST API', status: 'Active', latency: '610ms', sync: 'Synced 30m ago', icon: 'SNOW', enabled: true, desc: 'Imports service ownership tags, criticality tiers (P0/P1), and business unit boundaries.' , pollCadence: 'Every 30 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'conn-9', name: 'Wiz.io Cloud Security Posture (CSPM)', category: 'asset', type: 'GraphQL', status: 'Active', latency: '290ms', sync: 'Synced 8m ago', icon: 'WIZ', enabled: true, desc: 'Correlates network reachability and IAM privilege escalation pathways in multi-cloud.' , pollCadence: 'Every 15 Minutes', ingestFilter: { minSeverity: 'high', keywords: 'public exposure, privilege escalation' } },
+      { id: 'conn-10', name: 'Jira Software & Service Management', category: 'soar', type: 'Webhook / REST', status: 'Active', latency: '110ms', sync: 'Bi-Directional', icon: 'JIRA', enabled: true, desc: 'Creates enriched remediation tickets with MITRE ATT&CK tags and tracks SLA closure.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'high', keywords: '' } },
+      { id: 'conn-11', name: 'Slack SOC Security War Room', category: 'soar', type: 'Incoming Webhook', status: 'Active', latency: '80ms', sync: 'Instant Push', icon: 'SLACK', enabled: true, desc: 'Sends immediate interactive alert cards to #soc-tier1-alerts with 1-click isolate buttons.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'critical', keywords: '' } },
+      { id: 'conn-12', name: 'AWS WAF & Cloudflare Virtual Patching', category: 'soar', type: 'Edge API', status: 'Active', latency: '220ms', sync: 'Active Orchestration', icon: 'WAF', enabled: true, desc: 'Automates deployment of URI regex blocks to perimeter WAFs when weaponized 0-days hit KEV.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'critical', keywords: 'KEV' } },
+      { id: 'conn-13', name: 'Splunk Enterprise SIEM Forwarder', category: 'soar', type: 'HEC', status: 'Active', latency: '90ms', sync: 'Streaming', icon: 'SPL', enabled: true, desc: 'Streams correlated risk incidents and contextual telemetry directly into internal security data lake.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'conn-14', name: 'internal-k8s-sbom-collector.prod', category: 'custom', type: 'Internal REST', status: 'Active', latency: '45ms', sync: 'Synced 1m ago', icon: 'K8S', enabled: true, desc: 'Internal Go daemon scanning Kubernetes pod container image manifests and Syft SBOMs.' , pollCadence: 'Every 5 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'conn-15', name: 'corp-pci-network-mapper.internal', category: 'custom', type: 'mTLS Private', status: 'Active', latency: '60ms', sync: 'Synced 15m ago', icon: 'NET', enabled: true, desc: 'Internal network scanner verifying VPC peering routes and security group ingress limits.' , pollCadence: 'Every 15 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'conn-16', name: 'ad-identity-privilege-audit-api', category: 'custom', type: 'Kerberos API', status: 'Active', latency: '190ms', sync: 'Hourly Sync', icon: 'AD', enabled: true, desc: 'Correlates compromised service accounts and domain admin privileges from Active Directory.' , pollCadence: 'Hourly Sync', ingestFilter: { minSeverity: 'medium', keywords: 'privilege escalation' } }
     ];
 
     const MOCK_ASSETS = [
@@ -1379,9 +1459,9 @@
     ];
 
     const MOCK_FEEDS = [
-      { id: 'feed-1', name: 'OpenCTI OpenSource STIX Bundle', type: 'stix', url: 'demo.opencti.io/feeds/opensource-bundle.json', desc: 'Community OpenCTI instance re-publishing MISP galaxy clusters and OSINT reports as a public STIX 2.1 bundle.', cadence: 'Hourly Sync', status: 'Active', lastSync: 'Synced 40m ago', enabled: true },
-      { id: 'feed-2', name: 'MITRE ATT&CK TAXII Collection', type: 'taxii', url: 'cti-taxii.mitre.org/stix/collections/enterprise-attack', desc: 'Official MITRE-hosted TAXII 2.1 server exposing Enterprise ATT&CK techniques and groups as STIX objects.', cadence: 'Daily Sync', status: 'Active', lastSync: 'Synced 6h ago', enabled: true },
-      { id: 'feed-3', name: 'The Hacker News - Security RSS', type: 'rss', url: 'thehackernews.com/feeds/posts/default', desc: 'General security news RSS feed used for analyst situational awareness, not auto-correlated against assets.', cadence: 'Every 5 Minutes', status: 'Active', lastSync: 'Synced 3m ago', enabled: true }
+      { id: 'feed-1', name: 'OpenCTI OpenSource STIX Bundle', type: 'stix', url: 'demo.opencti.io/feeds/opensource-bundle.json', desc: 'Community OpenCTI instance re-publishing MISP galaxy clusters and OSINT reports as a public STIX 2.1 bundle.', cadence: 'Hourly Sync', status: 'Active', lastSync: 'Synced 40m ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'feed-2', name: 'MITRE ATT&CK TAXII Collection', type: 'taxii', url: 'cti-taxii.mitre.org/stix/collections/enterprise-attack', desc: 'Official MITRE-hosted TAXII 2.1 server exposing Enterprise ATT&CK techniques and groups as STIX objects.', cadence: 'Daily Sync', status: 'Active', lastSync: 'Synced 6h ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'feed-3', name: 'The Hacker News - Security RSS', type: 'rss', url: 'thehackernews.com/feeds/posts/default', desc: 'General security news RSS feed used for analyst situational awareness, not auto-correlated against assets.', cadence: 'Every 5 Minutes', status: 'Active', lastSync: 'Synced 3m ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: 'breach, zero-day, ransomware' } }
     ];
 
     let editingFeedId = null;
@@ -2420,12 +2500,15 @@
               </div>
               <span class="text-slate-400">Latency: <span class="text-slate-200">${conn.latency}</span></span>
             </div>
+            <div class="text-[12px] font-mono text-slate-500 truncate" title="${describeIngestFilter(conn.ingestFilter)}">
+              Poll: <span class="text-slate-300">${conn.pollCadence || 'Not set'}</span> · ${describeIngestFilter(conn.ingestFilter)}
+            </div>
 
             <div class="flex items-center gap-2 pt-1">
               <button onclick="testExistingConnector('${conn.name}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 Test Sync
               </button>
-              <button onclick="editConnector('${conn.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
+              <button onclick="openConnectorConfigModal('${conn.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 Config
               </button>
             </div>
@@ -2433,6 +2516,13 @@
         `;
         grid.appendChild(card);
       });
+    }
+
+    function describeIngestFilter(f) {
+      if (!f) return 'All data accepted';
+      const sevLabel = { all: 'All Severities', medium: 'Medium+', high: 'High+', critical: 'Critical Only' }[f.minSeverity] || 'All Severities';
+      const kw = f.keywords && f.keywords.trim() ? `Keywords: ${f.keywords.trim()}` : 'No keyword filter';
+      return `${sevLabel} · ${kw}`;
     }
 
     function filterConnectors(category) {
@@ -2457,11 +2547,42 @@
       showMockModal('Connector Health Probe', `Sending simulated HTTP HEAD / OAuth probe to ${name}... Response: 200 OK (Latency: 64ms). Synced 0 errors.`);
     }
 
-    function editConnector(id) {
+    let configuringConnectorId = null;
+
+    function openConnectorConfigModal(id) {
       const conn = MOCK_CONNECTORS.find(c => c.id === id);
-      if (conn) {
-        showMockModal(`Configure ${conn.name}`, `Current Protocol: ${conn.type}\nStatus: ${conn.status}\nCadence: ${conn.sync}\n\nYou can update API keys, OAuth credentials, or webhook secrets here.`);
-      }
+      if (!conn) return;
+      configuringConnectorId = id;
+
+      document.getElementById('connConfigTitle').textContent = `Configure ${conn.name}`;
+      document.getElementById('connConfigSubtitle').textContent = `${conn.type} · ${conn.status}`;
+      document.getElementById('connConfigCadence').value = conn.pollCadence || 'Hourly Sync';
+      document.getElementById('connConfigSeverity').value = (conn.ingestFilter && conn.ingestFilter.minSeverity) || 'all';
+      document.getElementById('connConfigKeywords').value = (conn.ingestFilter && conn.ingestFilter.keywords) || '';
+
+      document.getElementById('connectorConfigModal').classList.remove('hidden');
+    }
+
+    function closeConnectorConfigModal() {
+      document.getElementById('connectorConfigModal').classList.add('hidden');
+      configuringConnectorId = null;
+    }
+
+    function saveConnectorConfig(event) {
+      event.preventDefault();
+      const conn = MOCK_CONNECTORS.find(c => c.id === configuringConnectorId);
+      if (!conn) return;
+
+      conn.pollCadence = document.getElementById('connConfigCadence').value;
+      conn.ingestFilter = {
+        minSeverity: document.getElementById('connConfigSeverity').value,
+        keywords: document.getElementById('connConfigKeywords').value.trim()
+      };
+
+      renderConnectors();
+      logChange('Connector Config Updated', `${conn.name} — ${conn.pollCadence}, ${describeIngestFilter(conn.ingestFilter)}`);
+      closeConnectorConfigModal();
+      showMockModal('Connector Config Saved', `Updated polling and ingestion rules for "${conn.name}". New settings take effect on the next poll cycle.`);
     }
 
     // ==========================================
@@ -2618,6 +2739,9 @@
               </div>
               <span class="text-slate-400">${feed.cadence}</span>
             </div>
+            <div class="text-[12px] font-mono text-slate-500 truncate" title="${describeIngestFilter(feed.ingestFilter)}">
+              ${describeIngestFilter(feed.ingestFilter)}
+            </div>
             <div class="flex items-center gap-2 pt-1">
               <button onclick="testExistingFeed('${feed.id}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 Test
@@ -2694,6 +2818,8 @@
       document.getElementById('feedUrl').value = feed.url;
       document.getElementById('feedDesc').value = feed.desc || '';
       document.getElementById('feedCadence').value = feed.cadence;
+      document.getElementById('feedMinSeverity').value = (feed.ingestFilter && feed.ingestFilter.minSeverity) || 'all';
+      document.getElementById('feedKeywords').value = (feed.ingestFilter && feed.ingestFilter.keywords) || '';
       document.getElementById('feedTestResultBanner').classList.add('hidden');
 
       document.getElementById('feedModalTitle').textContent = `EDIT FEED: ${feed.name}`;
@@ -2734,6 +2860,10 @@
       const url = document.getElementById('feedUrl').value;
       const desc = document.getElementById('feedDesc').value;
       const cadence = document.getElementById('feedCadence').value;
+      const ingestFilter = {
+        minSeverity: document.getElementById('feedMinSeverity').value,
+        keywords: document.getElementById('feedKeywords').value.trim()
+      };
 
       if (editingFeedId) {
         const feed = MOCK_FEEDS.find(f => f.id === editingFeedId);
@@ -2743,11 +2873,12 @@
           feed.url = url;
           feed.desc = desc;
           feed.cadence = cadence;
+          feed.ingestFilter = ingestFilter;
         }
         renderFeeds();
         closeAddFeedModal();
-        logChange('Feed Updated', name);
-        showMockModal('Feed Updated', `Updated subscription details for "${name}".`);
+        logChange('Feed Updated', `${name} — ${cadence}, ${describeIngestFilter(ingestFilter)}`);
+        showMockModal('Feed Updated', `Updated subscription details for "${name}". New polling and ingestion rules take effect on the next cycle.`);
         return;
       }
 
@@ -2760,7 +2891,8 @@
         cadence: cadence,
         status: 'Active',
         lastSync: 'Just now',
-        enabled: true
+        enabled: true,
+        ingestFilter: ingestFilter
       };
 
       MOCK_FEEDS.push(newFeed);
@@ -2777,6 +2909,7 @@
       'Connector Added': '<span class="inline-block h-2 w-2 rounded-full bg-cyan-400"></span>',
       'Connector Enabled': '<span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>',
       'Connector Disabled': '<span class="inline-block h-2 w-2 rounded-full bg-slate-600"></span>',
+      'Connector Config Updated': '<span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span>',
       'Feed Subscribed': '<span class="inline-block h-2 w-2 rounded-full bg-cyan-400"></span>',
       'Feed Updated': '<span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span>',
       'Feed Enabled': '<span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>',
