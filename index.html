@@ -25,7 +25,7 @@
 </head>
 <body class="bg-[#07090e] text-slate-200 antialiased font-sans min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
 
-  <!-- LOGIN GATE (session-only — resets on refresh, no backend) -->
+  <!-- LOGIN GATE (demo auth — saved to this browser's localStorage, no backend) -->
   <div id="loginGate" class="fixed inset-0 z-[100] bg-[#07090e] flex items-center justify-center p-4">
     <div class="absolute inset-0 grid-pattern opacity-60"></div>
     <form onsubmit="attemptLogin(event)" class="relative w-full max-w-sm rounded-2xl border border-cyan-900/50 bg-[#0b0f19]/95 shadow-2xl shadow-cyan-950/40 p-6 space-y-5">
@@ -59,7 +59,7 @@
       </button>
 
       <div class="text-[12px] text-slate-500 leading-relaxed border-t border-slate-800 pt-3">
-        Session-only auth — accounts and logins reset on page refresh. Manage accounts under <span class="text-slate-300">Settings → User Setup</span> once signed in.
+        Demo auth, saved in this browser — your account and login will still be here after a refresh. Manage accounts under <span class="text-slate-300">Settings → User Setup</span> once signed in.
       </div>
     </form>
   </div>
@@ -598,7 +598,7 @@
 
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden max-w-xl">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
-            <span class="text-sm font-semibold text-slate-200">User Setup <span class="text-[11px] text-slate-500 font-normal">(demo accounts — session only)</span></span>
+            <span class="text-sm font-semibold text-slate-200">User Setup <span class="text-[11px] text-slate-500 font-normal">(demo accounts — saved in this browser)</span></span>
           </div>
           <div class="p-4 space-y-4">
             <div id="userFormModeBanner" class="hidden text-[12px] text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-3 py-2">
@@ -634,7 +634,10 @@
             </form>
 
             <div class="border-t border-slate-800 pt-3 space-y-2" id="userSetupListWrap">
-              <div class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Demo Accounts This Session</div>
+              <div class="flex items-center justify-between">
+                <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Saved Demo Accounts</span>
+                <button onclick="resetDemoData()" class="text-[11px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-500 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition">Reset Demo Data</button>
+              </div>
               <div class="space-y-1.5" id="userSetupList"></div>
             </div>
           </div>
@@ -1384,15 +1387,74 @@
     let editingFeedId = null;
 
     // ==========================================
-    // USERS & SESSION-ONLY AUTH (demo login — no backend, resets on refresh)
+    // USERS & DEMO AUTH (no real backend — accounts & login state are saved to
+    // this browser's localStorage so a refresh doesn't lose them; private to
+    // this browser only, and visible via dev tools, so still demo-grade)
     // ==========================================
+    const USERS_STORAGE_KEY = 'aegisCtiDemoUsers_v1';
+    const SESSION_STORAGE_KEY = 'aegisCtiDemoSession_v1';
+
     const MOCK_USERS = [
       { username: 'analyst1', password: 'demo1234', displayName: 'Alex Chen', role: 'Senior Analyst' }
     ];
     let currentUser = null;
 
+    function saveUsersToStorage() {
+      try { localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(MOCK_USERS)); } catch (e) { /* storage unavailable — demo still works in-memory */ }
+    }
+
+    function loadUsersFromStorage() {
+      try {
+        const raw = localStorage.getItem(USERS_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) {
+          MOCK_USERS.length = 0;
+          parsed.forEach(u => MOCK_USERS.push(u));
+        }
+      } catch (e) { /* ignore corrupt/blocked storage, fall back to seeded account */ }
+    }
+
+    function saveSessionToStorage() {
+      try {
+        if (currentUser) localStorage.setItem(SESSION_STORAGE_KEY, currentUser.username);
+        else localStorage.removeItem(SESSION_STORAGE_KEY);
+      } catch (e) { /* ignore */ }
+    }
+
+    function restoreSessionFromStorage() {
+      try {
+        const username = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (!username) return false;
+        const match = MOCK_USERS.find(u => u.username === username);
+        if (!match) return false;
+        enterApp(match, false);
+        return true;
+      } catch (e) { return false; }
+    }
+
+    function resetDemoData() {
+      showMockModal('Reset Demo Data?', 'This clears all saved demo accounts and signs you out on this browser. This cannot be undone.', () => {
+        try {
+          localStorage.removeItem(USERS_STORAGE_KEY);
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+        } catch (e) { /* ignore */ }
+        location.reload();
+      });
+    }
+
     function initials(name) {
       return name.split(' ').filter(Boolean).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+    }
+
+    function enterApp(user, persistSession) {
+      currentUser = user;
+      document.getElementById('loginGate').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
+      document.getElementById('headerUserAvatar').textContent = initials(user.displayName);
+      document.getElementById('headerUserName').textContent = user.displayName;
+      document.getElementById('headerUserRole').textContent = user.role;
+      if (persistSession) saveSessionToStorage();
     }
 
     function attemptLogin(event) {
@@ -1409,16 +1471,12 @@
       }
 
       errorBox.classList.add('hidden');
-      currentUser = match;
-      document.getElementById('loginGate').classList.add('hidden');
-      document.getElementById('appShell').classList.remove('hidden');
-      document.getElementById('headerUserAvatar').textContent = initials(match.displayName);
-      document.getElementById('headerUserName').textContent = match.displayName;
-      document.getElementById('headerUserRole').textContent = match.role;
+      enterApp(match, true);
     }
 
     function logoutUser() {
       currentUser = null;
+      saveSessionToStorage();
       document.getElementById('loginPasswordInput').value = '';
       document.getElementById('loginErrorMsg').classList.add('hidden');
       document.getElementById('appShell').classList.add('hidden');
@@ -1444,7 +1502,7 @@
       const editingUser = editingUsername ? MOCK_USERS.find(u => u.username === editingUsername) : null;
       const usernameTaken = MOCK_USERS.some(u => u !== editingUser && u.username.toLowerCase() === username.toLowerCase());
       if (usernameTaken) {
-        errorBox.textContent = `Username "${username}" is already taken this session.`;
+        errorBox.textContent = `Username "${username}" is already taken.`;
         errorBox.classList.remove('hidden');
         return;
       }
@@ -1452,19 +1510,23 @@
       errorBox.classList.add('hidden');
 
       if (editingUser) {
+        const wasCurrentUser = currentUser === editingUser;
         editingUser.displayName = displayName;
         editingUser.role = role;
         editingUser.username = username;
         editingUser.password = password;
-        if (currentUser === editingUser) {
+        if (wasCurrentUser) {
           document.getElementById('headerUserAvatar').textContent = initials(currentUser.displayName);
           document.getElementById('headerUserName').textContent = currentUser.displayName;
           document.getElementById('headerUserRole').textContent = currentUser.role;
+          saveSessionToStorage();
         }
+        saveUsersToStorage();
         cancelEditMockUser();
         renderSettingsPanel();
       } else {
         MOCK_USERS.push({ username, password, displayName, role });
+        saveUsersToStorage();
         document.getElementById('newUserDisplayName').value = '';
         document.getElementById('newUserUsername').value = '';
         document.getElementById('newUserPassword').value = '';
@@ -1508,6 +1570,7 @@
       if (editingUsername === username) cancelEditMockUser();
       const idx = MOCK_USERS.findIndex(u => u.username === username);
       if (idx !== -1) MOCK_USERS.splice(idx, 1);
+      saveUsersToStorage();
       renderUserSetupList();
     }
 
@@ -2837,9 +2900,9 @@
         <div class="flex justify-between"><span class="text-slate-400">Active Connectors</span><span class="text-emerald-300">${MOCK_CONNECTORS.filter(c => c.enabled).length} / ${MOCK_CONNECTORS.length}</span></div>
         <div class="flex justify-between"><span class="text-slate-400">Subscribed Feeds</span><span class="text-emerald-300">${MOCK_FEEDS.filter(f => f.enabled).length} / ${MOCK_FEEDS.length}</span></div>
         <div class="flex justify-between"><span class="text-slate-400">Memos Generated This Session</span><span class="text-indigo-300">${memoArchive.length}</span></div>
-        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Authentication</span><span class="text-amber-300 text-right">Static demo login (session-only, no SSO yet)</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Authentication</span><span class="text-amber-300 text-right">Static demo login, saved to this browser (no SSO yet)</span></div>
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Signed In As</span><span class="text-cyan-300 text-right">${currentUser ? `${currentUser.displayName} (${currentUser.role})` : '—'}</span></div>
-        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Demo Accounts This Session</span><span class="text-emerald-300 text-right">${MOCK_USERS.length}</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Saved Demo Accounts</span><span class="text-emerald-300 text-right">${MOCK_USERS.length}</span></div>
       `;
       renderUserSetupList();
     }
@@ -3216,6 +3279,8 @@ and will re-verify once remediation is reported complete.
 
     // INITIAL LOAD
     document.addEventListener('DOMContentLoaded', () => {
+      loadUsersFromStorage();
+      restoreSessionFromStorage();
       renderAlerts();
       renderAssets();
       renderConnectors();
