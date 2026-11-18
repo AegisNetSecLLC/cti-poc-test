@@ -2928,11 +2928,32 @@
     let activeMemoRiskRating = 'medium';
 
     const RISK_RATING_META = {
-      low: { label: 'LOW', color: 'emerald', activeClasses: 'bg-emerald-600 text-white border-emerald-500', btnClasses: 'bg-emerald-600 hover:bg-emerald-500 text-white' },
-      medium: { label: 'MEDIUM', color: 'yellow', activeClasses: 'bg-yellow-400 text-slate-900 border-yellow-300', btnClasses: 'bg-yellow-400 hover:bg-yellow-300 text-slate-900' },
-      high: { label: 'HIGH', color: 'orange', activeClasses: 'bg-orange-500 text-white border-orange-400', btnClasses: 'bg-orange-500 hover:bg-orange-400 text-white' },
-      critical: { label: 'CRITICAL', color: 'red', activeClasses: 'bg-red-600 text-white border-red-500', btnClasses: 'bg-red-600 hover:bg-red-500 text-white' }
+      low: { label: 'LOW', color: 'emerald', activeClasses: 'bg-emerald-600 text-white border-emerald-500', btnClasses: 'bg-emerald-600 hover:bg-emerald-500 text-white', stampChar: '.', tagline: 'ROUTINE — MONITOR, NO IMMEDIATE ACTION REQUIRED' },
+      medium: { label: 'MEDIUM', color: 'yellow', activeClasses: 'bg-yellow-400 text-slate-900 border-yellow-300', btnClasses: 'bg-yellow-400 hover:bg-yellow-300 text-slate-900', stampChar: '-', tagline: 'REVIEW RECOMMENDED WITHIN NORMAL SLA' },
+      high: { label: 'HIGH', color: 'orange', activeClasses: 'bg-orange-500 text-white border-orange-400', btnClasses: 'bg-orange-500 hover:bg-orange-400 text-white', stampChar: '*', tagline: 'PROMPT REMEDIATION ADVISED' },
+      critical: { label: 'CRITICAL', color: 'red', activeClasses: 'bg-red-600 text-white border-red-500', btnClasses: 'bg-red-600 hover:bg-red-500 text-white', stampChar: '#', tagline: 'IMMEDIATE ACTION REQUIRED — ESCALATE NOW' }
     };
+
+    function buildRiskStamp(riskRating) {
+      const meta = RISK_RATING_META[riskRating];
+      const width = 64;
+      const ch = meta.stampChar;
+      const border = ch.repeat(width);
+      const center = (text) => {
+        const pad = Math.max(0, width - 2 - text.length);
+        const left = Math.floor(pad / 2);
+        const right = pad - left;
+        return `${ch}${' '.repeat(left)}${text}${' '.repeat(right)}${ch}`;
+      };
+      return [
+        border,
+        center(''),
+        center(`RISK CLASSIFICATION: ${meta.label}`),
+        center(meta.tagline),
+        center(''),
+        border
+      ].join('\n');
+    }
 
     function defaultRiskRatingForAlert(alert) {
       if (alert.priority.includes('P1')) return 'critical';
@@ -2954,6 +2975,8 @@
       return `================================================================
 THREAT INTELLIGENCE MEMORANDUM                      ${tlp}
 ================================================================
+${buildRiskStamp(riskRating)}
+
 DATE:              ${dateStr}
 RE:                ${alert.cve} — ${alert.title}
 ANALYST RISK RATING: ${RISK_RATING_META[riskRating].label}
