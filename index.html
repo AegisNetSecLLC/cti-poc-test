@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0">
   <title>AegisCTI // Threat Intelligence & Environment Correlation</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8/build/index.umd.js"></script>
   <style>
     /* Custom sleek scrollbar & cyber accents */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -3808,16 +3808,43 @@
 
     const MEMO_SECTION_DEFAULTS = { whatIsThis: true, exploitDetails: true, businessImpact: true, technicalDetails: false, iocs: false, recommendedAction: true };
 
+    // Single source of truth for which sections go in a memo and what they say — both
+    // buildMemoText (.txt/clipboard/mailto) and buildMemoDocxDocument (.docx) read from this,
+    // so toggling a checkbox can never make one export disagree with another.
+    function getMemoSectionList(alert, sections) {
+      const iocs = alert.iocs || { ips: [], domains: [], hashes: [] };
+      const iocLines = [
+        ...(iocs.ips || []).map(v => `IP:     ${v}`),
+        ...(iocs.domains || []).map(v => `Domain: ${v}`),
+        ...(iocs.hashes || []).map(v => `Hash:   ${v}`)
+      ];
+
+      const list = [{ heading: 'EXECUTIVE SUMMARY', text: alert.summary }];
+      if (sections.whatIsThis) list.push({ heading: 'WHAT THIS IS', text: alert.whatIsThis || 'Technical write-up pending.' });
+      if (sections.exploitDetails) list.push({ heading: 'EXPLOIT DETAILS (HOW THE ATTACK WORKS)', text: alert.exploitDetails || 'Exploit mechanics pending further analysis.' });
+      if (sections.businessImpact) list.push({ heading: 'BUSINESS IMPACT IF NOT REMEDIATED', text: alert.ifUnremediated || 'Impact assessment pending further analysis.' });
+      if (sections.technicalDetails) {
+        list.push({
+          heading: 'TECHNICAL DETAILS',
+          text: `CVE:              ${alert.cve}  (CVSS ${alert.cvss} | EPSS ${alert.epss}%)\nCISA KEV Status:  ${alert.inKev ? 'Listed — confirmed actively exploited' : 'Not listed'}\nThreat Actor:     ${alert.actor}\nAffected Asset:   ${alert.targetHost} (${alert.environment})\nMITRE ATT&CK:     ${alert.killChain.join(' -> ')}`
+        });
+      }
+      if (sections.iocs) {
+        list.push({ heading: 'INDICATORS OF COMPROMISE', text: iocLines.length ? iocLines.join('\n') : 'No indicators attributed yet for this finding.' });
+      }
+      if (sections.recommendedAction) {
+        list.push({
+          heading: 'RECOMMENDED ACTION',
+          text: `This finding has been escalated to ${alert.owningTeam || 'the appropriate owning team'} for\nremediation. Recommended: patch/upgrade ${alert.software.split(' (')[0]} and\nvalidate closure once the fix is applied. The Threat Correlation Team\nwill continue monitoring for exploitation signals and will re-verify\nonce remediation is reported complete.`
+        });
+      }
+      return list;
+    }
+
     function buildMemoText(alert, riskRating, sections) {
       sections = sections || MEMO_SECTION_DEFAULTS;
       const tlp = (alert.inKev || alert.riskScore >= 85) ? 'TLP:AMBER' : 'TLP:GREEN';
       const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-      const iocs = alert.iocs || { ips: [], domains: [], hashes: [] };
-      const iocLines = [
-        ...(iocs.ips || []).map(v => `  IP:     ${v}`),
-        ...(iocs.domains || []).map(v => `  Domain: ${v}`),
-        ...(iocs.hashes || []).map(v => `  Hash:   ${v}`)
-      ];
       const divider = '----------------------------------------------------------------';
 
       const blocks = [
@@ -3833,34 +3860,69 @@ ANALYST RISK RATING: ${RISK_RATING_META[riskRating].label}
 PRIORITY:          ${alert.priority}   |   Correlated Risk: ${alert.riskScore}/100
 PREPARED BY:       AEGIS.INTEL Threat Correlation Team
 FOR:               Security Leadership / Steering Committee
-OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`,
-
-        `${divider}\nEXECUTIVE SUMMARY\n${divider}\n${alert.summary}`
+OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
       ];
 
-      if (sections.whatIsThis) {
-        blocks.push(`${divider}\nWHAT THIS IS\n${divider}\n${alert.whatIsThis || 'Technical write-up pending.'}`);
-      }
-      if (sections.exploitDetails) {
-        blocks.push(`${divider}\nEXPLOIT DETAILS (HOW THE ATTACK WORKS)\n${divider}\n${alert.exploitDetails || 'Exploit mechanics pending further analysis.'}`);
-      }
-      if (sections.businessImpact) {
-        blocks.push(`${divider}\nBUSINESS IMPACT IF NOT REMEDIATED\n${divider}\n${alert.ifUnremediated || 'Impact assessment pending further analysis.'}`);
-      }
-      if (sections.technicalDetails) {
-        blocks.push(`${divider}\nTECHNICAL DETAILS\n${divider}\nCVE:              ${alert.cve}  (CVSS ${alert.cvss} | EPSS ${alert.epss}%)\nCISA KEV Status:  ${alert.inKev ? 'Listed — confirmed actively exploited' : 'Not listed'}\nThreat Actor:     ${alert.actor}\nAffected Asset:   ${alert.targetHost} (${alert.environment})\nMITRE ATT&CK:     ${alert.killChain.join(' -> ')}`);
-      }
-      if (sections.iocs) {
-        blocks.push(`${divider}\nINDICATORS OF COMPROMISE\n${divider}\n${iocLines.length ? iocLines.join('\n') : '  No indicators attributed yet for this finding.'}`);
-      }
-
-      if (sections.recommendedAction) {
-        blocks.push(`${divider}\nRECOMMENDED ACTION\n${divider}\nThis finding has been escalated to ${alert.owningTeam || 'the appropriate owning team'} for\nremediation. Recommended: patch/upgrade ${alert.software.split(' (')[0]} and\nvalidate closure once the fix is applied. The Threat Correlation Team\nwill continue monitoring for exploitation signals and will re-verify\nonce remediation is reported complete.`);
-      }
+      getMemoSectionList(alert, sections).forEach(s => {
+        blocks.push(`${divider}\n${s.heading}\n${divider}\n${s.text}`);
+      });
 
       blocks.push('================================================================');
 
       return blocks.join('\n\n');
+    }
+
+    function buildMemoDocxDocument(alert, riskRating, sections, gaugeImageDataUri) {
+      const { Document, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } = window.docx;
+      const meta = RISK_RATING_META[riskRating];
+      const tlp = (alert.inKev || alert.riskScore >= 85) ? 'TLP:AMBER' : 'TLP:GREEN';
+      const tlpColor = tlp === 'TLP:AMBER' ? 'B45309' : '047857';
+      const ratingColor = { low: '15803D', medium: 'A16207', high: 'C2410C', critical: 'B91C1C' }[riskRating] || '374151';
+      const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+
+      const children = [];
+
+      if (gaugeImageDataUri) {
+        const b64 = gaugeImageDataUri.slice(gaugeImageDataUri.indexOf(',') + 1);
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        children.push(new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+          rows: [new TableRow({ children: [
+            new TableCell({ width: { size: 65, type: WidthType.PERCENTAGE }, children: [new Paragraph('')] }),
+            new TableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new ImageRun({ data: bytes, transformation: { width: 170, height: Math.round(170 * (768 / 1376)) } })] })] })
+          ]})]
+        }));
+      }
+
+      children.push(new Paragraph({ children: [new TextRun({ text: 'THREAT INTELLIGENCE MEMORANDUM', bold: true, size: 32 })], spacing: { after: 80 } }));
+      children.push(new Paragraph({ children: [new TextRun({ text: `Classification: ${tlp}`, bold: true, color: tlpColor })], spacing: { after: 160 } }));
+      children.push(new Paragraph({ children: [new TextRun({ text: `RISK CLASSIFICATION: ${meta.label} — ${meta.tagline}`, bold: true, color: ratingColor })], spacing: { after: 240 } }));
+
+      const metaLine = (label, value) => new Paragraph({ children: [new TextRun({ text: `${label}  `, bold: true }), new TextRun(value)], spacing: { after: 60 } });
+      children.push(metaLine('DATE:', dateStr));
+      children.push(metaLine('RE:', `${alert.cve} — ${alert.title}`));
+      children.push(metaLine('ANALYST RISK RATING:', meta.label));
+      children.push(metaLine('PRIORITY:', `${alert.priority}   |   Correlated Risk: ${alert.riskScore}/100`));
+      children.push(metaLine('PREPARED BY:', 'AEGIS.INTEL Threat Correlation Team'));
+      children.push(metaLine('FOR:', 'Security Leadership / Steering Committee'));
+      children.push(metaLine('OWNING TEAM:', `${alert.owningTeam || 'Unassigned'} (action required)`));
+
+      getMemoSectionList(alert, sections).forEach(s => {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: s.heading, bold: true })],
+          spacing: { before: 280, after: 100 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '94A3B8' } }
+        }));
+        s.text.split('\n').forEach(line => {
+          children.push(new Paragraph({ text: line, spacing: { after: 60 } }));
+        });
+      });
+
+      return new window.docx.Document({ sections: [{ children }] });
     }
 
     function suggestMemoRecipientsForAlert(alert) {
@@ -3975,26 +4037,11 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`,
       logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
-    function downloadMemoDocx() {
-      const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
-      const text = document.getElementById('memoBody').textContent;
-      const status = document.getElementById('memoCopyStatus');
-
-      if (typeof htmlDocx === 'undefined') {
-        status.textContent = '.docx export library failed to load (check your internet connection) — use Download .txt instead.';
-        return;
-      }
-
-      const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    async function buildAndDownloadMemoDocxBlob(alert) {
       const gaugeImg = MEMO_RISK_GAUGE_IMAGES[activeMemoRiskRating];
-      const gaugeHtml = gaugeImg
-        ? `<table width="100%" style="border-collapse:collapse;"><tr><td style="width:70%;">&#160;</td><td style="width:30%; text-align:right; vertical-align:top;"><img src="${gaugeImg}" width="170" alt="Risk rating: ${RISK_RATING_META[activeMemoRiskRating].label}"></td></tr></table>`
-        : '';
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Threat Memo ${alert ? alert.cve : ''}</title></head>
-        <body>${gaugeHtml}<pre style="font-family:'Courier New',Courier,monospace; font-size:10pt; white-space:pre-wrap; margin:0;">${escaped}</pre></body></html>`;
-
-      const docxBlob = htmlDocx.asBlob(html);
-      const url = URL.createObjectURL(docxBlob);
+      const doc = buildMemoDocxDocument(alert, activeMemoRiskRating, activeMemoSections, gaugeImg);
+      const blob = await window.docx.Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `threat-memo-${alert ? alert.cve : 'draft'}.docx`;
@@ -4002,12 +4049,25 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`,
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      return !!gaugeImg;
+    }
+
+    async function downloadMemoDocx() {
+      const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
+      const status = document.getElementById('memoCopyStatus');
+
+      if (typeof window.docx === 'undefined') {
+        status.textContent = '.docx export library failed to load (check your internet connection) — use Download .txt instead.';
+        return;
+      }
+
+      const hadGauge = await buildAndDownloadMemoDocxBlob(alert);
 
       const recipients = document.getElementById('memoRecipientInput').value.trim();
-      const gaugeNote = gaugeImg
+      const gaugeNote = hadGauge
         ? `includes the ${RISK_RATING_META[activeMemoRiskRating].label} risk gauge, top right`
         : `no risk gauge image for ${RISK_RATING_META[activeMemoRiskRating].label} yet`;
-      status.textContent = `.docx download started (${gaugeNote}) — attach it to your email manually (mailto links can't carry attachments).`;
+      status.textContent = `.docx download started (${gaugeNote}) — opens correctly in Word and Google Docs.`;
       logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
@@ -4249,11 +4309,12 @@ Correlation Team does not perform remediation itself.
       logChange('Weekly Report Exported', `Program summary exported covering ${MOCK_ALERTS.length} correlated findings.`);
     }
 
-    function emailMemo() {
+    async function emailMemo() {
       const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
       if (!alert) return;
       const text = document.getElementById('memoBody').textContent;
       const subject = `Threat Memo [${RISK_RATING_META[activeMemoRiskRating].label}]: ${alert.cve} — ${alert.title}`;
+      const status = document.getElementById('memoCopyStatus');
 
       const recipients = document.getElementById('memoRecipientInput').value.trim();
       const tokens = recipients ? recipients.split(',').map(t => t.trim()).filter(Boolean) : [];
@@ -4271,8 +4332,18 @@ Correlation Team does not perform remediation itself.
       let statusMsg = toField ? `Opening your email client, addressed to ${toField}...` : 'Opening your email client... (no email address entered above, so "To" is blank)';
       statusMsg += ' Full memo also copied to clipboard as backup in case it gets truncated.';
       if (nonEmailTokens.length) statusMsg += ` Note: ${nonEmailTokens.join(', ')} isn't an email address and was left out of the mail client's "To" field — post the memo there separately.`;
-      statusMsg += ' Mailto links can\'t carry attachments — use Download .docx if you want to attach a Word copy yourself.';
-      document.getElementById('memoCopyStatus').textContent = statusMsg;
+
+      // mailto: has no attachment mechanism in any browser — nothing client-side can force a
+      // file into that draft. The closest real equivalent: download the matching .docx (same
+      // sections, same risk gauge image) at the same moment, ready to drag into the compose window.
+      if (typeof window.docx !== 'undefined') {
+        const hadGauge = await buildAndDownloadMemoDocxBlob(alert);
+        statusMsg += ` A matching .docx also downloaded${hadGauge ? ` (with the ${RISK_RATING_META[activeMemoRiskRating].label} risk gauge)` : ''} — mailto can't auto-attach, so drag that file into the compose window yourself.`;
+      } else {
+        statusMsg += ' .docx export library failed to load, so no file was downloaded to attach — check your internet connection and try again.';
+      }
+
+      status.textContent = statusMsg;
       logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
