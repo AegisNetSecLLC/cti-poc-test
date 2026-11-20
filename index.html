@@ -8,6 +8,7 @@
   <meta http-equiv="Expires" content="0">
   <title>AegisCTI // Threat Intelligence & Environment Correlation</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html-docx-js/dist/html-docx.js"></script>
   <style>
     /* Custom sleek scrollbar & cyber accents */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -1281,6 +1282,7 @@
         <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-businessImpact" onchange="toggleMemoSection('businessImpact')" class="accent-indigo-500"> Business Impact</label>
         <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-technicalDetails" onchange="toggleMemoSection('technicalDetails')" class="accent-indigo-500"> Technical Details</label>
         <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-iocs" onchange="toggleMemoSection('iocs')" class="accent-indigo-500"> Indicators of Compromise</label>
+        <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-recommendedAction" onchange="toggleMemoSection('recommendedAction')" class="accent-indigo-500"> Recommended Action</label>
       </div>
 
       <div class="p-5 overflow-y-auto font-mono text-sm leading-relaxed text-slate-200 whitespace-pre-wrap bg-[#0d1119]" id="memoBody"></div>
@@ -1289,6 +1291,7 @@
         <span class="text-[11px] text-slate-500 font-mono" id="memoCopyStatus">Not copied yet.</span>
         <div class="flex items-center gap-2 flex-wrap">
           <button type="button" onclick="downloadMemo()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Download .txt</button>
+          <button type="button" onclick="downloadMemoDocx()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Download .docx</button>
           <button type="button" onclick="emailMemo()" id="btnEmailMemo" class="px-4 py-2 rounded-lg text-white font-semibold text-sm transition">Email</button>
           <button type="button" onclick="copyMemoToClipboard()" id="btnCopyMemo" class="px-4 py-2 rounded-lg text-white font-semibold text-sm transition">Copy to Clipboard</button>
         </div>
@@ -3792,7 +3795,7 @@
       return 'low';
     }
 
-    const MEMO_SECTION_DEFAULTS = { whatIsThis: true, exploitDetails: true, businessImpact: true, technicalDetails: false, iocs: false };
+    const MEMO_SECTION_DEFAULTS = { whatIsThis: true, exploitDetails: true, businessImpact: true, technicalDetails: false, iocs: false, recommendedAction: true };
 
     function buildMemoText(alert, riskRating, sections) {
       sections = sections || MEMO_SECTION_DEFAULTS;
@@ -3840,7 +3843,11 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`,
         blocks.push(`${divider}\nINDICATORS OF COMPROMISE\n${divider}\n${iocLines.length ? iocLines.join('\n') : '  No indicators attributed yet for this finding.'}`);
       }
 
-      blocks.push(`${divider}\nRECOMMENDED ACTION\n${divider}\nThis finding has been escalated to ${alert.owningTeam || 'the appropriate owning team'} for\nremediation. Recommended: patch/upgrade ${alert.software.split(' (')[0]} and\nvalidate closure once the fix is applied. The Threat Correlation Team\nwill continue monitoring for exploitation signals and will re-verify\nonce remediation is reported complete.\n================================================================`);
+      if (sections.recommendedAction) {
+        blocks.push(`${divider}\nRECOMMENDED ACTION\n${divider}\nThis finding has been escalated to ${alert.owningTeam || 'the appropriate owning team'} for\nremediation. Recommended: patch/upgrade ${alert.software.split(' (')[0]} and\nvalidate closure once the fix is applied. The Threat Correlation Team\nwill continue monitoring for exploitation signals and will re-verify\nonce remediation is reported complete.`);
+      }
+
+      blocks.push('================================================================');
 
       return blocks.join('\n\n');
     }
@@ -3954,6 +3961,35 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`,
       URL.revokeObjectURL(url);
       const recipients = document.getElementById('memoRecipientInput').value.trim();
       document.getElementById('memoCopyStatus').textContent = 'Download started.';
+      logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
+    }
+
+    function downloadMemoDocx() {
+      const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
+      const text = document.getElementById('memoBody').textContent;
+      const status = document.getElementById('memoCopyStatus');
+
+      if (typeof htmlDocx === 'undefined') {
+        status.textContent = '.docx export library failed to load (check your internet connection) — use Download .txt instead.';
+        return;
+      }
+
+      const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Threat Memo ${alert ? alert.cve : ''}</title></head>
+        <body><pre style="font-family:'Courier New',Courier,monospace; font-size:10pt; white-space:pre-wrap; margin:0;">${escaped}</pre></body></html>`;
+
+      const docxBlob = htmlDocx.asBlob(html);
+      const url = URL.createObjectURL(docxBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `threat-memo-${alert ? alert.cve : 'draft'}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      const recipients = document.getElementById('memoRecipientInput').value.trim();
+      status.textContent = '.docx download started — attach it to your email manually (mailto links can\'t carry attachments).';
       logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
@@ -4217,6 +4253,7 @@ Correlation Team does not perform remediation itself.
       let statusMsg = toField ? `Opening your email client, addressed to ${toField}...` : 'Opening your email client... (no email address entered above, so "To" is blank)';
       statusMsg += ' Full memo also copied to clipboard as backup in case it gets truncated.';
       if (nonEmailTokens.length) statusMsg += ` Note: ${nonEmailTokens.join(', ')} isn't an email address and was left out of the mail client's "To" field — post the memo there separately.`;
+      statusMsg += ' Mailto links can\'t carry attachments — use Download .docx if you want to attach a Word copy yourself.';
       document.getElementById('memoCopyStatus').textContent = statusMsg;
       logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
