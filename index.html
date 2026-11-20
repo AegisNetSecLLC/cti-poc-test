@@ -1266,6 +1266,13 @@
         <button type="button" onclick="setMemoRiskRating('critical')" id="riskPill-critical" class="risk-pill px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border transition">CRITICAL</button>
       </div>
 
+      <!-- Recipient -->
+      <div class="px-4 py-2.5 border-b border-slate-800 bg-slate-950/50 flex items-center gap-2 flex-wrap">
+        <label for="memoRecipientInput" class="text-[11px] font-mono text-slate-400 shrink-0">TO:</label>
+        <input id="memoRecipientInput" type="text" placeholder="e.g. ciso@corp.com, #soc-tier1-alerts" class="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+        <span id="memoRecipientHint" class="text-[11px] text-slate-500 font-mono"></span>
+      </div>
+
       <div class="p-5 overflow-y-auto font-mono text-sm leading-relaxed text-slate-200 whitespace-pre-wrap bg-[#0d1119]" id="memoBody"></div>
 
       <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2 flex-wrap">
@@ -3673,15 +3680,16 @@
     let activeMemoAlertId = null;
     const memoArchive = [];
 
-    function logMemoArchiveEntry(alertId, riskRating) {
+    function logMemoArchiveEntry(alertId, riskRating, recipients) {
       const alert = MOCK_ALERTS.find(a => a.id === alertId);
       if (!alert) return;
       const existing = memoArchive.find(m => m.alertId === alertId);
       if (existing) {
         existing.riskRating = riskRating;
         existing.lastTouched = Date.now();
+        existing.recipients = recipients || existing.recipients;
       } else {
-        memoArchive.unshift({ alertId: alertId, cve: alert.cve, title: alert.title, riskRating: riskRating, lastTouched: Date.now() });
+        memoArchive.unshift({ alertId: alertId, cve: alert.cve, title: alert.title, riskRating: riskRating, lastTouched: Date.now(), recipients: recipients || '' });
       }
       const badge = document.getElementById('badgeMemoArchiveCount');
       if (badge) badge.textContent = memoArchive.length;
@@ -3704,7 +3712,7 @@
                 <span class="font-mono text-sm font-bold text-cyan-300">${entry.cve}</span>
               </div>
               <div class="text-sm text-slate-200">${entry.title}</div>
-              <div class="text-[11px] text-slate-500 font-mono">${timeAgo(entry.lastTouched)}</div>
+              <div class="text-[11px] text-slate-500 font-mono">${timeAgo(entry.lastTouched)}${entry.recipients ? ` &middot; To: ${entry.recipients}` : ''}</div>
             </div>
             <div class="flex items-center gap-2">
               <button onclick="reopenArchivedMemo('${entry.alertId}', '${entry.riskRating}')" class="px-2.5 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm transition">Reopen</button>
@@ -3850,6 +3858,20 @@ and will re-verify once remediation is reported complete.
 ================================================================`;
     }
 
+    function suggestMemoRecipientsForAlert(alert) {
+      const candidateTriggers = [];
+      if (alert.priority === 'P1-CRITICAL') candidateTriggers.push('p1_critical');
+      if (alert.inKev) candidateTriggers.push('kev_match');
+      if (alert.internetFacing) candidateTriggers.push('internet_facing');
+      candidateTriggers.push('memo_generated');
+
+      for (const trig of candidateTriggers) {
+        const rule = MOCK_ALERT_RULES.find(r => r.trigger === trig);
+        if (rule) return { recipients: rule.recipients, source: `from "${ALERT_TRIGGER_LABELS[trig]}" alert rule` };
+      }
+      return { recipients: '', source: '' };
+    }
+
     function openThreatMemoModal(alertId) {
       const alert = MOCK_ALERTS.find(a => a.id === alertId);
       if (!alert) return;
@@ -3866,6 +3888,11 @@ and will re-verify once remediation is reported complete.
       renderRiskPills();
       document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating);
       document.getElementById('memoCopyStatus').textContent = 'Not copied yet.';
+
+      const suggestion = suggestMemoRecipientsForAlert(alert);
+      document.getElementById('memoRecipientInput').value = suggestion.recipients;
+      document.getElementById('memoRecipientHint').textContent = suggestion.recipients ? `Suggested ${suggestion.source} — edit as needed` : 'No matching alert rule — enter recipients manually';
+
       document.getElementById('threatMemoModal').classList.remove('hidden');
     }
 
@@ -3899,10 +3926,13 @@ and will re-verify once remediation is reported complete.
 
     function copyMemoToClipboard() {
       const text = document.getElementById('memoBody').textContent;
+      const recipients = document.getElementById('memoRecipientInput').value.trim();
       const status = document.getElementById('memoCopyStatus');
       navigator.clipboard.writeText(text).then(() => {
-        status.textContent = 'Copied to clipboard — paste into email, Slack, or your ticketing system.';
-        logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating);
+        status.textContent = recipients
+          ? `Copied to clipboard — paste into a message to ${recipients}.`
+          : 'Copied to clipboard — no recipient entered above, so paste it wherever it needs to go.';
+        logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
       }).catch(() => {
         status.textContent = 'Copy failed — your browser may be blocking clipboard access.';
       });
@@ -3920,8 +3950,9 @@ and will re-verify once remediation is reported complete.
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      const recipients = document.getElementById('memoRecipientInput').value.trim();
       document.getElementById('memoCopyStatus').textContent = 'Download started.';
-      logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating);
+      logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
     const OVERVIEW_TREND_DATA = [1, 2, 1, 3, 2, 4, 3, 2, 4, 5, 3, 6, 4, 5];
@@ -4168,14 +4199,24 @@ Correlation Team does not perform remediation itself.
       const text = document.getElementById('memoBody').textContent;
       const subject = `Threat Memo [${RISK_RATING_META[activeMemoRiskRating].label}]: ${alert.cve} — ${alert.title}`;
 
+      const recipients = document.getElementById('memoRecipientInput').value.trim();
+      const tokens = recipients ? recipients.split(',').map(t => t.trim()).filter(Boolean) : [];
+      const emailTokens = tokens.filter(t => t.includes('@'));
+      const nonEmailTokens = tokens.filter(t => !t.includes('@'));
+      const toField = emailTokens.join(',');
+
       // Mailto bodies get truncated by some mail clients on long text, so also copy
       // the full memo to the clipboard as a backup the analyst can paste in manually.
       navigator.clipboard.writeText(text).catch(() => {});
 
-      const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+      const mailto = `mailto:${encodeURIComponent(toField)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
       window.location.href = mailto;
-      document.getElementById('memoCopyStatus').textContent = 'Opening your email client... (full memo also copied to clipboard as backup in case it gets truncated)';
-      logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating);
+
+      let statusMsg = toField ? `Opening your email client, addressed to ${toField}...` : 'Opening your email client... (no email address entered above, so "To" is blank)';
+      statusMsg += ' Full memo also copied to clipboard as backup in case it gets truncated.';
+      if (nonEmailTokens.length) statusMsg += ` Note: ${nonEmailTokens.join(', ')} isn't an email address and was left out of the mail client's "To" field — post the memo there separately.`;
+      document.getElementById('memoCopyStatus').textContent = statusMsg;
+      logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
     // ==========================================
