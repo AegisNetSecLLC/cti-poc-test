@@ -231,6 +231,16 @@
 
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-200">Remediation & SLA Status <span class="text-[11px] text-slate-500 font-normal">(are notified teams actually acting?)</span></span>
+          </div>
+          <div class="p-4 space-y-4">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="overviewSlaTiles"></div>
+            <div class="space-y-1.5" id="overviewSlaBreaches"></div>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
             <span class="text-sm font-semibold text-slate-200">Recent Platform Activity</span>
             <button type="button" onclick="switchTab('settings')" class="text-[12px] text-cyan-400 hover:text-cyan-300 font-mono transition">Full audit log &rarr;</button>
           </div>
@@ -1552,6 +1562,82 @@
       }
     ];
 
+    // ==========================================
+    // SLA / REMEDIATION TRACKING
+    // ==========================================
+    const SLA_HOURS_BY_PRIORITY = { 'P1-CRITICAL': 24, 'P2-HIGH': 72, 'P3-MEDIUM': 168 };
+    const ALERT_NOTIFIED_HOURS_AGO = {
+      'CORR-2026-065': 30,
+      'CORR-2026-091': 6,
+      'CORR-2026-088': 50,
+      'CORR-2026-074': 120,
+      'CORR-2026-051': 200
+    };
+    const ALERT_REMEDIATION_STORAGE_KEY = 'aegisCtiDemoRemediation_v1';
+    const REMEDIATION_STATUS_LABELS = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved' };
+
+    function initAlertRemediationFields() {
+      MOCK_ALERTS.forEach(a => {
+        if (a.notifiedAt === undefined) {
+          const hrsAgo = ALERT_NOTIFIED_HOURS_AGO[a.id] !== undefined ? ALERT_NOTIFIED_HOURS_AGO[a.id] : 24;
+          a.notifiedAt = Date.now() - hrsAgo * 3600000;
+        }
+        if (a.remediationStatus === undefined) a.remediationStatus = 'open';
+        if (a.resolvedAt === undefined) a.resolvedAt = null;
+      });
+    }
+
+    function saveRemediationToStorage() {
+      try {
+        const map = {};
+        MOCK_ALERTS.forEach(a => { map[a.id] = { status: a.remediationStatus, resolvedAt: a.resolvedAt }; });
+        localStorage.setItem(ALERT_REMEDIATION_STORAGE_KEY, JSON.stringify(map));
+      } catch (e) { /* ignore */ }
+    }
+
+    function loadRemediationFromStorage() {
+      try {
+        const raw = localStorage.getItem(ALERT_REMEDIATION_STORAGE_KEY);
+        if (!raw) return;
+        const map = JSON.parse(raw);
+        MOCK_ALERTS.forEach(a => {
+          if (map[a.id]) {
+            a.remediationStatus = map[a.id].status;
+            a.resolvedAt = map[a.id].resolvedAt;
+          }
+        });
+      } catch (e) { /* ignore */ }
+    }
+
+    function slaStatusForAlert(alert) {
+      if (alert.remediationStatus === 'resolved') {
+        return { label: 'RESOLVED', cls: 'bg-emerald-950 text-emerald-300 border-emerald-700' };
+      }
+      const slaHours = SLA_HOURS_BY_PRIORITY[alert.priority] || 72;
+      const hoursSince = (Date.now() - alert.notifiedAt) / 3600000;
+      if (hoursSince > slaHours) return { label: 'SLA BREACHED', cls: 'bg-rose-950 text-rose-300 border-rose-700' };
+      if (hoursSince > slaHours * 0.75) return { label: 'AT RISK', cls: 'bg-amber-950 text-amber-300 border-amber-700' };
+      return { label: 'ON TRACK', cls: 'bg-cyan-950 text-cyan-300 border-cyan-700' };
+    }
+
+    function remediationButtonsHtml(alert) {
+      return ['open', 'in_progress', 'resolved'].map(val => {
+        const active = alert.remediationStatus === val;
+        return `<button data-write-action onclick="event.stopPropagation(); setRemediationStatus('${alert.id}','${val}')" class="px-2 py-0.5 rounded text-[11px] font-mono border transition ${active ? 'bg-slate-700 text-white border-slate-600' : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'}">${REMEDIATION_STATUS_LABELS[val]}</button>`;
+      }).join('');
+    }
+
+    function setRemediationStatus(alertId, status) {
+      const alert = MOCK_ALERTS.find(a => a.id === alertId);
+      if (!alert || alert.remediationStatus === status) return;
+      alert.remediationStatus = status;
+      alert.resolvedAt = status === 'resolved' ? Date.now() : null;
+      saveRemediationToStorage();
+      logChange('Remediation Status Updated', `${alert.cve} marked "${REMEDIATION_STATUS_LABELS[status]}" for ${alert.owningTeam || 'owning team'}`);
+      renderAlerts();
+      if (!document.getElementById('view-overview').classList.contains('hidden')) renderOverviewPanel();
+    }
+
     const MOCK_CONNECTORS = [
       { id: 'conn-1', name: 'CISA Known Exploited Vulns (KEV)', category: 'intel', type: 'REST JSON', status: 'Active', latency: '120ms', sync: 'Synced 5m ago', icon: 'KEV', enabled: true, desc: 'Official federal catalog of vulnerabilities actively weaponized in the wild.' , pollCadence: 'Every 5 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
       { id: 'conn-2', name: 'FIRST.org EPSS v3 Predictor', category: 'intel', type: 'REST API', status: 'Active', latency: '340ms', sync: 'Synced 1h ago', icon: 'EPSS', enabled: true, desc: 'Machine learning model predicting 30-day weaponization probability for all CVEs.' , pollCadence: 'Hourly Sync', ingestFilter: { minSeverity: 'all', keywords: '' } },
@@ -1637,12 +1723,13 @@
     }
 
     function resetDemoData() {
-      showMockModal('Reset Demo Data?', 'This clears all saved demo accounts, alert rules, audit history, and signs you out on this browser. This cannot be undone.', () => {
+      showMockModal('Reset Demo Data?', 'This clears all saved demo accounts, alert rules, audit history, remediation status, and signs you out on this browser. This cannot be undone.', () => {
         try {
           localStorage.removeItem(USERS_STORAGE_KEY);
           localStorage.removeItem(SESSION_STORAGE_KEY);
           localStorage.removeItem(ALERT_RULES_STORAGE_KEY);
           localStorage.removeItem(AUDIT_LOG_STORAGE_KEY);
+          localStorage.removeItem(ALERT_REMEDIATION_STORAGE_KEY);
         } catch (e) { /* ignore */ }
         location.reload();
       });
@@ -2954,7 +3041,8 @@
 
         const card = document.createElement('div');
         card.className = `p-4 rounded-xl bg-[#090d16] border ${isCritical ? 'border-rose-900/60 hover:border-rose-500/50' : 'border-slate-800/80 hover:border-slate-700'} transition space-y-3 shadow-md group cursor-pointer`;
-        
+        const sla = slaStatusForAlert(alert);
+
         card.innerHTML = `
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="space-y-1">
@@ -3003,6 +3091,15 @@
             </div>
           </div>
 
+          <!-- Remediation / SLA Tracking -->
+          <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/70 text-[12px] font-mono" onclick="event.stopPropagation()">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-slate-500">Notified ${timeAgo(alert.notifiedAt)} to ${alert.owningTeam || 'Unassigned'}</span>
+              <span class="px-1.5 py-0.5 rounded border font-bold ${sla.cls}">${sla.label}</span>
+            </div>
+            <div class="flex items-center gap-1">${remediationButtonsHtml(alert)}</div>
+          </div>
+
           <!-- Summary and Fast Triage Actions -->
           <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
             <p class="text-sm text-slate-400 max-w-xl leading-relaxed">${alert.summary}</p>
@@ -3021,6 +3118,7 @@
         `;
         container.appendChild(card);
       });
+      applyRoleRestrictions();
     }
 
     // ==========================================
@@ -3493,7 +3591,8 @@
       'New 0-Day Alert Ingested': '<span class="inline-block h-2 w-2 rounded-full bg-rose-500"></span>',
       'Alert Rule Added': '<span class="inline-block h-2 w-2 rounded-full bg-cyan-400"></span>',
       'Alert Rule Updated': '<span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span>',
-      'Weekly Report Exported': '<span class="inline-block h-2 w-2 rounded-full bg-indigo-400"></span>'
+      'Weekly Report Exported': '<span class="inline-block h-2 w-2 rounded-full bg-indigo-400"></span>',
+      'Remediation Status Updated': '<span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>'
     };
 
     function timeAgo(timestamp) {
@@ -3904,6 +4003,46 @@ and will re-verify once remediation is reported complete.
         </div>
       `).join('');
 
+      const slaBuckets = { onTrack: 0, atRisk: 0, breached: 0, resolved: 0 };
+      MOCK_ALERTS.forEach(a => {
+        const s = slaStatusForAlert(a);
+        if (s.label === 'RESOLVED') slaBuckets.resolved++;
+        else if (s.label === 'SLA BREACHED') slaBuckets.breached++;
+        else if (s.label === 'AT RISK') slaBuckets.atRisk++;
+        else slaBuckets.onTrack++;
+      });
+      document.getElementById('overviewSlaTiles').innerHTML = `
+        <div class="p-3 rounded-lg bg-slate-950/50 border border-cyan-900/40 text-center">
+          <div class="text-xl font-bold font-mono text-cyan-300">${slaBuckets.onTrack}</div>
+          <div class="text-[11px] text-slate-500 font-mono uppercase mt-1">On Track</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-950/50 border border-amber-900/40 text-center">
+          <div class="text-xl font-bold font-mono text-amber-300">${slaBuckets.atRisk}</div>
+          <div class="text-[11px] text-slate-500 font-mono uppercase mt-1">At Risk</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-950/50 border border-rose-900/40 text-center">
+          <div class="text-xl font-bold font-mono text-rose-300">${slaBuckets.breached}</div>
+          <div class="text-[11px] text-slate-500 font-mono uppercase mt-1">SLA Breached</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-950/50 border border-emerald-900/40 text-center">
+          <div class="text-xl font-bold font-mono text-emerald-300">${slaBuckets.resolved}</div>
+          <div class="text-[11px] text-slate-500 font-mono uppercase mt-1">Resolved</div>
+        </div>
+      `;
+
+      const breachedAlerts = MOCK_ALERTS.filter(a => slaStatusForAlert(a).label === 'SLA BREACHED');
+      const breachList = document.getElementById('overviewSlaBreaches');
+      if (breachedAlerts.length === 0) {
+        breachList.innerHTML = `<div class="p-3 text-center text-[13px] font-mono text-emerald-400/80 border border-dashed border-slate-800 rounded-lg">No findings are past their notification SLA right now.</div>`;
+      } else {
+        breachList.innerHTML = breachedAlerts.map(a => `
+          <div class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-rose-950/20 border border-rose-900/40 text-[12px] font-mono cursor-pointer" onclick="switchTab('triage'); openDeepDive('${a.id}')">
+            <span class="text-rose-300 truncate">${a.cve} — ${a.title}</span>
+            <span class="text-slate-400 shrink-0">${a.owningTeam || 'Unassigned'} &middot; notified ${timeAgo(a.notifiedAt)}</span>
+          </div>
+        `).join('');
+      }
+
       const recent = auditLog.slice().reverse().slice(0, 6);
       const activityList = document.getElementById('overviewActivityList');
       if (recent.length === 0) {
@@ -3929,7 +4068,21 @@ and will re-verify once remediation is reported complete.
       const internetFacingAlerts = MOCK_ALERTS.filter(a => a.internetFacing);
       const sortedAlerts = MOCK_ALERTS.slice().sort((a, b) => b.riskScore - a.riskScore);
 
-      const alertLines = sortedAlerts.map(a => `  [${a.priority}]  ${a.cve}  (Risk ${a.riskScore}/100)  ${a.title}\n           Owning Team: ${a.owningTeam || 'Unassigned'}${a.inKev ? '  |  CISA KEV' : ''}${a.internetFacing ? '  |  Internet-Facing' : ''}`);
+      const alertLines = sortedAlerts.map(a => {
+        const sla = slaStatusForAlert(a);
+        return `  [${a.priority}]  ${a.cve}  (Risk ${a.riskScore}/100)  ${a.title}\n           Owning Team: ${a.owningTeam || 'Unassigned'}${a.inKev ? '  |  CISA KEV' : ''}${a.internetFacing ? '  |  Internet-Facing' : ''}\n           Status: ${REMEDIATION_STATUS_LABELS[a.remediationStatus]}  |  SLA: ${sla.label}  |  Notified ${timeAgo(a.notifiedAt)}`;
+      });
+
+      const slaBuckets = { onTrack: 0, atRisk: 0, breached: 0, resolved: 0 };
+      MOCK_ALERTS.forEach(a => {
+        const label = slaStatusForAlert(a).label;
+        if (label === 'RESOLVED') slaBuckets.resolved++;
+        else if (label === 'SLA BREACHED') slaBuckets.breached++;
+        else if (label === 'AT RISK') slaBuckets.atRisk++;
+        else slaBuckets.onTrack++;
+      });
+      const breachedLines = MOCK_ALERTS.filter(a => slaStatusForAlert(a).label === 'SLA BREACHED')
+        .map(a => `  ${a.cve}  —  ${a.owningTeam || 'Unassigned'}  (notified ${timeAgo(a.notifiedAt)})`);
 
       const connectorLines = MOCK_CONNECTORS.map(c => `  ${c.enabled ? '[ENABLED] ' : '[DISABLED]'}  ${c.name}`);
       const feedLines = MOCK_FEEDS.map(f => `  ${f.enabled ? '[ENABLED] ' : '[DISABLED]'}  ${f.name}`);
@@ -3956,6 +4109,17 @@ HEADLINE NUMBERS
   Subscribed Feeds:                   ${MOCK_FEEDS.filter(f => f.enabled).length} / ${MOCK_FEEDS.length} enabled
 
 ----------------------------------------------------------------
+REMEDIATION & SLA STATUS (BY OWNING TEAM)
+----------------------------------------------------------------
+  On Track:        ${slaBuckets.onTrack}
+  At Risk:         ${slaBuckets.atRisk}
+  SLA Breached:    ${slaBuckets.breached}
+  Resolved:        ${slaBuckets.resolved}
+
+  Past SLA, awaiting action:
+${breachedLines.length ? breachedLines.join('\n') : '    None — all open findings are within their notification SLA.'}
+
+----------------------------------------------------------------
 CORRELATED FINDINGS (BY RISK SCORE)
 ----------------------------------------------------------------
 ${alertLines.join('\n\n')}
@@ -3979,7 +4143,8 @@ NOTE ON THIS PLATFORM'S ROLE
 ----------------------------------------------------------------
 The Threat Correlation Team notifies and escalates — remediation is
 owned and executed by the teams listed above against each finding.
-This report reflects notification status, not remediation status.
+Status above reflects what owning teams have reported back; the
+Correlation Team does not perform remediation itself.
 ================================================================`;
     }
 
@@ -4204,7 +4369,10 @@ This report reflects notification status, not remediation status.
             assetCriticality: 98,
             actorSophistication: 95,
             detectionGap: 90
-          }
+          },
+          notifiedAt: Date.now(),
+          remediationStatus: 'open',
+          resolvedAt: null
         };
 
         MOCK_ALERTS.unshift(newAlert);
@@ -4229,6 +4397,8 @@ This report reflects notification status, not remediation status.
       restoreSessionFromStorage();
       loadAlertRulesFromStorage();
       loadAuditLogFromStorage();
+      initAlertRemediationFields();
+      loadRemediationFromStorage();
       renderAlerts();
       renderAssets();
       renderConnectors();
