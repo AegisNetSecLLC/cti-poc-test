@@ -661,15 +661,26 @@
           <p class="text-sm text-slate-400">Platform status and what's coming next.</p>
         </div>
 
-        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden max-w-xl">
+        <div class="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
+          <button onclick="switchSettingsTab('status')" id="settingsTab-status" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Platform Status</button>
+          <button onclick="switchSettingsTab('users')" id="settingsTab-users" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">User Setup</button>
+          <button onclick="switchSettingsTab('alerting')" id="settingsTab-alerting" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Alerting & Notifications</button>
+          <button onclick="switchSettingsTab('audit')" id="settingsTab-audit" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Audit Log</button>
+          <button onclick="switchSettingsTab('roadmap')" id="settingsTab-roadmap" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Coming Soon</button>
+        </div>
+
+        <div id="settingsPane-status" class="max-w-xl">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between gap-3">
             <span class="text-sm font-semibold text-slate-200">Platform Status</span>
             <button type="button" onclick="exportWeeklyReport()" title="Download a plain-text program summary for leadership" class="px-2.5 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[12px] font-semibold transition">Export Weekly Report</button>
           </div>
           <div class="p-4 space-y-2 text-sm font-mono" id="settingsStatusBody"></div>
         </div>
+        </div>
 
-        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden max-w-xl">
+        <div id="settingsPane-users" class="max-w-xl hidden">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
             <span class="text-sm font-semibold text-slate-200">User Setup <span class="text-[11px] text-slate-500 font-normal">(demo accounts — saved in this browser)</span></span>
           </div>
@@ -715,8 +726,10 @@
             </div>
           </div>
         </div>
+        </div>
 
-        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden max-w-xl">
+        <div id="settingsPane-alerting" class="max-w-xl hidden">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
             <span class="text-sm font-semibold text-slate-200">Alerting & Notifications <span class="text-[11px] text-slate-500 font-normal">(demo rules — saved in this browser)</span></span>
           </div>
@@ -783,8 +796,10 @@
             </div>
           </div>
         </div>
+        </div>
 
-        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden max-w-xl">
+        <div id="settingsPane-audit" class="max-w-xl hidden">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between gap-3">
             <span class="text-sm font-semibold text-slate-200">Audit Log <span class="text-[11px] text-slate-500 font-normal">(persists in this browser)</span></span>
             <button type="button" data-write-action onclick="clearAuditLog()" class="text-[12px] text-slate-500 hover:text-rose-400 font-mono transition">Clear</button>
@@ -794,14 +809,17 @@
             <div class="space-y-1.5 max-h-80 overflow-y-auto" id="auditLogList"></div>
           </div>
         </div>
+        </div>
 
-        <div class="rounded-xl border border-dashed border-slate-700 bg-slate-900/20 overflow-hidden max-w-xl">
+        <div id="settingsPane-roadmap" class="max-w-xl hidden">
+        <div class="rounded-xl border border-dashed border-slate-700 bg-slate-900/20 overflow-hidden">
           <div class="p-3 border-b border-dashed border-slate-700 text-sm font-semibold text-slate-300">Coming Soon</div>
           <div class="p-4 space-y-2 text-sm text-slate-400">
             <div>• Real SSO (Okta / Active Directory) — this login screen is a static demo stand-in</div>
             <div>• These rules actually dispatching to real Email/Slack/Jira, not just being saved as configuration</div>
             <div>• Exporting the audit log, or retaining it anywhere beyond this browser</div>
           </div>
+        </div>
         </div>
       </section>
 
@@ -4304,6 +4322,23 @@
       const auditFilterInput = document.getElementById('auditLogFilter');
       if (auditFilterInput) auditFilterInput.value = '';
       renderAuditLogList('');
+      switchSettingsTab(activeSettingsTab);
+    }
+
+    let activeSettingsTab = 'status';
+
+    function switchSettingsTab(name) {
+      activeSettingsTab = name;
+      ['status', 'users', 'alerting', 'audit', 'roadmap'].forEach(t => {
+        const pane = document.getElementById('settingsPane-' + t);
+        if (pane) pane.classList.toggle('hidden', t !== name);
+        const tab = document.getElementById('settingsTab-' + t);
+        if (tab) {
+          tab.className = t === name
+            ? 'settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+            : 'settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent';
+        }
+      });
     }
     let activeMemoRiskRating = 'medium';
 
