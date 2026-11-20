@@ -529,7 +529,13 @@
               </button>
             </div>
           </div>
-          <div class="px-3 pt-3 text-[12px] text-slate-500 font-mono" id="liveCveStatus">Not pulled yet this session — pick a window and click "Pull Latest."</div>
+          <div class="px-3 pt-3 flex flex-wrap items-center gap-2">
+            <input type="text" id="liveCveIdInput" placeholder="Look up specific CVE IDs instead — e.g. CVE-2026-121805, CVE-2026-120292" class="flex-1 min-w-[260px] bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono">
+            <button onclick="lookupSpecificCves()" id="btnLookupCveIds" class="px-3 py-1.5 rounded-lg text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium transition shrink-0">
+              Look Up by ID
+            </button>
+          </div>
+          <div class="px-3 pt-3 text-[12px] text-slate-500 font-mono" id="liveCveStatus">Not pulled yet this session — pick a window and click "Pull Latest," or look up specific CVE IDs above.</div>
           <div class="p-3 space-y-2" id="liveCveList"></div>
         </div>
 
@@ -1638,6 +1644,312 @@
           actorSophistication: 20,
           detectionGap: 35
         }
+      },
+      {
+        id: 'CORR-2026-150',
+        graphTopology: 'diamond',
+        title: 'F5 BIG-IP iRule PEM::subscriber Stack Buffer Overflow (RCE)',
+        cve: 'CVE-2026-121805',
+        cvss: 9.8,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+        epss: 0.7,
+        inKev: false,
+        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
+        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
+        actorDesc: 'No confirmed exploitation in the wild yet — this is an emergency vendor patch released ahead of expected mass scanning, which historically follows BIG-IP RCE disclosures within days.',
+        actorTtp: 'T1190 - Exploit Public-Facing Application',
+        riskScore: 78,
+        status: 'Active',
+        priority: 'P1-CRITICAL',
+        internetFacing: true,
+        targetHost: 'bigip-edge-prod-us1.corp',
+        hostIp: '198.51.100.21',
+        environment: 'On-Prem DMZ (US-East Primary Data Center)',
+        software: 'F5 BIG-IP TMOS 17.1.x (VULNERABLE, PEM::subscriber iRule active)',
+        secondaryNode: {
+          name: 'payment-gateway-prod-01',
+          type: 'APPLICATION SERVER',
+          sw: 'Payment Processing Service',
+          desc: 'Processes card-present and card-not-present customer transactions.'
+        },
+        crownJewel: 'Customer Payment Gateway',
+        crownJewelPath: 'Fronts the Customer Payment Gateway — direct data-plane path, no intermediate hop',
+        crownJewelDesc: 'Handles live payment transactions; a TMM crash or RCE here sits directly in front of cardholder transaction flow.',
+        summary: 'F5 released an emergency patch for an unauthenticated stack-based buffer overflow in a PEM::subscriber iRule on this edge BIG-IP. No active exploitation observed yet — patching ahead of the expected post-disclosure scanning wave.',
+        mitreTtp: 'T1190 - Exploit Public-Facing Application',
+        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
+        owningTeam: 'Network Engineering — Edge / Perimeter Team',
+        whatIsThis: "A stack-based buffer overflow in BIG-IP's Traffic Management Microkernel (TMM), triggered when a configured iRule processes client traffic through the PEM::subscriber command. An unauthenticated remote request can crash TMM and, under the right conditions, achieve code execution on the appliance itself.",
+        exploitDetails: 'An attacker sends specially crafted requests to a virtual server configured with the vulnerable iRule. The malformed input overruns a fixed-size buffer inside TMM, corrupting adjacent memory — enough to crash the traffic-management process outright, and potentially enough to redirect execution to attacker-controlled code. No authentication or prior access is required.',
+        ifUnremediated: 'Every TMM restart drops in-flight traffic for every virtual server on this appliance, including the Payment Gateway. If RCE is achieved rather than just a crash, the attacker gains a foothold on the data-plane device sitting directly in front of transaction processing — a direct path to one of the environment\'s highest-value systems.',
+        iocs: {
+          ips: [],
+          domains: [],
+          hashes: []
+        },
+        radar: {
+          exploitability: 85,
+          exposure: 80,
+          lateralMovement: 60,
+          assetCriticality: 90,
+          actorSophistication: 20,
+          detectionGap: 55
+        }
+      },
+      {
+        id: 'CORR-2026-151',
+        graphTopology: 'direct',
+        title: 'F5 BIG-IP iRule MR::message Route Stack Buffer Overflow (RCE)',
+        cve: 'CVE-2026-120292',
+        cvss: 9.8,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+        epss: 0.7,
+        inKev: false,
+        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
+        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
+        actorDesc: 'No confirmed exploitation in the wild yet — same emergency F5 advisory as the other five BIG-IP findings below, covering a family of iRule-triggered TMM crashes across the fleet.',
+        actorTtp: 'T1190 - Exploit Public-Facing Application',
+        riskScore: 76,
+        status: 'Active',
+        priority: 'P1-CRITICAL',
+        internetFacing: true,
+        targetHost: 'bigip-api-gateway-prod.corp',
+        hostIp: '198.51.100.34',
+        environment: 'AWS us-east-1 (Public API Edge)',
+        software: 'F5 BIG-IP TMOS 17.1.x (VULNERABLE, MR::message iRule active)',
+        secondaryNode: {
+          name: 'api-backend-cluster-03',
+          type: 'API CLUSTER',
+          sw: 'Internal Microservices Mesh',
+          desc: 'Backend services powering mobile and partner-facing APIs.'
+        },
+        crownJewel: 'Public Partner & Mobile API Gateway',
+        crownJewelPath: 'Sits directly in front of the Partner & Mobile API Gateway',
+        crownJewelDesc: 'All mobile app and partner API traffic routes through this appliance before reaching backend microservices.',
+        summary: 'Same emergency F5 advisory, different iRule command (MR::message route) on the public API edge BIG-IP. Unauthenticated, no RCE observed in the wild yet.',
+        mitreTtp: 'T1190 - Exploit Public-Facing Application',
+        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
+        owningTeam: 'API Platform Engineering',
+        whatIsThis: "The same class of TMM stack-based buffer overflow as the other findings in this advisory, this time triggered via an iRule using the MR::message route command alongside an HTTP profile on this virtual server.",
+        exploitDetails: 'An unauthenticated attacker sends crafted requests that the vulnerable iRule routes through MR::message, overflowing a fixed buffer in TMM. Traffic is disrupted while TMM restarts, with RCE a realistic possibility depending on exact memory layout.',
+        ifUnremediated: 'This appliance fronts every mobile and partner API call. Repeated crashes degrade API availability for customers and partners; a successful RCE would hand an attacker a foothold with visibility into all API traffic passing through it.',
+        iocs: {
+          ips: [],
+          domains: [],
+          hashes: []
+        },
+        radar: {
+          exploitability: 85,
+          exposure: 75,
+          lateralMovement: 55,
+          assetCriticality: 85,
+          actorSophistication: 20,
+          detectionGap: 55
+        }
+      },
+      {
+        id: 'CORR-2026-152',
+        graphTopology: 'sparse',
+        title: 'F5 BIG-IP iRule PSC::ip_address Stack Buffer Overflow (RCE)',
+        cve: 'CVE-2026-120285',
+        cvss: 9.8,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+        epss: 0.7,
+        inKev: false,
+        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
+        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
+        actorDesc: 'No confirmed exploitation in the wild yet — part of the same emergency F5 advisory affecting the BIG-IP fleet.',
+        actorTtp: 'T1190 - Exploit Public-Facing Application',
+        riskScore: 74,
+        status: 'Active',
+        priority: 'P1-CRITICAL',
+        internetFacing: true,
+        targetHost: 'bigip-vpn-concentrator-eu1.corp',
+        hostIp: '203.0.113.56',
+        environment: 'On-Prem DMZ (EU-West Data Center, Dublin)',
+        software: 'F5 BIG-IP TMOS 16.1.x (VULNERABLE, PSC::ip_address iRule active)',
+        secondaryNode: {
+          name: 'ad-sync-agent-eu-01',
+          type: 'IDENTITY BRIDGE',
+          sw: 'Samba / Winbind',
+          desc: 'Authentication sync tunnel into the EU domain controller.'
+        },
+        crownJewel: 'Corporate Remote-Access VPN Concentrator',
+        crownJewelPath: 'Primary tunnel endpoint for EU remote-access VPN',
+        crownJewelDesc: 'Terminates remote-access VPN sessions for the EU workforce ahead of the identity bridge into Active Directory.',
+        summary: 'Same emergency F5 advisory, affecting the EU remote-access VPN concentrator via a PSC::ip_address iRule. Unauthenticated, no confirmed exploitation yet.',
+        mitreTtp: 'T1190 - Exploit Public-Facing Application',
+        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
+        owningTeam: 'Network Engineering — EU Infrastructure Team',
+        whatIsThis: 'The same TMM stack-based buffer overflow vulnerability class, here triggered through an iRule using the PSC::ip_address command on the EU VPN concentrator.',
+        exploitDetails: 'Crafted requests reaching the vulnerable virtual server overflow a fixed buffer inside TMM while processing the PSC::ip_address command, crashing the traffic-management process and potentially enabling code execution — all without authentication.',
+        ifUnremediated: 'This appliance sits directly in front of the EU remote-access path into Active Directory. Disruption here cuts off remote workforce access; RCE would place an attacker on the device immediately upstream of the identity bridge.',
+        iocs: {
+          ips: [],
+          domains: [],
+          hashes: []
+        },
+        radar: {
+          exploitability: 85,
+          exposure: 70,
+          lateralMovement: 65,
+          assetCriticality: 80,
+          actorSophistication: 20,
+          detectionGap: 55
+        }
+      },
+      {
+        id: 'CORR-2026-153',
+        graphTopology: 'diamond',
+        title: 'F5 BIG-IP iRule GENERICMESSAGE::route Stack Buffer Overflow (RCE)',
+        cve: 'CVE-2026-116953',
+        cvss: 9.8,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+        epss: 0.7,
+        inKev: false,
+        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
+        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
+        actorDesc: 'No confirmed exploitation in the wild yet — part of the same emergency F5 advisory affecting the BIG-IP fleet.',
+        actorTtp: 'T1190 - Exploit Public-Facing Application',
+        riskScore: 72,
+        status: 'Active',
+        priority: 'P1-CRITICAL',
+        internetFacing: true,
+        targetHost: 'bigip-partner-portal-prod.corp',
+        hostIp: '198.51.100.47',
+        environment: 'On-Prem DMZ (US-East Secondary Data Center)',
+        software: 'F5 BIG-IP TMOS 17.5.x (VULNERABLE, GENERICMESSAGE::route iRule active)',
+        secondaryNode: {
+          name: 'partner-edi-processor-01',
+          type: 'EDI PROCESSOR',
+          sw: 'B2B Data Exchange Service',
+          desc: 'Processes inbound and outbound EDI transactions with supply-chain partners.'
+        },
+        crownJewel: 'Partner Data Exchange Hub',
+        crownJewelPath: 'Fronts the Partner Data Exchange Hub — direct data-plane path',
+        crownJewelDesc: 'Carries EDI transaction data exchanged with supply-chain partners; disruption or compromise affects partner-facing operations.',
+        summary: 'Same emergency F5 advisory, affecting the partner portal BIG-IP via a GENERICMESSAGE::route iRule. Unauthenticated, no confirmed exploitation yet.',
+        mitreTtp: 'T1190 - Exploit Public-Facing Application',
+        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
+        owningTeam: 'Partner Integrations Team',
+        whatIsThis: 'The same TMM stack-based buffer overflow class, triggered here through an iRule using the GENERICMESSAGE::route command on the partner-facing virtual server.',
+        exploitDetails: 'An unauthenticated attacker sends requests that the vulnerable iRule processes through GENERICMESSAGE::route, overflowing a fixed buffer in TMM and crashing it — with RCE a realistic possibility depending on heap layout at the time.',
+        ifUnremediated: 'Disruption here interrupts EDI transaction flow with supply-chain partners; a successful RCE would give an attacker a presence on the device handling partner data exchange.',
+        iocs: {
+          ips: [],
+          domains: [],
+          hashes: []
+        },
+        radar: {
+          exploitability: 85,
+          exposure: 70,
+          lateralMovement: 50,
+          assetCriticality: 75,
+          actorSophistication: 20,
+          detectionGap: 55
+        }
+      },
+      {
+        id: 'CORR-2026-154',
+        graphTopology: 'direct',
+        title: 'F5 BIG-IP APM Per-Request Policy Stack Buffer Overflow (RCE)',
+        cve: 'CVE-2026-123637',
+        cvss: 9.8,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+        epss: 0.8,
+        inKev: false,
+        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
+        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
+        actorDesc: 'No confirmed exploitation in the wild yet — part of the same emergency F5 advisory, this one in the Access Policy Manager (APM) module itself rather than a custom iRule.',
+        actorTtp: 'T1190 - Exploit Public-Facing Application',
+        riskScore: 80,
+        status: 'Active',
+        priority: 'P1-CRITICAL',
+        internetFacing: true,
+        targetHost: 'bigip-sso-apm-prod.corp',
+        hostIp: '203.0.113.72',
+        environment: 'On-Prem DMZ (US-East Primary, Identity Zone)',
+        software: 'F5 BIG-IP APM 17.1.x (VULNERABLE, Client Info + Endpoint Security agents active)',
+        secondaryNode: {
+          name: 'ad-domain-controller-01',
+          type: 'IDENTITY INFRASTRUCTURE',
+          sw: 'Active Directory Domain Services',
+          desc: 'Backing directory for corporate SSO authentication.'
+        },
+        crownJewel: 'Corporate SSO / Access Policy Manager',
+        crownJewelPath: 'Directly in front of corporate SSO — all authenticated sessions traverse this appliance',
+        crownJewelDesc: 'Every corporate SSO session is brokered through this APM instance ahead of the Active Directory domain controller.',
+        summary: 'Same emergency F5 advisory, this time in BIG-IP APM itself: a per-request policy using the Client Information and Endpoint Security agents can crash TMM. Highest risk score of this batch given its position directly in front of corporate SSO.',
+        mitreTtp: 'T1190 - Exploit Public-Facing Application',
+        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
+        owningTeam: 'Identity & Access Management Team',
+        whatIsThis: 'A stack-based buffer overflow in BIG-IP APM itself, triggered when a per-request policy combining the Client Information agent and Endpoint Security agent processes an unauthenticated request.',
+        exploitDetails: 'An attacker sends crafted requests to the APM virtual server; the per-request policy\'s agent chain overflows a fixed buffer in TMM while evaluating the request, crashing the process and potentially executing attacker-controlled code — no authentication required.',
+        ifUnremediated: 'This appliance brokers every corporate SSO session before it reaches Active Directory. A crash locks out SSO-dependent applications fleet-wide; RCE would place an attacker directly in front of the organization\'s identity infrastructure.',
+        iocs: {
+          ips: [],
+          domains: [],
+          hashes: []
+        },
+        radar: {
+          exploitability: 85,
+          exposure: 80,
+          lateralMovement: 80,
+          assetCriticality: 95,
+          actorSophistication: 20,
+          detectionGap: 55
+        }
+      },
+      {
+        id: 'CORR-2026-155',
+        graphTopology: 'sparse',
+        title: 'F5 BIG-IP APM SAML SP Integer Underflow (Unauthenticated DoS)',
+        cve: 'CVE-2026-126822',
+        cvss: 7.5,
+        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H',
+        epss: 0.5,
+        inKev: false,
+        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
+        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
+        actorDesc: 'No confirmed exploitation in the wild yet. Part of the same emergency F5 advisory, but DoS-only — no RCE path identified for this one, hence the lower priority tier.',
+        actorTtp: 'T1499 - Endpoint Denial of Service',
+        riskScore: 45,
+        status: 'Active',
+        priority: 'P2-HIGH',
+        internetFacing: true,
+        targetHost: 'bigip-saml-idp-prod.corp',
+        hostIp: '203.0.113.89',
+        environment: 'On-Prem DMZ (US-East Primary, Identity Zone)',
+        software: 'F5 BIG-IP APM 17.1.x (VULNERABLE, SAML SP Access Profile active)',
+        secondaryNode: {
+          name: 'saml-sp-relying-party-01',
+          type: 'SAML RELYING PARTY',
+          sw: 'SaaS Application Suite',
+          desc: 'Downstream SaaS applications relying on this SAML SP for authentication.'
+        },
+        crownJewel: 'Corporate SAML Identity Provider Endpoint',
+        crownJewelPath: 'DoS-only — no code execution path identified in the advisory',
+        crownJewelDesc: 'Brokers SAML authentication for downstream SaaS applications; impact is availability only, not compromise.',
+        summary: 'Same emergency F5 advisory — a SAML Service Provider integer underflow that can crash TMM. Unlike the other five findings, this one is DoS-only with no RCE path, so it is tracked at High rather than Critical.',
+        mitreTtp: 'T1499 - Endpoint Denial of Service',
+        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)'],
+        owningTeam: 'Identity & Access Management Team',
+        whatIsThis: 'An integer underflow in how BIG-IP APM handles a SAML Service Provider Access Profile, reachable by an unauthenticated remote request and capable of crashing TMM. No remote code execution path has been identified for this specific finding.',
+        exploitDetails: 'An attacker sends a crafted request to the SAML SP virtual server; an integer underflow during processing crashes TMM. Traffic is disrupted while it restarts, but unlike the other findings in this advisory, there is no indication this can be escalated to code execution.',
+        ifUnremediated: 'Repeated crashes disrupt SAML-based authentication for downstream SaaS applications. Availability impact only — no confidentiality or integrity impact identified for this specific vulnerability.',
+        iocs: {
+          ips: [],
+          domains: [],
+          hashes: []
+        },
+        radar: {
+          exploitability: 70,
+          exposure: 65,
+          lateralMovement: 20,
+          assetCriticality: 60,
+          actorSophistication: 15,
+          detectionGap: 40
+        }
       }
     ];
 
@@ -1650,7 +1962,13 @@
       'CORR-2026-091': 6,
       'CORR-2026-088': 50,
       'CORR-2026-074': 120,
-      'CORR-2026-051': 200
+      'CORR-2026-051': 200,
+      'CORR-2026-150': 10,
+      'CORR-2026-151': 14,
+      'CORR-2026-152': 20,
+      'CORR-2026-153': 8,
+      'CORR-2026-154': 26,
+      'CORR-2026-155': 5
     };
     const ALERT_REMEDIATION_STORAGE_KEY = 'aegisCtiDemoRemediation_v1';
     const REMEDIATION_STATUS_LABELS = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved' };
@@ -3538,6 +3856,88 @@
 
     const LIVE_CVE_WINDOW_LABELS = { '1': 'the last 1 hour', '24': 'the last 24 hours', '168': 'the last 7 days', '720': 'the last 30 days' };
 
+    function parseNvdCveRecord(cve) {
+      const desc = (cve.descriptions || []).find(d => d.lang === 'en');
+      const cvss = cvssFromNvdMetrics(cve.metrics);
+      const affected = (cve.affected || [])[0];
+      const affectedData = affected && (affected.affectedData || [])[0];
+      return {
+        id: cve.id,
+        published: cve.published,
+        description: desc ? desc.value.replace(/\s+/g, ' ').trim() : 'No description published yet.',
+        score: cvss ? cvss.score : null,
+        severity: cvss ? cvss.severity : 'UNSCORED',
+        vendor: affectedData ? affectedData.vendor : null,
+        product: affectedData ? affectedData.product : null
+      };
+    }
+
+    function renderLiveCveCards(entries) {
+      return entries.map(c => `
+        <div class="p-3 rounded-lg bg-slate-950/50 border border-slate-800/80 space-y-1.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <a href="https://nvd.nist.gov/vuln/detail/${c.id}" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-bold text-cyan-400 hover:text-cyan-200 hover:underline">${c.id}</a>
+            <div class="flex items-center gap-2">
+              ${c.score !== null ? `<span class="text-[11px] font-mono text-slate-400">CVSS ${c.score}</span>` : ''}
+              <span class="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border ${severityBadgeClasses(c.severity)}">${c.severity}</span>
+            </div>
+          </div>
+          ${c.vendor ? `<div class="text-[11px] text-slate-500 font-mono">${c.vendor}${c.product ? ' / ' + c.product : ''}</div>` : ''}
+          <p class="text-[13px] text-slate-400 leading-relaxed line-clamp-3">${c.description.length > 280 ? c.description.slice(0, 280) + '…' : c.description}</p>
+          <div class="text-[11px] text-slate-600 font-mono">Published ${timeAgo(new Date(c.published).getTime())}</div>
+        </div>
+      `).join('');
+    }
+
+    async function lookupSpecificCves() {
+      const input = document.getElementById('liveCveIdInput');
+      const btn = document.getElementById('btnLookupCveIds');
+      const status = document.getElementById('liveCveStatus');
+      const list = document.getElementById('liveCveList');
+
+      const ids = input.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+      if (ids.length === 0) {
+        status.textContent = 'Enter at least one CVE ID (e.g. CVE-2026-121805) to look up.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add('opacity-60');
+      status.textContent = `Looking up ${ids.length} specific CVE ID(s) from the NVD API (one request per ID, so this takes a few seconds)...`;
+
+      const found = [];
+      const notFound = [];
+      for (const id of ids) {
+        try {
+          const res = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${encodeURIComponent(id)}`);
+          if (res.status === 429) {
+            status.textContent = `NVD rate-limited this request partway through (${found.length}/${ids.length} looked up). Wait a moment and try again for the rest.`;
+            break;
+          }
+          if (!res.ok) { notFound.push(id); continue; }
+          const data = await res.json();
+          const v = (data.vulnerabilities || [])[0];
+          if (!v) { notFound.push(id); continue; }
+          found.push(parseNvdCveRecord(v.cve));
+        } catch (e) {
+          notFound.push(id);
+        }
+        if (ids.indexOf(id) < ids.length - 1) await new Promise(r => setTimeout(r, 1500));
+      }
+
+      if (found.length === 0) {
+        list.innerHTML = `<div class="p-4 text-center text-[13px] font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">None of the entered CVE IDs were found in NVD. Check the IDs and try again.</div>`;
+      } else {
+        list.innerHTML = renderLiveCveCards(found);
+      }
+
+      status.textContent = `Looked up ${found.length} of ${ids.length} CVE ID(s) directly by ID — not a date-range pull, so these show regardless of publish date.` + (notFound.length ? ` Not found: ${notFound.join(', ')}.` : '');
+      logChange('Live CVE Feed Pulled', `Looked up ${found.length} specific CVE ID(s) by ID (NVD CVE API, real data): ${found.map(c => c.id).join(', ')}`);
+
+      btn.disabled = false;
+      btn.classList.remove('opacity-60');
+    }
+
     async function refreshLiveCveFeed() {
       const btn = document.getElementById('btnRefreshLiveCve');
       const status = document.getElementById('liveCveStatus');
@@ -3567,42 +3967,13 @@
         }
         const data = await res.json();
         const vulns = (data.vulnerabilities || []).map(v => v.cve);
-
-        const parsed = vulns.map(cve => {
-          const desc = (cve.descriptions || []).find(d => d.lang === 'en');
-          const cvss = cvssFromNvdMetrics(cve.metrics);
-          const affected = (cve.affected || [])[0];
-          const affectedData = affected && (affected.affectedData || [])[0];
-          return {
-            id: cve.id,
-            published: cve.published,
-            description: desc ? desc.value : 'No description published yet.',
-            score: cvss ? cvss.score : null,
-            severity: cvss ? cvss.severity : 'UNSCORED',
-            vendor: affectedData ? affectedData.vendor : null,
-            product: affectedData ? affectedData.product : null
-          };
-        }).sort((a, b) => (b.score || 0) - (a.score || 0));
-
+        const parsed = vulns.map(parseNvdCveRecord).sort((a, b) => (b.score || 0) - (a.score || 0));
         const top = parsed.slice(0, 15);
 
         if (top.length === 0) {
           list.innerHTML = `<div class="p-4 text-center text-[13px] font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">No CVEs published in ${windowLabel} (unusual at 24h+, but it happens at the 1-hour setting).</div>`;
         } else {
-          list.innerHTML = top.map(c => `
-            <div class="p-3 rounded-lg bg-slate-950/50 border border-slate-800/80 space-y-1.5">
-              <div class="flex items-center justify-between gap-2 flex-wrap">
-                <a href="https://nvd.nist.gov/vuln/detail/${c.id}" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-bold text-cyan-400 hover:text-cyan-200 hover:underline">${c.id}</a>
-                <div class="flex items-center gap-2">
-                  ${c.score !== null ? `<span class="text-[11px] font-mono text-slate-400">CVSS ${c.score}</span>` : ''}
-                  <span class="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border ${severityBadgeClasses(c.severity)}">${c.severity}</span>
-                </div>
-              </div>
-              ${c.vendor ? `<div class="text-[11px] text-slate-500 font-mono">${c.vendor}${c.product ? ' / ' + c.product : ''}</div>` : ''}
-              <p class="text-[13px] text-slate-400 leading-relaxed line-clamp-3">${c.description.length > 280 ? c.description.slice(0, 280) + '…' : c.description}</p>
-              <div class="text-[11px] text-slate-600 font-mono">Published ${timeAgo(new Date(c.published).getTime())}</div>
-            </div>
-          `).join('');
+          list.innerHTML = renderLiveCveCards(top);
         }
 
         status.textContent = `Showing ${top.length} of ${parsed.length} CVEs published in ${windowLabel} (NVD), sorted by CVSS. Pulled ${timeAgo(Date.now())}.`;
