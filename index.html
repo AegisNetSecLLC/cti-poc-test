@@ -517,11 +517,19 @@
               <span class="text-sm font-semibold text-slate-200">Live CVE Ingestion <span class="text-[11px] text-emerald-400 font-mono border border-emerald-700 bg-emerald-950/60 px-1.5 py-0.5 rounded ml-1">REAL DATA</span></span>
               <p class="text-[12px] text-slate-400 mt-0.5">Pulled directly from the NVD CVE API — genuinely published in the window below, not part of the demo's fictional correlation story.</p>
             </div>
-            <button onclick="refreshLiveCveFeed()" id="btnRefreshLiveCve" class="px-3 py-1.5 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition shrink-0">
-              Pull Last 24 Hours
-            </button>
+            <div class="flex items-center gap-2 shrink-0">
+              <select id="liveCveLookback" class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                <option value="1">Last 1 Hour</option>
+                <option value="24" selected>Last 24 Hours</option>
+                <option value="168">Last 7 Days</option>
+                <option value="720">Last 30 Days</option>
+              </select>
+              <button onclick="refreshLiveCveFeed()" id="btnRefreshLiveCve" class="px-3 py-1.5 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition">
+                Pull Latest
+              </button>
+            </div>
           </div>
-          <div class="px-3 pt-3 text-[12px] text-slate-500 font-mono" id="liveCveStatus">Not pulled yet this session — click "Pull Last 24 Hours."</div>
+          <div class="px-3 pt-3 text-[12px] text-slate-500 font-mono" id="liveCveStatus">Not pulled yet this session — pick a window and click "Pull Latest."</div>
           <div class="p-3 space-y-2" id="liveCveList"></div>
         </div>
 
@@ -1055,6 +1063,18 @@
           </div>
         </div>
 
+        <div>
+          <label class="block text-[13px] font-mono text-slate-300 mb-1">Lookback Window</label>
+          <select id="connLookback" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+            <option value="Last 1 Hour">Last 1 Hour</option>
+            <option value="Last 24 Hours" selected>Last 24 Hours</option>
+            <option value="Last 7 Days">Last 7 Days</option>
+            <option value="Last 30 Days">Last 30 Days</option>
+            <option value="All History">All History (no date limit)</option>
+          </select>
+          <p class="text-[12px] text-slate-500 mt-1">How far back this connector looks when it first ingests.</p>
+        </div>
+
         <div id="testResultBanner" class="p-2.5 rounded-lg border text-sm font-mono hidden"></div>
 
         <div class="flex items-center justify-between pt-3 border-t border-slate-800">
@@ -1095,6 +1115,18 @@
             <option value="Daily Sync">Daily Sync (Midnight UTC)</option>
           </select>
           <p class="text-[12px] text-slate-500 mt-1">How often this connector polls its source for new data.</p>
+        </div>
+
+        <div>
+          <label class="block text-[13px] font-mono text-slate-300 mb-1">Lookback Window</label>
+          <select id="connConfigLookback" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+            <option value="Last 1 Hour">Last 1 Hour</option>
+            <option value="Last 24 Hours">Last 24 Hours</option>
+            <option value="Last 7 Days">Last 7 Days</option>
+            <option value="Last 30 Days">Last 30 Days</option>
+            <option value="All History">All History (no date limit)</option>
+          </select>
+          <p class="text-[12px] text-slate-500 mt-1">How far back this connector looks when it ingests — not just how often it checks.</p>
         </div>
 
         <div class="pt-3 border-t border-slate-800 space-y-1">
@@ -1186,6 +1218,18 @@
             <label class="block text-[13px] font-mono text-slate-300 mb-1">Auth Token (optional, TAXII only)</label>
             <input type="password" id="feedToken" placeholder="••••••••••••••••••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
           </div>
+        </div>
+
+        <div>
+          <label class="block text-[13px] font-mono text-slate-300 mb-1">Lookback Window</label>
+          <select id="feedLookback" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
+            <option value="Last 1 Hour">Last 1 Hour</option>
+            <option value="Last 24 Hours" selected>Last 24 Hours</option>
+            <option value="Last 7 Days">Last 7 Days</option>
+            <option value="Last 30 Days">Last 30 Days</option>
+            <option value="All History">All History (no date limit)</option>
+          </select>
+          <p class="text-[12px] text-slate-500 mt-1">How far back this feed looks when it ingests — not just how often it checks.</p>
         </div>
 
         <div class="pt-3 border-t border-slate-800 space-y-1">
@@ -3207,7 +3251,7 @@
               <span class="text-slate-400">Latency: <span class="text-slate-200">${conn.latency}</span></span>
             </div>
             <div class="text-[12px] font-mono text-slate-500 truncate" title="${describeIngestFilter(conn.ingestFilter)}">
-              Poll: <span class="text-slate-300">${conn.pollCadence || 'Not set'}</span> · ${describeIngestFilter(conn.ingestFilter)}
+              Poll: <span class="text-slate-300">${conn.pollCadence || 'Not set'}</span> · Looks back: <span class="text-slate-300">${conn.lookbackWindow || 'Last 24 Hours'}</span> · ${describeIngestFilter(conn.ingestFilter)}
             </div>
 
             <div class="flex items-center gap-2 pt-1">
@@ -3264,6 +3308,7 @@
       document.getElementById('connConfigTitle').textContent = `Configure ${conn.name}`;
       document.getElementById('connConfigSubtitle').textContent = `${conn.type} · ${conn.status}`;
       document.getElementById('connConfigCadence').value = conn.pollCadence || 'Hourly Sync';
+      document.getElementById('connConfigLookback').value = conn.lookbackWindow || 'Last 24 Hours';
       document.getElementById('connConfigSeverity').value = (conn.ingestFilter && conn.ingestFilter.minSeverity) || 'all';
       document.getElementById('connConfigKeywords').value = (conn.ingestFilter && conn.ingestFilter.keywords) || '';
 
@@ -3281,13 +3326,14 @@
       if (!conn) return;
 
       conn.pollCadence = document.getElementById('connConfigCadence').value;
+      conn.lookbackWindow = document.getElementById('connConfigLookback').value;
       conn.ingestFilter = {
         minSeverity: document.getElementById('connConfigSeverity').value,
         keywords: document.getElementById('connConfigKeywords').value.trim()
       };
 
       renderConnectors();
-      logChange('Connector Config Updated', `${conn.name} — ${conn.pollCadence}, ${describeIngestFilter(conn.ingestFilter)}`);
+      logChange('Connector Config Updated', `${conn.name} — ${conn.pollCadence}, looking back ${conn.lookbackWindow}, ${describeIngestFilter(conn.ingestFilter)}`);
       closeConnectorConfigModal();
       showMockModal('Connector Config Saved', `Updated polling and ingestion rules for "${conn.name}". New settings take effect on the next poll cycle.`);
     }
@@ -3374,6 +3420,7 @@
       const url = document.getElementById('connUrl').value;
       const cadence = document.getElementById('connCadence').value;
       const parser = document.getElementById('connParser').value;
+      const lookback = document.getElementById('connLookback').value;
 
       const newId = 'conn-' + (MOCK_CONNECTORS.length + 1);
       const iconMap = { intel: 'INTEL', asset: 'ASSET', soar: 'SOAR', custom: 'API' };
@@ -3388,6 +3435,9 @@
         sync: cadence,
         icon: iconMap[category] || 'API',
         enabled: true,
+        pollCadence: cadence,
+        lookbackWindow: lookback,
+        ingestFilter: { minSeverity: 'all', keywords: '' },
         desc: `Custom connector linked to https://${url}. Ingesting via ${parser}.`
       };
 
@@ -3447,7 +3497,7 @@
               <span class="text-slate-400">${feed.cadence}</span>
             </div>
             <div class="text-[12px] font-mono text-slate-500 truncate" title="${describeIngestFilter(feed.ingestFilter)}">
-              ${describeIngestFilter(feed.ingestFilter)}
+              Looks back: <span class="text-slate-300">${feed.lookbackWindow || 'Last 24 Hours'}</span> · ${describeIngestFilter(feed.ingestFilter)}
             </div>
             <div class="flex items-center gap-2 pt-1">
               <button onclick="testExistingFeed('${feed.id}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
@@ -3486,17 +3536,22 @@
       return map[severity] || 'bg-slate-800 text-slate-400 border-slate-700';
     }
 
+    const LIVE_CVE_WINDOW_LABELS = { '1': 'the last 1 hour', '24': 'the last 24 hours', '168': 'the last 7 days', '720': 'the last 30 days' };
+
     async function refreshLiveCveFeed() {
       const btn = document.getElementById('btnRefreshLiveCve');
       const status = document.getElementById('liveCveStatus');
       const list = document.getElementById('liveCveList');
+      const hoursValue = document.getElementById('liveCveLookback').value;
+      const hours = parseInt(hoursValue, 10);
+      const windowLabel = LIVE_CVE_WINDOW_LABELS[hoursValue] || `the last ${hours} hours`;
 
       btn.disabled = true;
       btn.classList.add('opacity-60');
-      status.textContent = 'Pulling the last 24 hours of published CVEs from the NVD API...';
+      status.textContent = `Pulling CVEs published in ${windowLabel} from the NVD API...`;
 
       const now = new Date();
-      const since = new Date(now.getTime() - 24 * 3600 * 1000);
+      const since = new Date(now.getTime() - hours * 3600 * 1000);
       const isoNoMs = (d) => d.toISOString().slice(0, 19) + '.000';
       const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?pubStartDate=${isoNoMs(since)}&pubEndDate=${isoNoMs(now)}&resultsPerPage=2000`;
 
@@ -3532,7 +3587,7 @@
         const top = parsed.slice(0, 15);
 
         if (top.length === 0) {
-          list.innerHTML = `<div class="p-4 text-center text-[13px] font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">No CVEs published in the last 24 hours (unusual, but it happens).</div>`;
+          list.innerHTML = `<div class="p-4 text-center text-[13px] font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">No CVEs published in ${windowLabel} (unusual at 24h+, but it happens at the 1-hour setting).</div>`;
         } else {
           list.innerHTML = top.map(c => `
             <div class="p-3 rounded-lg bg-slate-950/50 border border-slate-800/80 space-y-1.5">
@@ -3550,8 +3605,8 @@
           `).join('');
         }
 
-        status.textContent = `Showing ${top.length} of ${parsed.length} CVEs published in the last 24 hours (NVD), sorted by CVSS. Pulled ${timeAgo(Date.now())}.`;
-        logChange('Live CVE Feed Pulled', `${parsed.length} CVEs published in the last 24 hours (NVD CVE API, real data)`);
+        status.textContent = `Showing ${top.length} of ${parsed.length} CVEs published in ${windowLabel} (NVD), sorted by CVSS. Pulled ${timeAgo(Date.now())}.`;
+        logChange('Live CVE Feed Pulled', `${parsed.length} CVEs published in ${windowLabel} (NVD CVE API, real data)`);
       } catch (e) {
         status.textContent = 'Could not reach the NVD API — check your internet connection and try again.';
       } finally {
@@ -3619,6 +3674,7 @@
       document.getElementById('feedUrl').value = feed.url;
       document.getElementById('feedDesc').value = feed.desc || '';
       document.getElementById('feedCadence').value = feed.cadence;
+      document.getElementById('feedLookback').value = feed.lookbackWindow || 'Last 24 Hours';
       document.getElementById('feedMinSeverity').value = (feed.ingestFilter && feed.ingestFilter.minSeverity) || 'all';
       document.getElementById('feedKeywords').value = (feed.ingestFilter && feed.ingestFilter.keywords) || '';
       document.getElementById('feedTestResultBanner').classList.add('hidden');
@@ -3661,6 +3717,7 @@
       const url = document.getElementById('feedUrl').value;
       const desc = document.getElementById('feedDesc').value;
       const cadence = document.getElementById('feedCadence').value;
+      const lookbackWindow = document.getElementById('feedLookback').value;
       const ingestFilter = {
         minSeverity: document.getElementById('feedMinSeverity').value,
         keywords: document.getElementById('feedKeywords').value.trim()
@@ -3674,11 +3731,12 @@
           feed.url = url;
           feed.desc = desc;
           feed.cadence = cadence;
+          feed.lookbackWindow = lookbackWindow;
           feed.ingestFilter = ingestFilter;
         }
         renderFeeds();
         closeAddFeedModal();
-        logChange('Feed Updated', `${name} — ${cadence}, ${describeIngestFilter(ingestFilter)}`);
+        logChange('Feed Updated', `${name} — ${cadence}, looking back ${lookbackWindow}, ${describeIngestFilter(ingestFilter)}`);
         showMockModal('Feed Updated', `Updated subscription details for "${name}". New polling and ingestion rules take effect on the next cycle.`);
         return;
       }
@@ -3690,6 +3748,7 @@
         url: url,
         desc: desc,
         cadence: cadence,
+        lookbackWindow: lookbackWindow,
         status: 'Active',
         lastSync: 'Just now',
         enabled: true,
