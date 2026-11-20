@@ -157,9 +157,8 @@
             <button onclick="switchTab('graph')" id="nav-graph" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M7.5 7.5L10.5 16.5M16.5 7.5L13.5 16.5"/></svg>
-                <span class="nav-label">Blast Radius Graph</span>
+                <span class="nav-label">Blast Radius</span>
               </span>
-              <span class="nav-label text-[12px] font-mono text-purple-400">Dynamic</span>
             </button>
             <button onclick="switchTab('connectors')" id="nav-connectors" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
@@ -178,7 +177,7 @@
             <button onclick="switchTab('assets')" id="nav-assets" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
               <span class="flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
-                <span class="nav-label">Internal Inventory</span>
+                <span class="nav-label">Inventory</span>
               </span>
               <span class="nav-label text-[12px] font-mono text-slate-400">CMDB/EDR</span>
             </button>
@@ -196,16 +195,6 @@
               </span>
             </button>
           </nav>
-        </div>
-
-        <!-- Quick Help Tip -->
-        <div class="nav-label rounded-xl p-3 bg-gradient-to-b from-slate-900 to-[#0e1424] border border-cyan-900/40 text-sm space-y-2">
-          <div class="flex items-center gap-1.5 text-cyan-400 font-semibold text-[13px] font-mono">
-            <span>DYNAMIC BLAST GRAPHS</span>
-          </div>
-          <p class="text-[13px] text-slate-400 leading-relaxed">
-            Clicking any CVE card (e.g., <strong class="text-cyan-300">CVE-2026-10332</strong>) dynamically maps its specific threat actor, target host, and crown jewels on the graph.
-          </p>
         </div>
       </div>
     </aside>
@@ -646,12 +635,79 @@
           </div>
         </div>
 
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden max-w-xl">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-200">Alerting & Notifications <span class="text-[11px] text-slate-500 font-normal">(demo rules — saved in this browser)</span></span>
+          </div>
+          <div class="p-4 space-y-4">
+            <p class="text-[13px] text-slate-400 leading-relaxed">
+              Define what the platform notifies on, how urgently, and who gets told — separate from the mock data itself. In a real deployment this is what actually pages someone at 2am instead of just logging a correlated finding quietly.
+            </p>
+
+            <div id="alertRuleFormModeBanner" class="hidden text-[12px] text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-3 py-2">
+              Editing <span id="alertRuleFormModeName" class="font-semibold"></span> — changes save to this rule.
+            </div>
+            <form onsubmit="saveAlertRule(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Alert On</label>
+                <select id="alertRuleTrigger" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                  <option value="p1_critical">New P1 / Critical Correlation</option>
+                  <option value="kev_match">New CISA KEV Match</option>
+                  <option value="internet_facing">Internet-Facing Exposure Detected</option>
+                  <option value="connector_failure">Connector / Feed Failure</option>
+                  <option value="memo_generated">Threat Memo Generated</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Minimum Severity</label>
+                <select id="alertRuleSeverity" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                  <option value="all">All Severities</option>
+                  <option value="medium">Medium and above</option>
+                  <option value="high">High and above</option>
+                  <option value="critical">Critical only</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Frequency</label>
+                <select id="alertRuleFrequency" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                  <option value="realtime">Real-time (as it happens)</option>
+                  <option value="hourly">Hourly Digest</option>
+                  <option value="daily">Daily Digest</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Channel</label>
+                <select id="alertRuleChannel" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                  <option value="Email">Email</option>
+                  <option value="Slack">Slack</option>
+                  <option value="Jira Ticket">Jira Ticket</option>
+                  <option value="Email + Slack">Email + Slack</option>
+                </select>
+              </div>
+              <div class="sm:col-span-2">
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Recipients</label>
+                <input type="text" id="alertRuleRecipients" placeholder="e.g. soc-tier1@corp.com, #soc-tier1-alerts, Jordan Reyes" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                <p class="text-[12px] text-slate-500 mt-1">Emails, Slack channels, or team/person names — comma-separated.</p>
+              </div>
+              <div id="alertRuleErrorMsg" class="hidden sm:col-span-2 text-[13px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"></div>
+              <div class="sm:col-span-2 flex items-center gap-2">
+                <button type="submit" id="alertRuleSubmitBtn" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">+ Add Alert Rule</button>
+                <button type="button" id="alertRuleCancelBtn" onclick="cancelEditAlertRule()" class="hidden px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-sm font-semibold transition">Cancel</button>
+              </div>
+            </form>
+
+            <div class="border-t border-slate-800 pt-3 space-y-2">
+              <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Active Alert Rules</span>
+              <div class="space-y-1.5" id="alertRuleList"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="rounded-xl border border-dashed border-slate-700 bg-slate-900/20 overflow-hidden max-w-xl">
           <div class="p-3 border-b border-dashed border-slate-700 text-sm font-semibold text-slate-300">Coming Soon</div>
           <div class="p-4 space-y-2 text-sm text-slate-400">
             <div>• Real SSO (Okta / Active Directory) — this login screen is a static demo stand-in</div>
-            <div>• Email & ticketing integrations wired to real accounts</div>
-            <div>• Notification preferences per owning team</div>
+            <div>• These rules actually dispatching to real Email/Slack/Jira, not just being saved as configuration</div>
             <div>• Data retention & audit export controls</div>
           </div>
         </div>
@@ -1528,13 +1584,153 @@
     }
 
     function resetDemoData() {
-      showMockModal('Reset Demo Data?', 'This clears all saved demo accounts and signs you out on this browser. This cannot be undone.', () => {
+      showMockModal('Reset Demo Data?', 'This clears all saved demo accounts, alert rules, and signs you out on this browser. This cannot be undone.', () => {
         try {
           localStorage.removeItem(USERS_STORAGE_KEY);
           localStorage.removeItem(SESSION_STORAGE_KEY);
+          localStorage.removeItem(ALERT_RULES_STORAGE_KEY);
         } catch (e) { /* ignore */ }
         location.reload();
       });
+    }
+
+    // ==========================================
+    // ALERTING & NOTIFICATIONS (what to notify on, how
+    // urgently, and who gets told — saved to this browser,
+    // same demo-grade caveat as accounts: configuration only,
+    // nothing actually dispatches to a real inbox/Slack/Jira)
+    // ==========================================
+    const ALERT_RULES_STORAGE_KEY = 'aegisCtiDemoAlertRules_v1';
+
+    const ALERT_TRIGGER_LABELS = {
+      p1_critical: 'New P1 / Critical Correlation',
+      kev_match: 'New CISA KEV Match',
+      internet_facing: 'Internet-Facing Exposure Detected',
+      connector_failure: 'Connector / Feed Failure',
+      memo_generated: 'Threat Memo Generated'
+    };
+
+    const MOCK_ALERT_RULES = [
+      { id: 'rule-1', trigger: 'p1_critical', minSeverity: 'critical', frequency: 'realtime', channel: 'Email + Slack', recipients: 'soc-tier1@corp.com, #soc-tier1-alerts' },
+      { id: 'rule-2', trigger: 'kev_match', minSeverity: 'all', frequency: 'daily', channel: 'Email', recipients: 'ciso@corp.com' },
+      { id: 'rule-3', trigger: 'connector_failure', minSeverity: 'all', frequency: 'realtime', channel: 'Slack', recipients: '#soc-tier1-alerts' }
+    ];
+
+    function saveAlertRulesToStorage() {
+      try { localStorage.setItem(ALERT_RULES_STORAGE_KEY, JSON.stringify(MOCK_ALERT_RULES)); } catch (e) { /* ignore */ }
+    }
+
+    function loadAlertRulesFromStorage() {
+      try {
+        const raw = localStorage.getItem(ALERT_RULES_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) {
+          MOCK_ALERT_RULES.length = 0;
+          parsed.forEach(r => MOCK_ALERT_RULES.push(r));
+        }
+      } catch (e) { /* ignore corrupt/blocked storage, fall back to seeded rules */ }
+    }
+
+    function describeAlertRule(rule) {
+      const sevLabel = { all: 'All Severities', medium: 'Medium+', high: 'High+', critical: 'Critical Only' }[rule.minSeverity] || 'All Severities';
+      const freqLabel = { realtime: 'Real-time', hourly: 'Hourly Digest', daily: 'Daily Digest' }[rule.frequency] || rule.frequency;
+      return `${sevLabel} · ${freqLabel} · via ${rule.channel}`;
+    }
+
+    let editingAlertRuleId = null;
+
+    function saveAlertRule(event) {
+      event.preventDefault();
+      const trigger = document.getElementById('alertRuleTrigger').value;
+      const minSeverity = document.getElementById('alertRuleSeverity').value;
+      const frequency = document.getElementById('alertRuleFrequency').value;
+      const channel = document.getElementById('alertRuleChannel').value;
+      const recipients = document.getElementById('alertRuleRecipients').value.trim();
+      const errorBox = document.getElementById('alertRuleErrorMsg');
+
+      if (!recipients) {
+        errorBox.textContent = 'At least one recipient (email, Slack channel, or team/person name) is required.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+      errorBox.classList.add('hidden');
+
+      if (editingAlertRuleId) {
+        const rule = MOCK_ALERT_RULES.find(r => r.id === editingAlertRuleId);
+        if (rule) {
+          rule.trigger = trigger;
+          rule.minSeverity = minSeverity;
+          rule.frequency = frequency;
+          rule.channel = channel;
+          rule.recipients = recipients;
+        }
+        saveAlertRulesToStorage();
+        cancelEditAlertRule();
+        logChange('Alert Rule Updated', `${ALERT_TRIGGER_LABELS[trigger]} — ${describeAlertRule({ minSeverity, frequency, channel })}`);
+      } else {
+        const newRule = { id: 'rule-' + Date.now(), trigger, minSeverity, frequency, channel, recipients };
+        MOCK_ALERT_RULES.push(newRule);
+        saveAlertRulesToStorage();
+        document.getElementById('alertRuleRecipients').value = '';
+        renderAlertRuleList();
+        logChange('Alert Rule Added', `${ALERT_TRIGGER_LABELS[trigger]} — ${describeAlertRule(newRule)}`);
+      }
+    }
+
+    function editAlertRule(id) {
+      const rule = MOCK_ALERT_RULES.find(r => r.id === id);
+      if (!rule) return;
+      editingAlertRuleId = id;
+      document.getElementById('alertRuleTrigger').value = rule.trigger;
+      document.getElementById('alertRuleSeverity').value = rule.minSeverity;
+      document.getElementById('alertRuleFrequency').value = rule.frequency;
+      document.getElementById('alertRuleChannel').value = rule.channel;
+      document.getElementById('alertRuleRecipients').value = rule.recipients;
+      document.getElementById('alertRuleErrorMsg').classList.add('hidden');
+      document.getElementById('alertRuleFormModeBanner').classList.remove('hidden');
+      document.getElementById('alertRuleFormModeName').textContent = ALERT_TRIGGER_LABELS[rule.trigger];
+      document.getElementById('alertRuleSubmitBtn').textContent = 'Save Changes';
+      document.getElementById('alertRuleCancelBtn').classList.remove('hidden');
+    }
+
+    function cancelEditAlertRule() {
+      editingAlertRuleId = null;
+      document.getElementById('alertRuleRecipients').value = '';
+      document.getElementById('alertRuleErrorMsg').classList.add('hidden');
+      document.getElementById('alertRuleFormModeBanner').classList.add('hidden');
+      document.getElementById('alertRuleSubmitBtn').textContent = '+ Add Alert Rule';
+      document.getElementById('alertRuleCancelBtn').classList.add('hidden');
+      renderAlertRuleList();
+    }
+
+    function removeAlertRule(id) {
+      if (editingAlertRuleId === id) cancelEditAlertRule();
+      const idx = MOCK_ALERT_RULES.findIndex(r => r.id === id);
+      if (idx !== -1) MOCK_ALERT_RULES.splice(idx, 1);
+      saveAlertRulesToStorage();
+      renderAlertRuleList();
+    }
+
+    function renderAlertRuleList() {
+      const wrap = document.getElementById('alertRuleList');
+      if (!wrap) return;
+      if (!MOCK_ALERT_RULES.length) {
+        wrap.innerHTML = `<div class="text-[13px] text-slate-500 font-mono px-3 py-2">No alert rules configured yet.</div>`;
+        return;
+      }
+      wrap.innerHTML = MOCK_ALERT_RULES.map(r => `
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-slate-950/60 border border-slate-800">
+          <div class="min-w-0">
+            <div class="text-[13px] text-slate-200 truncate">${ALERT_TRIGGER_LABELS[r.trigger] || r.trigger}</div>
+            <div class="text-[11px] text-slate-500 font-mono truncate">${describeAlertRule(r)} → ${r.recipients}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="editAlertRule('${r.id}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-cyan-900/60 text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-700/60 transition">Edit</button>
+            <button onclick="removeAlertRule('${r.id}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition">Remove</button>
+          </div>
+        </div>
+      `).join('');
     }
 
     function initials(name) {
@@ -3152,7 +3348,9 @@
       'Feed Enabled': '<span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>',
       'Feed Disabled': '<span class="inline-block h-2 w-2 rounded-full bg-slate-600"></span>',
       'Feed Removed': '<span class="inline-block h-2 w-2 rounded-full bg-rose-500"></span>',
-      'New 0-Day Alert Ingested': '<span class="inline-block h-2 w-2 rounded-full bg-rose-500"></span>'
+      'New 0-Day Alert Ingested': '<span class="inline-block h-2 w-2 rounded-full bg-rose-500"></span>',
+      'Alert Rule Added': '<span class="inline-block h-2 w-2 rounded-full bg-cyan-400"></span>',
+      'Alert Rule Updated': '<span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span>'
     };
 
     function timeAgo(timestamp) {
@@ -3292,8 +3490,10 @@
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Authentication</span><span class="text-amber-300 text-right">Static demo login, saved to this browser (no SSO yet)</span></div>
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Signed In As</span><span class="text-cyan-300 text-right">${currentUser ? `${currentUser.displayName} (${currentUser.role})` : '—'}</span></div>
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Saved Demo Accounts</span><span class="text-emerald-300 text-right">${MOCK_USERS.length}</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Active Alert Rules</span><span class="text-emerald-300 text-right">${MOCK_ALERT_RULES.length}</span></div>
       `;
       renderUserSetupList();
+      renderAlertRuleList();
     }
     let activeMemoRiskRating = 'medium';
 
@@ -3701,6 +3901,7 @@ and will re-verify once remediation is reported complete.
     document.addEventListener('DOMContentLoaded', () => {
       loadUsersFromStorage();
       restoreSessionFromStorage();
+      loadAlertRulesFromStorage();
       renderAlerts();
       renderAssets();
       renderConnectors();
