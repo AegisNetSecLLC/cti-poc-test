@@ -510,6 +510,21 @@
           </div>
         </div>
 
+        <!-- LIVE CVE Ingestion — real data, not mock, pulled directly from NVD -->
+        <div class="rounded-xl border border-emerald-800/60 bg-slate-900/40 overflow-hidden">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <span class="text-sm font-semibold text-slate-200">Live CVE Ingestion <span class="text-[11px] text-emerald-400 font-mono border border-emerald-700 bg-emerald-950/60 px-1.5 py-0.5 rounded ml-1">REAL DATA</span></span>
+              <p class="text-[12px] text-slate-400 mt-0.5">Pulled directly from the NVD CVE API — genuinely published in the window below, not part of the demo's fictional correlation story.</p>
+            </div>
+            <button onclick="refreshLiveCveFeed()" id="btnRefreshLiveCve" class="px-3 py-1.5 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition shrink-0">
+              Pull Last 24 Hours
+            </button>
+          </div>
+          <div class="px-3 pt-3 text-[12px] text-slate-500 font-mono" id="liveCveStatus">Not pulled yet this session — click "Pull Last 24 Hours."</div>
+          <div class="p-3 space-y-2" id="liveCveList"></div>
+        </div>
+
         <!-- OpenCTI-Compatible Feed Subscriptions (STIX / TAXII / RSS) -->
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex flex-wrap justify-between items-center gap-2">
@@ -3452,6 +3467,99 @@
       applyRoleRestrictions();
     }
 
+    function cvssFromNvdMetrics(metrics) {
+      if (!metrics) return null;
+      const m = (metrics.cvssMetricV31 || metrics.cvssMetricV30 || [])[0];
+      if (m) return { score: m.cvssData.baseScore, severity: m.cvssData.baseSeverity, vector: m.cvssData.vectorString };
+      const m2 = (metrics.cvssMetricV2 || [])[0];
+      if (m2) return { score: m2.cvssData.baseScore, severity: (m2.baseSeverity || '').toUpperCase(), vector: m2.cvssData.vectorString };
+      return null;
+    }
+
+    function severityBadgeClasses(severity) {
+      const map = {
+        CRITICAL: 'bg-rose-950 text-rose-300 border-rose-700',
+        HIGH: 'bg-orange-950 text-orange-300 border-orange-700',
+        MEDIUM: 'bg-amber-950 text-amber-300 border-amber-700',
+        LOW: 'bg-slate-800 text-slate-400 border-slate-700'
+      };
+      return map[severity] || 'bg-slate-800 text-slate-400 border-slate-700';
+    }
+
+    async function refreshLiveCveFeed() {
+      const btn = document.getElementById('btnRefreshLiveCve');
+      const status = document.getElementById('liveCveStatus');
+      const list = document.getElementById('liveCveList');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-60');
+      status.textContent = 'Pulling the last 24 hours of published CVEs from the NVD API...';
+
+      const now = new Date();
+      const since = new Date(now.getTime() - 24 * 3600 * 1000);
+      const isoNoMs = (d) => d.toISOString().slice(0, 19) + '.000';
+      const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?pubStartDate=${isoNoMs(since)}&pubEndDate=${isoNoMs(now)}&resultsPerPage=2000`;
+
+      try {
+        const res = await fetch(url);
+        if (res.status === 429) {
+          status.textContent = 'NVD rate-limited this request (no API key = a few requests per 30s). Wait a moment and try again.';
+          return;
+        }
+        if (!res.ok) {
+          status.textContent = `NVD API returned an error (HTTP ${res.status}). Try again shortly.`;
+          return;
+        }
+        const data = await res.json();
+        const vulns = (data.vulnerabilities || []).map(v => v.cve);
+
+        const parsed = vulns.map(cve => {
+          const desc = (cve.descriptions || []).find(d => d.lang === 'en');
+          const cvss = cvssFromNvdMetrics(cve.metrics);
+          const affected = (cve.affected || [])[0];
+          const affectedData = affected && (affected.affectedData || [])[0];
+          return {
+            id: cve.id,
+            published: cve.published,
+            description: desc ? desc.value : 'No description published yet.',
+            score: cvss ? cvss.score : null,
+            severity: cvss ? cvss.severity : 'UNSCORED',
+            vendor: affectedData ? affectedData.vendor : null,
+            product: affectedData ? affectedData.product : null
+          };
+        }).sort((a, b) => (b.score || 0) - (a.score || 0));
+
+        const top = parsed.slice(0, 15);
+
+        if (top.length === 0) {
+          list.innerHTML = `<div class="p-4 text-center text-[13px] font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">No CVEs published in the last 24 hours (unusual, but it happens).</div>`;
+        } else {
+          list.innerHTML = top.map(c => `
+            <div class="p-3 rounded-lg bg-slate-950/50 border border-slate-800/80 space-y-1.5">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <a href="https://nvd.nist.gov/vuln/detail/${c.id}" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-bold text-cyan-400 hover:text-cyan-200 hover:underline">${c.id}</a>
+                <div class="flex items-center gap-2">
+                  ${c.score !== null ? `<span class="text-[11px] font-mono text-slate-400">CVSS ${c.score}</span>` : ''}
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border ${severityBadgeClasses(c.severity)}">${c.severity}</span>
+                </div>
+              </div>
+              ${c.vendor ? `<div class="text-[11px] text-slate-500 font-mono">${c.vendor}${c.product ? ' / ' + c.product : ''}</div>` : ''}
+              <p class="text-[13px] text-slate-400 leading-relaxed line-clamp-3">${c.description.length > 280 ? c.description.slice(0, 280) + '…' : c.description}</p>
+              <div class="text-[11px] text-slate-600 font-mono">Published ${timeAgo(new Date(c.published).getTime())}</div>
+            </div>
+          `).join('');
+        }
+
+        status.textContent = `Showing ${top.length} of ${parsed.length} CVEs published in the last 24 hours (NVD), sorted by CVSS. Pulled ${timeAgo(Date.now())}.`;
+        logChange('Live CVE Feed Pulled', `${parsed.length} CVEs published in the last 24 hours (NVD CVE API, real data)`);
+      } catch (e) {
+        status.textContent = 'Could not reach the NVD API — check your internet connection and try again.';
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-60');
+      }
+    }
+
     function toggleFeed(id) {
       const feed = MOCK_FEEDS.find(f => f.id === id);
       if (feed) {
@@ -3612,7 +3720,8 @@
       'Alert Rule Added': '<span class="inline-block h-2 w-2 rounded-full bg-cyan-400"></span>',
       'Alert Rule Updated': '<span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span>',
       'Weekly Report Exported': '<span class="inline-block h-2 w-2 rounded-full bg-indigo-400"></span>',
-      'Remediation Status Updated': '<span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>'
+      'Remediation Status Updated': '<span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>',
+      'Live CVE Feed Pulled': '<span class="inline-block h-2 w-2 rounded-full bg-cyan-400"></span>'
     };
 
     function timeAgo(timestamp) {
