@@ -105,11 +105,11 @@
 
     <!-- Right Actions -->
     <div class="flex items-center gap-2">
-      <button onclick="openAddConnectorModal()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition whitespace-nowrap">
+      <button data-write-action onclick="openAddConnectorModal()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition whitespace-nowrap">
         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         <span>Add Connector / API</span>
       </button>
-      <button onclick="triggerSimulation()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition whitespace-nowrap">
+      <button data-write-action onclick="triggerSimulation()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition whitespace-nowrap">
         <svg class="w-3.5 h-3.5 text-cyan-400 animate-spin shrink-0" id="simSpinner" style="display:none;" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
         <span id="simBtnText">Simulate 0-Day Feed Drop</span>
       </button>
@@ -201,6 +201,9 @@
 
     <!-- CENTER CONTENT AREA -->
     <main class="flex-1 flex flex-col overflow-y-auto bg-[#07090e]">
+      <div id="readOnlyBanner" class="hidden px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-[12px] text-amber-300 font-mono">
+        Leadership (Read-Only) role — viewing is unrestricted, but creating, editing, or removing anything is disabled for this account.
+      </div>
 
       <!-- TAB 0: LEADERSHIP OVERVIEW -->
       <section id="view-overview" class="p-4 md:p-6 space-y-6 hidden">
@@ -419,7 +422,7 @@
             <p class="text-sm text-slate-400 mt-0.5">Plug in Open Source feeds, commercial intelligence, internal CMDBs, cloud providers, and custom enterprise APIs.</p>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="openAddConnectorModal()" class="px-3.5 py-1.5 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-900/40 transition">
+            <button data-write-action onclick="openAddConnectorModal()" class="px-3.5 py-1.5 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-900/40 transition">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               <span>+ Add Connector / Custom API</span>
             </button>
@@ -455,7 +458,7 @@
             <h2 class="text-base font-semibold text-white">Threat Intelligence Ingestion Feeds</h2>
             <p class="text-sm text-slate-400">Real-time ingestion pipelines: CISA KEV, EPSS Daily Scores, TAXII 2.1 Feeds & Threat Actors</p>
           </div>
-          <button onclick="openAddFeedModal()" class="px-3 py-1.5 rounded-lg text-sm bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition">
+          <button data-write-action onclick="openAddFeedModal()" class="px-3 py-1.5 rounded-lg text-sm bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition">
             + Connect New Feed
           </button>
         </div>
@@ -503,7 +506,7 @@
               <span class="text-sm font-semibold text-slate-200">OpenCTI-Compatible Feed Subscriptions</span>
               <p class="text-[12px] text-slate-400 mt-0.5">Subscribe directly to any STIX 2.1 bundle URL, TAXII 2.1 collection, or RSS/Atom security feed.</p>
             </div>
-            <button onclick="openAddFeedModal()" class="px-2.5 py-1 rounded-lg text-[13px] bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-medium transition">
+            <button data-write-action onclick="openAddFeedModal()" class="px-2.5 py-1 rounded-lg text-[13px] bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-medium transition">
               + Add STIX / TAXII / RSS Feed
             </button>
           </div>
@@ -658,7 +661,7 @@
               </div>
               <div id="newUserErrorMsg" class="hidden sm:col-span-2 text-[13px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"></div>
               <div class="sm:col-span-2 flex items-center gap-2">
-                <button type="submit" id="userFormSubmitBtn" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">+ Create Account</button>
+                <button type="submit" id="userFormSubmitBtn" data-write-action class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">+ Create Account</button>
                 <button type="button" id="userFormCancelBtn" onclick="cancelEditMockUser()" class="hidden px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-sm font-semibold transition">Cancel</button>
               </div>
             </form>
@@ -666,7 +669,7 @@
             <div class="border-t border-slate-800 pt-3 space-y-2" id="userSetupListWrap">
               <div class="flex items-center justify-between">
                 <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Saved Demo Accounts</span>
-                <button onclick="resetDemoData()" class="text-[11px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-500 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition">Reset Demo Data</button>
+                <button data-write-action onclick="resetDemoData()" class="text-[11px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-500 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition">Reset Demo Data</button>
               </div>
               <div class="space-y-1.5" id="userSetupList"></div>
             </div>
@@ -729,7 +732,7 @@
               </div>
               <div id="alertRuleErrorMsg" class="hidden sm:col-span-2 text-[13px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"></div>
               <div class="sm:col-span-2 flex items-center gap-2">
-                <button type="submit" id="alertRuleSubmitBtn" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">+ Add Alert Rule</button>
+                <button type="submit" id="alertRuleSubmitBtn" data-write-action class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">+ Add Alert Rule</button>
                 <button type="button" id="alertRuleCancelBtn" onclick="cancelEditAlertRule()" class="hidden px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-sm font-semibold transition">Cancel</button>
               </div>
             </form>
@@ -744,7 +747,7 @@
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden max-w-xl">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between gap-3">
             <span class="text-sm font-semibold text-slate-200">Audit Log <span class="text-[11px] text-slate-500 font-normal">(persists in this browser)</span></span>
-            <button type="button" onclick="clearAuditLog()" class="text-[12px] text-slate-500 hover:text-rose-400 font-mono transition">Clear</button>
+            <button type="button" data-write-action onclick="clearAuditLog()" class="text-[12px] text-slate-500 hover:text-rose-400 font-mono transition">Clear</button>
           </div>
           <div class="p-4 space-y-3">
             <input id="auditLogFilter" type="text" oninput="renderAuditLogList(this.value)" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="Filter by action, detail, or user...">
@@ -907,7 +910,7 @@
 
             <!-- Triage Actions -->
             <div class="flex items-center gap-2 pt-2 flex-wrap">
-              <button onclick="executeModalAction('jira')" class="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-sm font-semibold transition">
+              <button data-write-action onclick="executeModalAction('jira')" class="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-sm font-semibold transition">
                 Sync to Jira
               </button>
               <button onclick="openThreatMemoModal(activeAlertForModal.id)" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-sm font-semibold shadow-lg shadow-indigo-900/40 transition">
@@ -1034,7 +1037,7 @@
           </button>
           <div class="flex items-center gap-2">
             <button type="button" onclick="closeAddConnectorModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Cancel</button>
-            <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition">Save & Activate Connector</button>
+            <button type="submit" data-write-action class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition">Save & Activate Connector</button>
           </div>
         </div>
       </form>
@@ -1091,7 +1094,7 @@
 
         <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
           <button type="button" onclick="closeConnectorConfigModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Cancel</button>
-          <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition">Save Config</button>
+          <button type="submit" data-write-action class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition">Save Config</button>
         </div>
       </form>
 
@@ -1189,7 +1192,7 @@
           </button>
           <div class="flex items-center gap-2">
             <button type="button" onclick="closeAddFeedModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Cancel</button>
-            <button type="submit" id="btnSaveFeed" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-sm transition">Subscribe to Feed</button>
+            <button type="submit" id="btnSaveFeed" data-write-action class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-sm transition">Subscribe to Feed</button>
           </div>
         </div>
       </form>
@@ -1219,7 +1222,7 @@
         <span class="text-[12px] text-slate-500 font-mono">Session-only staging — nothing is pushed to GitHub by this button.</span>
         <div class="flex items-center gap-2 shrink-0">
           <button type="button" onclick="closeActivateModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Cancel</button>
-          <button type="button" onclick="confirmActivateDeploy()" id="btnConfirmActivate" class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold text-sm transition flex items-center gap-1.5">
+          <button type="button" onclick="confirmActivateDeploy()" id="btnConfirmActivate" data-write-action class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold text-sm transition flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 animate-spin" id="activateSpinner" style="display:none;" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
             <span id="btnConfirmActivateText">Activate & Deploy</span>
           </button>
@@ -1594,7 +1597,8 @@
     const SESSION_STORAGE_KEY = 'aegisCtiDemoSession_v1';
 
     const MOCK_USERS = [
-      { username: 'analyst1', password: 'demo1234', displayName: 'Alex Chen', role: 'Senior Analyst' }
+      { username: 'analyst1', password: 'demo1234', displayName: 'Alex Chen', role: 'Senior Analyst' },
+      { username: 'leadership1', password: 'demo1234', displayName: 'Jordan Blake', role: 'Leadership (Read-Only)' }
     ];
     let currentUser = null;
 
@@ -1776,11 +1780,12 @@
             <div class="text-[11px] text-slate-500 font-mono truncate">${describeAlertRule(r)} → ${r.recipients}</div>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
-            <button onclick="editAlertRule('${r.id}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-cyan-900/60 text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-700/60 transition">Edit</button>
-            <button onclick="removeAlertRule('${r.id}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition">Remove</button>
+            <button data-write-action onclick="editAlertRule('${r.id}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-cyan-900/60 text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-700/60 transition">Edit</button>
+            <button data-write-action onclick="removeAlertRule('${r.id}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition">Remove</button>
           </div>
         </div>
       `).join('');
+      applyRoleRestrictions();
     }
 
     function initials(name) {
@@ -1795,6 +1800,27 @@
       document.getElementById('headerUserName').textContent = user.displayName;
       document.getElementById('headerUserRole').textContent = user.role;
       if (persistSession) saveSessionToStorage();
+      applyRoleRestrictions();
+    }
+
+    function applyRoleRestrictions() {
+      const readOnly = !!(currentUser && currentUser.role === 'Leadership (Read-Only)');
+      document.querySelectorAll('[data-write-action]').forEach(el => {
+        if (readOnly) {
+          el.disabled = true;
+          el.dataset.roleLocked = 'true';
+          el.classList.add('opacity-40', 'cursor-not-allowed');
+          if (el.dataset.origTitle === undefined) el.dataset.origTitle = el.title || '';
+          el.title = 'Read-only role — this account cannot make changes';
+        } else if (el.dataset.roleLocked === 'true') {
+          el.disabled = false;
+          delete el.dataset.roleLocked;
+          el.classList.remove('opacity-40', 'cursor-not-allowed');
+          el.title = el.dataset.origTitle || '';
+        }
+      });
+      const banner = document.getElementById('readOnlyBanner');
+      if (banner) banner.classList.toggle('hidden', !readOnly);
     }
 
     function attemptLogin(event) {
@@ -1927,11 +1953,12 @@
             </div>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
-            <button onclick="editMockUser('${u.username}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-cyan-900/60 text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-700/60 transition">Edit</button>
-            <button onclick="removeMockUser('${u.username}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition">Remove</button>
+            <button data-write-action onclick="editMockUser('${u.username}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-cyan-900/60 text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-700/60 transition">Edit</button>
+            <button data-write-action onclick="removeMockUser('${u.username}')" class="text-[12px] px-2 py-1 rounded-md bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 transition">Remove</button>
           </div>
         </div>
       `).join('');
+      applyRoleRestrictions();
     }
 
     let currentVersionMajor = 2;
@@ -2492,7 +2519,7 @@
         `;
 
         actions.innerHTML = `
-          <button onclick="takeAction('${alert.id}', 'jira', '${data.name}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">
+          <button data-write-action onclick="takeAction('${alert.id}', 'jira', '${data.name}')" class="w-full py-1.5 rounded-lg text-sm font-mono bg-slate-800 hover:bg-slate-700 text-slate-200">
             Notify Owning Team via Jira
           </button>
         `;
@@ -2529,6 +2556,7 @@
       }
 
       syncSimulationUI(nodeId, alert);
+      applyRoleRestrictions();
     }
 
     function closeGraphDrawer() {
@@ -3030,7 +3058,7 @@
                 </div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" ${conn.enabled ? 'checked' : ''} onchange="toggleConnector('${conn.id}')" class="sr-only peer">
+                <input type="checkbox" data-write-action ${conn.enabled ? 'checked' : ''} onchange="toggleConnector('${conn.id}')" class="sr-only peer">
                 <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
               </label>
             </div>
@@ -3053,7 +3081,7 @@
               <button onclick="testExistingConnector('${conn.name}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 Test Sync
               </button>
-              <button onclick="openConnectorConfigModal('${conn.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
+              <button data-write-action onclick="openConnectorConfigModal('${conn.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 Config
               </button>
             </div>
@@ -3061,6 +3089,7 @@
         `;
         grid.appendChild(card);
       });
+      applyRoleRestrictions();
     }
 
     function describeIngestFilter(f) {
@@ -3268,7 +3297,7 @@
                 </div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" ${feed.enabled ? 'checked' : ''} onchange="toggleFeed('${feed.id}')" class="sr-only peer">
+                <input type="checkbox" data-write-action ${feed.enabled ? 'checked' : ''} onchange="toggleFeed('${feed.id}')" class="sr-only peer">
                 <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
               </label>
             </div>
@@ -3291,10 +3320,10 @@
               <button onclick="testExistingFeed('${feed.id}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 Test
               </button>
-              <button onclick="openEditFeedModal('${feed.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
+              <button data-write-action onclick="openEditFeedModal('${feed.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 Edit
               </button>
-              <button onclick="removeFeed('${feed.id}')" class="px-2.5 py-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-900 text-[13px] font-mono transition">
+              <button data-write-action onclick="removeFeed('${feed.id}')" class="px-2.5 py-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-900 text-[13px] font-mono transition">
                 Remove
               </button>
             </div>
@@ -3302,6 +3331,7 @@
         `;
         grid.appendChild(card);
       });
+      applyRoleRestrictions();
     }
 
     function toggleFeed(id) {
@@ -4071,6 +4101,7 @@ This report reflects notification status, not remediation status.
       } else if (tabName === 'settings') {
         renderSettingsPanel();
       }
+      applyRoleRestrictions();
     }
 
     // ==========================================
