@@ -1273,6 +1273,16 @@
         <span id="memoRecipientHint" class="text-[11px] text-slate-500 font-mono"></span>
       </div>
 
+      <!-- Section Toggles -->
+      <div class="px-4 py-2.5 border-b border-slate-800 bg-slate-950/50 flex items-center gap-x-4 gap-y-1.5 flex-wrap">
+        <span class="text-[11px] font-mono text-slate-400 shrink-0">INCLUDE:</span>
+        <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-whatIsThis" onchange="toggleMemoSection('whatIsThis')" class="accent-indigo-500"> What This Is</label>
+        <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-exploitDetails" onchange="toggleMemoSection('exploitDetails')" class="accent-indigo-500"> Exploit Details</label>
+        <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-businessImpact" onchange="toggleMemoSection('businessImpact')" class="accent-indigo-500"> Business Impact</label>
+        <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-technicalDetails" onchange="toggleMemoSection('technicalDetails')" class="accent-indigo-500"> Technical Details</label>
+        <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-iocs" onchange="toggleMemoSection('iocs')" class="accent-indigo-500"> Indicators of Compromise</label>
+      </div>
+
       <div class="p-5 overflow-y-auto font-mono text-sm leading-relaxed text-slate-200 whitespace-pre-wrap bg-[#0d1119]" id="memoBody"></div>
 
       <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2 flex-wrap">
@@ -3764,21 +3774,13 @@
 
     function buildRiskStamp(riskRating) {
       const meta = RISK_RATING_META[riskRating];
-      const width = 64;
-      const ch = meta.stampChar;
-      const border = ch.repeat(width);
-      const center = (text) => {
-        const pad = Math.max(0, width - 2 - text.length);
-        const left = Math.floor(pad / 2);
-        const right = pad - left;
-        return `${ch}${' '.repeat(left)}${text}${' '.repeat(right)}${ch}`;
-      };
+      const border = meta.stampChar.repeat(64);
+      // Left-aligned, no padding-based centering — centering math assumes a monospace
+      // font, which breaks (misaligned border vs. text) once pasted into Google Docs,
+      // Outlook, Slack, etc. where this renders in a proportional font.
       return [
         border,
-        center(''),
-        center(`RISK CLASSIFICATION: ${meta.label}`),
-        center(meta.tagline),
-        center(''),
+        `RISK CLASSIFICATION: ${meta.label} — ${meta.tagline}`,
         border
       ].join('\n');
     }
@@ -3790,7 +3792,10 @@
       return 'low';
     }
 
-    function buildMemoText(alert, riskRating) {
+    const MEMO_SECTION_DEFAULTS = { whatIsThis: true, exploitDetails: true, businessImpact: true, technicalDetails: false, iocs: false };
+
+    function buildMemoText(alert, riskRating, sections) {
+      sections = sections || MEMO_SECTION_DEFAULTS;
       const tlp = (alert.inKev || alert.riskScore >= 85) ? 'TLP:AMBER' : 'TLP:GREEN';
       const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
       const iocs = alert.iocs || { ips: [], domains: [], hashes: [] };
@@ -3799,9 +3804,12 @@
         ...(iocs.domains || []).map(v => `  Domain: ${v}`),
         ...(iocs.hashes || []).map(v => `  Hash:   ${v}`)
       ];
+      const divider = '----------------------------------------------------------------';
 
-      return `================================================================
-THREAT INTELLIGENCE MEMORANDUM                      ${tlp}
+      const blocks = [
+        `================================================================
+THREAT INTELLIGENCE MEMORANDUM
+Classification: ${tlp}
 ================================================================
 ${buildRiskStamp(riskRating)}
 
@@ -3811,51 +3819,30 @@ ANALYST RISK RATING: ${RISK_RATING_META[riskRating].label}
 PRIORITY:          ${alert.priority}   |   Correlated Risk: ${alert.riskScore}/100
 PREPARED BY:       AEGIS.INTEL Threat Correlation Team
 FOR:               Security Leadership / Steering Committee
-OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)
+OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`,
 
-----------------------------------------------------------------
-EXECUTIVE SUMMARY
-----------------------------------------------------------------
-${alert.summary}
+        `${divider}\nEXECUTIVE SUMMARY\n${divider}\n${alert.summary}`
+      ];
 
-----------------------------------------------------------------
-WHAT THIS IS
-----------------------------------------------------------------
-${alert.whatIsThis || 'Technical write-up pending.'}
+      if (sections.whatIsThis) {
+        blocks.push(`${divider}\nWHAT THIS IS\n${divider}\n${alert.whatIsThis || 'Technical write-up pending.'}`);
+      }
+      if (sections.exploitDetails) {
+        blocks.push(`${divider}\nEXPLOIT DETAILS (HOW THE ATTACK WORKS)\n${divider}\n${alert.exploitDetails || 'Exploit mechanics pending further analysis.'}`);
+      }
+      if (sections.businessImpact) {
+        blocks.push(`${divider}\nBUSINESS IMPACT IF NOT REMEDIATED\n${divider}\n${alert.ifUnremediated || 'Impact assessment pending further analysis.'}`);
+      }
+      if (sections.technicalDetails) {
+        blocks.push(`${divider}\nTECHNICAL DETAILS\n${divider}\nCVE:              ${alert.cve}  (CVSS ${alert.cvss} | EPSS ${alert.epss}%)\nCISA KEV Status:  ${alert.inKev ? 'Listed — confirmed actively exploited' : 'Not listed'}\nThreat Actor:     ${alert.actor}\nAffected Asset:   ${alert.targetHost} (${alert.environment})\nMITRE ATT&CK:     ${alert.killChain.join(' -> ')}`);
+      }
+      if (sections.iocs) {
+        blocks.push(`${divider}\nINDICATORS OF COMPROMISE\n${divider}\n${iocLines.length ? iocLines.join('\n') : '  No indicators attributed yet for this finding.'}`);
+      }
 
-----------------------------------------------------------------
-EXPLOIT DETAILS (HOW THE ATTACK WORKS)
-----------------------------------------------------------------
-${alert.exploitDetails || 'Exploit mechanics pending further analysis.'}
+      blocks.push(`${divider}\nRECOMMENDED ACTION\n${divider}\nThis finding has been escalated to ${alert.owningTeam || 'the appropriate owning team'} for\nremediation. Recommended: patch/upgrade ${alert.software.split(' (')[0]} and\nvalidate closure once the fix is applied. The Threat Correlation Team\nwill continue monitoring for exploitation signals and will re-verify\nonce remediation is reported complete.\n================================================================`);
 
-----------------------------------------------------------------
-BUSINESS IMPACT IF NOT REMEDIATED
-----------------------------------------------------------------
-${alert.ifUnremediated || 'Impact assessment pending further analysis.'}
-
-----------------------------------------------------------------
-TECHNICAL DETAILS
-----------------------------------------------------------------
-CVE:              ${alert.cve}  (CVSS ${alert.cvss} | EPSS ${alert.epss}%)
-CISA KEV Status:  ${alert.inKev ? 'Listed — confirmed actively exploited' : 'Not listed'}
-Threat Actor:     ${alert.actor}
-Affected Asset:   ${alert.targetHost} (${alert.environment})
-MITRE ATT&CK:     ${alert.killChain.join(' -> ')}
-
-----------------------------------------------------------------
-INDICATORS OF COMPROMISE
-----------------------------------------------------------------
-${iocLines.length ? iocLines.join('\n') : '  No indicators attributed yet for this finding.'}
-
-----------------------------------------------------------------
-RECOMMENDED ACTION
-----------------------------------------------------------------
-This finding has been escalated to ${alert.owningTeam || 'the appropriate owning team'} for
-remediation. Recommended: patch/upgrade ${alert.software.split(' (')[0]} and
-validate closure against the MITRE ATT&CK chain above. The Threat
-Correlation Team will continue monitoring for exploitation signals
-and will re-verify once remediation is reported complete.
-================================================================`;
+      return blocks.join('\n\n');
     }
 
     function suggestMemoRecipientsForAlert(alert) {
@@ -3872,11 +3859,18 @@ and will re-verify once remediation is reported complete.
       return { recipients: '', source: '' };
     }
 
+    let activeMemoSections = Object.assign({}, MEMO_SECTION_DEFAULTS);
+
     function openThreatMemoModal(alertId) {
       const alert = MOCK_ALERTS.find(a => a.id === alertId);
       if (!alert) return;
       activeMemoAlertId = alertId;
       activeMemoRiskRating = defaultRiskRatingForAlert(alert);
+      activeMemoSections = Object.assign({}, MEMO_SECTION_DEFAULTS);
+      Object.keys(activeMemoSections).forEach(key => {
+        const cb = document.getElementById('memoSection-' + key);
+        if (cb) cb.checked = activeMemoSections[key];
+      });
 
       const tlp = (alert.inKev || alert.riskScore >= 85) ? 'TLP:AMBER' : 'TLP:GREEN';
       const tlpBadge = document.getElementById('memoTlpBadge');
@@ -3886,7 +3880,7 @@ and will re-verify once remediation is reported complete.
         : 'px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border bg-emerald-950 text-emerald-300 border-emerald-700';
 
       renderRiskPills();
-      document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating);
+      document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
       document.getElementById('memoCopyStatus').textContent = 'Not copied yet.';
 
       const suggestion = suggestMemoRecipientsForAlert(alert);
@@ -3896,12 +3890,20 @@ and will re-verify once remediation is reported complete.
       document.getElementById('threatMemoModal').classList.remove('hidden');
     }
 
+    function toggleMemoSection(key) {
+      const cb = document.getElementById('memoSection-' + key);
+      activeMemoSections[key] = cb ? cb.checked : !activeMemoSections[key];
+      const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
+      if (!alert) return;
+      document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
+    }
+
     function setMemoRiskRating(level) {
       activeMemoRiskRating = level;
       const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
       if (!alert) return;
       renderRiskPills();
-      document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating);
+      document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
     }
 
     function renderRiskPills() {
