@@ -4467,16 +4467,16 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
           borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
           rows: [new TableRow({ children: [
             new TableCell({ width: { size: 65, type: WidthType.PERCENTAGE }, children: [new Paragraph('')] }),
-            new TableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new ImageRun({ data: bytes, transformation: { width: 170, height: Math.round(170 * (768 / 1376)) } })] })] })
+            new TableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new ImageRun({ data: bytes, transformation: { width: 240, height: Math.round(240 * (768 / 1376)) } })] })] })
           ]})]
         }));
       }
 
       children.push(new Paragraph({ children: [new TextRun({ text: 'THREAT INTELLIGENCE MEMORANDUM', bold: true, size: 32 })], spacing: { after: 80 } }));
-      children.push(new Paragraph({ children: [new TextRun({ text: `Classification: ${tlp}`, bold: true, color: tlpColor })], spacing: { after: 160 } }));
-      children.push(new Paragraph({ children: [new TextRun({ text: `RISK CLASSIFICATION: ${meta.label} — ${meta.tagline}`, bold: true, color: ratingColor })], spacing: { after: 240 } }));
+      children.push(new Paragraph({ children: [new TextRun({ text: `Classification: ${tlp}`, bold: true, color: tlpColor, size: 24 })], spacing: { after: 160 } }));
+      children.push(new Paragraph({ children: [new TextRun({ text: `RISK CLASSIFICATION: ${meta.label} — ${meta.tagline}`, bold: true, color: ratingColor, size: 24 })], spacing: { after: 240 } }));
 
-      const metaLine = (label, value) => new Paragraph({ children: [new TextRun({ text: `${label}  `, bold: true }), new TextRun(value)], spacing: { after: 60 } });
+      const metaLine = (label, value) => new Paragraph({ children: [new TextRun({ text: `${label}  `, bold: true, size: 24 }), new TextRun({ text: value, size: 24 })], spacing: { after: 60 } });
       children.push(metaLine('DATE:', dateStr));
       children.push(metaLine('RE:', `${alert.cve} — ${alert.title}`));
       children.push(metaLine('ANALYST RISK RATING:', meta.label));
@@ -4487,16 +4487,19 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
 
       getMemoSectionList(alert, sections).forEach(s => {
         children.push(new Paragraph({
-          children: [new TextRun({ text: s.heading, bold: true })],
+          children: [new TextRun({ text: s.heading, bold: true, size: 24 })],
           spacing: { before: 280, after: 100 },
           border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '94A3B8' } }
         }));
         s.text.split('\n').forEach(line => {
-          children.push(new Paragraph({ text: line, spacing: { after: 60 } }));
+          children.push(new Paragraph({ children: [new TextRun({ text: line, size: 24 })], spacing: { after: 60 } }));
         });
       });
 
-      return new window.docx.Document({ sections: [{ children }] });
+      return new window.docx.Document({
+        sections: [{ children }],
+        styles: { default: { document: { run: { size: 24 } } } }
+      });
     }
 
     function suggestMemoRecipientsForAlert(alert) {
