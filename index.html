@@ -732,6 +732,10 @@
                 <label class="text-[12px] text-slate-400 font-mono block mb-1">Password</label>
                 <input id="newUserPassword" type="password" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="••••••••">
               </div>
+              <div class="sm:col-span-2">
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Email</label>
+                <input id="newUserEmail" type="email" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="e.g. jreyes@aegissecure.net">
+              </div>
               <div id="newUserErrorMsg" class="hidden sm:col-span-2 text-[13px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"></div>
               <div class="sm:col-span-2 flex items-center gap-2">
                 <button type="submit" id="userFormSubmitBtn" data-write-action class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">+ Create Account</button>
@@ -787,8 +791,15 @@
                 <label class="text-[12px] text-slate-400 font-mono block mb-1">Frequency</label>
                 <select id="alertRuleFrequency" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
                   <option value="realtime">Real-time (as it happens)</option>
+                  <option value="m5">Every 5 Minutes</option>
+                  <option value="m15">Every 15 Minutes</option>
+                  <option value="m30">Every 30 Minutes</option>
                   <option value="hourly">Hourly Digest</option>
+                  <option value="h4">Every 4 Hours</option>
+                  <option value="h6">Every 6 Hours</option>
+                  <option value="h12">Every 12 Hours</option>
                   <option value="daily">Daily Digest</option>
+                  <option value="weekly">Weekly Digest</option>
                 </select>
               </div>
               <div>
@@ -2183,8 +2194,8 @@
     const SESSION_STORAGE_KEY = 'aegisCtiDemoSession_v1';
 
     const MOCK_USERS = [
-      { username: 'analyst1', password: 'demo1234', displayName: 'Alex Chen', role: 'Senior Analyst' },
-      { username: 'leadership1', password: 'demo1234', displayName: 'Jordan Blake', role: 'Leadership (Read-Only)' }
+      { username: 'analyst1', password: 'demo1234', displayName: 'Alex Chen', role: 'Senior Analyst', email: 'achen@aegissecure.net' },
+      { username: 'leadership1', password: 'demo1234', displayName: 'Jordan Blake', role: 'Leadership (Read-Only)', email: 'jblake@aegissecure.net' }
     ];
     let currentUser = null;
 
@@ -2275,7 +2286,11 @@
 
     function describeAlertRule(rule) {
       const sevLabel = { all: 'All Severities', medium: 'Medium+', high: 'High+', critical: 'Critical Only' }[rule.minSeverity] || 'All Severities';
-      const freqLabel = { realtime: 'Real-time', hourly: 'Hourly Digest', daily: 'Daily Digest' }[rule.frequency] || rule.frequency;
+      const freqLabel = {
+        realtime: 'Real-time', m5: 'Every 5 Min', m15: 'Every 15 Min', m30: 'Every 30 Min',
+        hourly: 'Hourly Digest', h4: 'Every 4 Hrs', h6: 'Every 6 Hrs', h12: 'Every 12 Hrs',
+        daily: 'Daily Digest', weekly: 'Weekly Digest'
+      }[rule.frequency] || rule.frequency;
       return `${sevLabel} · ${freqLabel} · via ${rule.channel}`;
     }
 
@@ -2447,10 +2462,17 @@
       const role = document.getElementById('newUserRole').value;
       const username = document.getElementById('newUserUsername').value.trim();
       const password = document.getElementById('newUserPassword').value;
+      const email = document.getElementById('newUserEmail').value.trim();
       const errorBox = document.getElementById('newUserErrorMsg');
 
-      if (!displayName || !username || !password) {
-        errorBox.textContent = 'Display name, username, and password are all required.';
+      if (!displayName || !username || !password || !email) {
+        errorBox.textContent = 'Display name, username, password, and email are all required.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errorBox.textContent = `"${email}" doesn't look like a valid email address.`;
         errorBox.classList.remove('hidden');
         return;
       }
@@ -2471,6 +2493,7 @@
         editingUser.role = role;
         editingUser.username = username;
         editingUser.password = password;
+        editingUser.email = email;
         if (wasCurrentUser) {
           document.getElementById('headerUserAvatar').textContent = initials(currentUser.displayName);
           document.getElementById('headerUserName').textContent = currentUser.displayName;
@@ -2482,11 +2505,12 @@
         renderSettingsPanel();
         showToast(`Account "${displayName}" updated.`, 'success');
       } else {
-        MOCK_USERS.push({ username, password, displayName, role });
+        MOCK_USERS.push({ username, password, displayName, role, email });
         saveUsersToStorage();
         document.getElementById('newUserDisplayName').value = '';
         document.getElementById('newUserUsername').value = '';
         document.getElementById('newUserPassword').value = '';
+        document.getElementById('newUserEmail').value = '';
         renderUserSetupList();
         showToast(`Account "${displayName}" created.`, 'success');
       }
@@ -2500,6 +2524,7 @@
       document.getElementById('newUserRole').value = user.role;
       document.getElementById('newUserUsername').value = user.username;
       document.getElementById('newUserPassword').value = user.password;
+      document.getElementById('newUserEmail').value = user.email || '';
       document.getElementById('newUserErrorMsg').classList.add('hidden');
       document.getElementById('userFormModeBanner').classList.remove('hidden');
       document.getElementById('userFormModeName').textContent = user.displayName;
@@ -2513,6 +2538,7 @@
       document.getElementById('newUserDisplayName').value = '';
       document.getElementById('newUserUsername').value = '';
       document.getElementById('newUserPassword').value = '';
+      document.getElementById('newUserEmail').value = '';
       document.getElementById('newUserErrorMsg').classList.add('hidden');
       document.getElementById('userFormModeBanner').classList.add('hidden');
       document.getElementById('userFormSubmitBtn').textContent = '+ Create Account';
@@ -2543,6 +2569,7 @@
             <div class="min-w-0">
               <div class="text-[13px] text-slate-200 truncate">${u.displayName} <span class="text-slate-500">· ${u.role}</span></div>
               <div class="text-[11px] text-slate-500 font-mono truncate">${u.username} / ${'•'.repeat(Math.max(6, u.password.length))}</div>
+              <div class="text-[11px] text-slate-500 font-mono truncate">${u.email || 'No email set'}</div>
             </div>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
