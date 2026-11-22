@@ -25,9 +25,31 @@
     }
     .sidebar-collapsed .nav-label { display: none; }
     .sidebar-collapsed .nav-item { justify-content: center; }
+
+    /* Toasts */
+    @keyframes toastSlideIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes toastSlideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(18px); } }
+    .toast-enter { animation: toastSlideIn 0.25s ease-out; }
+    .toast-exit { animation: toastSlideOut 0.3s ease-in forwards; }
+
+    /* Freshness pulse for "live" status dots */
+    @keyframes pulseDotGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.45); }
+      50% { box-shadow: 0 0 0 4px rgba(52, 211, 153, 0); }
+    }
+    .pulse-dot { animation: pulseDotGlow 2.4s ease-in-out infinite; }
+
+    /* Brief highlight when new data lands */
+    @keyframes newItemFlash {
+      0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.55); border-color: rgba(34, 211, 238, 0.6); }
+      70% { box-shadow: 0 0 0 12px rgba(34, 211, 238, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+    }
+    .new-item-glow { animation: newItemFlash 1.1s ease-out 2; }
   </style>
 </head>
 <body class="bg-[#07090e] text-slate-200 antialiased font-sans min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+  <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none"></div>
 
   <!-- LOGIN GATE (demo auth — saved to this browser's localStorage, no backend) -->
   <div id="loginGate" class="fixed inset-0 z-[100] bg-[#07090e] flex items-center justify-center p-4">
@@ -666,7 +688,7 @@
           <button onclick="switchSettingsTab('users')" id="settingsTab-users" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">User Setup</button>
           <button onclick="switchSettingsTab('alerting')" id="settingsTab-alerting" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Alerting & Notifications</button>
           <button onclick="switchSettingsTab('audit')" id="settingsTab-audit" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Audit Log</button>
-          <button onclick="switchSettingsTab('roadmap')" id="settingsTab-roadmap" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Coming Soon</button>
+          <button onclick="switchSettingsTab('roadmap')" id="settingsTab-roadmap" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Roadmap</button>
         </div>
 
         <div id="settingsPane-status" class="max-w-xl">
@@ -811,14 +833,20 @@
         </div>
         </div>
 
-        <div id="settingsPane-roadmap" class="max-w-xl hidden">
+        <div id="settingsPane-roadmap" class="max-w-xl hidden space-y-4">
         <div class="rounded-xl border border-dashed border-slate-700 bg-slate-900/20 overflow-hidden">
-          <div class="p-3 border-b border-dashed border-slate-700 text-sm font-semibold text-slate-300">Coming Soon</div>
-          <div class="p-4 space-y-2 text-sm text-slate-400">
-            <div>• Real SSO (Okta / Active Directory) — this login screen is a static demo stand-in</div>
-            <div>• These rules actually dispatching to real Email/Slack/Jira, not just being saved as configuration</div>
-            <div>• Exporting the audit log, or retaining it anywhere beyond this browser</div>
+          <div class="p-3 border-b border-dashed border-slate-700 flex items-center justify-between gap-3">
+            <span class="text-sm font-semibold text-slate-300">Roadmap — Everything Planned</span>
+            <span class="text-[11px] text-slate-500 font-mono">so nothing gets lost while we tune the demo</span>
           </div>
+          <div class="divide-y divide-slate-800/80" id="roadmapItemList"></div>
+        </div>
+        <div class="rounded-lg border border-slate-800 bg-slate-900/30 p-3 text-[12px] text-slate-500 leading-relaxed">
+          <span class="text-slate-400 font-semibold">Reading the status pills:</span>
+          <span class="inline-flex items-center gap-1 ml-1.5"><span class="h-2 w-2 rounded-full bg-slate-500"></span>Idea</span> ·
+          <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-cyan-500"></span>Designed</span> ·
+          <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-500"></span>Needs a real backend</span> ·
+          <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Shipped in this demo</span>
         </div>
         </div>
       </section>
@@ -1400,6 +1428,61 @@
 
   <!-- SCRIPT ENGINE -->
   <script>
+    // ==========================================
+    // UI ENHANCEMENTS — toasts, count-up animation, new-data pulses, tab badge
+    // ==========================================
+    function showToast(message, variant) {
+      variant = variant || 'info';
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const palette = {
+        success: 'border-emerald-700 bg-emerald-950/95 text-emerald-200',
+        info: 'border-cyan-700 bg-cyan-950/95 text-cyan-200',
+        error: 'border-rose-700 bg-rose-950/95 text-rose-200'
+      };
+      const toast = document.createElement('div');
+      toast.className = `toast-enter px-4 py-2.5 rounded-lg border shadow-lg text-[13px] font-mono max-w-sm leading-snug ${palette[variant] || palette.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 300);
+      }, 3600);
+    }
+
+    function animateCountUp(el, target, duration) {
+      if (!el) return;
+      duration = duration || 500;
+      const start = parseInt(el.textContent, 10) || 0;
+      if (start === target) { el.textContent = target; return; }
+      const startTime = performance.now();
+      function tick(now) {
+        const progress = Math.min(1, (now - startTime) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(start + (target - start) * eased);
+        if (progress < 1) requestAnimationFrame(tick);
+        else el.textContent = target;
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function flashNewItem(el) {
+      if (!el) return;
+      el.classList.add('new-item-glow');
+      setTimeout(() => el.classList.remove('new-item-glow'), 2300);
+    }
+
+    function activeP1CriticalCount() {
+      return MOCK_ALERTS.filter(a => a.priority && a.priority.includes('P1') && a.remediationStatus !== 'resolved').length;
+    }
+
+    function updateDocumentTitle() {
+      const count = activeP1CriticalCount();
+      document.title = count > 0
+        ? `(${count}) AegisCTI // Threat Intelligence & Environment Correlation`
+        : 'AegisCTI // Threat Intelligence & Environment Correlation';
+    }
+
     // COMPREHENSIVE DATA STORE (EVERY ALERT MAPS TO ITS OWN COMPLETE GRAPH & DETAILS)
     const MOCK_ALERTS = [
       {
@@ -2050,6 +2133,8 @@
       saveRemediationToStorage();
       logChange('Remediation Status Updated', `${alert.cve} marked "${REMEDIATION_STATUS_LABELS[status]}" for ${alert.owningTeam || 'owning team'}`);
       renderAlerts();
+      updateDocumentTitle();
+      showToast(`${alert.cve} marked "${REMEDIATION_STATUS_LABELS[status]}".`, 'success');
       if (!document.getElementById('view-overview').classList.contains('hidden')) renderOverviewPanel();
     }
 
@@ -2224,6 +2309,7 @@
         saveAlertRulesToStorage();
         cancelEditAlertRule();
         logChange('Alert Rule Updated', `${ALERT_TRIGGER_LABELS[trigger]} — ${describeAlertRule({ minSeverity, frequency, channel })}`);
+        showToast('Alert rule updated.', 'success');
       } else {
         const newRule = { id: 'rule-' + Date.now(), trigger, minSeverity, frequency, channel, recipients };
         MOCK_ALERT_RULES.push(newRule);
@@ -2231,6 +2317,7 @@
         document.getElementById('alertRuleRecipients').value = '';
         renderAlertRuleList();
         logChange('Alert Rule Added', `${ALERT_TRIGGER_LABELS[trigger]} — ${describeAlertRule(newRule)}`);
+        showToast('Alert rule added.', 'success');
       }
     }
 
@@ -2266,6 +2353,7 @@
       if (idx !== -1) MOCK_ALERT_RULES.splice(idx, 1);
       saveAlertRulesToStorage();
       renderAlertRuleList();
+      showToast('Alert rule removed.', 'success');
     }
 
     function renderAlertRuleList() {
@@ -2392,6 +2480,7 @@
         saveUsersToStorage();
         cancelEditMockUser();
         renderSettingsPanel();
+        showToast(`Account "${displayName}" updated.`, 'success');
       } else {
         MOCK_USERS.push({ username, password, displayName, role });
         saveUsersToStorage();
@@ -2399,6 +2488,7 @@
         document.getElementById('newUserUsername').value = '';
         document.getElementById('newUserPassword').value = '';
         renderUserSetupList();
+        showToast(`Account "${displayName}" created.`, 'success');
       }
     }
 
@@ -2440,6 +2530,7 @@
       if (idx !== -1) MOCK_USERS.splice(idx, 1);
       saveUsersToStorage();
       renderUserSetupList();
+      showToast('Account removed.', 'success');
     }
 
     function renderUserSetupList() {
@@ -2492,6 +2583,7 @@
         auditLog.length = 0;
         saveAuditLogToStorage();
         renderAuditLogList('');
+        showToast('Audit log cleared.', 'success');
       });
     }
 
@@ -3553,9 +3645,10 @@
       document.getElementById('countConnAsset').textContent = MOCK_CONNECTORS.filter(c => c.category === 'asset').length;
       document.getElementById('countConnSoar').textContent = MOCK_CONNECTORS.filter(c => c.category === 'soar').length;
       document.getElementById('countConnCustom').textContent = MOCK_CONNECTORS.filter(c => c.category === 'custom').length;
-      document.getElementById('badgeConnectorsCount').textContent = MOCK_CONNECTORS.filter(c => c.enabled).length;
-      document.getElementById('headerConnectorsCount').textContent = MOCK_CONNECTORS.filter(c => c.enabled).length + ' Active';
-      document.getElementById('statConnectedSources').textContent = MOCK_CONNECTORS.filter(c => c.enabled).length;
+      const enabledConnCount = MOCK_CONNECTORS.filter(c => c.enabled).length;
+      document.getElementById('badgeConnectorsCount').textContent = enabledConnCount;
+      document.getElementById('headerConnectorsCount').textContent = enabledConnCount + ' Active';
+      animateCountUp(document.getElementById('statConnectedSources'), enabledConnCount, 500);
 
       filtered.forEach(conn => {
         const card = document.createElement('div');
@@ -3581,7 +3674,7 @@
           <div class="pt-2 border-t border-slate-800/70 space-y-2">
             <div class="flex items-center justify-between text-[12px] font-mono">
               <div class="flex items-center gap-1.5 text-slate-400">
-                <span class="h-1.5 w-1.5 rounded-full ${conn.enabled ? 'bg-emerald-400' : 'bg-slate-600'}"></span>
+                <span class="h-1.5 w-1.5 rounded-full ${conn.enabled ? 'bg-emerald-400 pulse-dot' : 'bg-slate-600'}"></span>
                 <span>${conn.sync}</span>
               </div>
               <span class="text-slate-400">Latency: <span class="text-slate-200">${conn.latency}</span></span>
@@ -3627,6 +3720,7 @@
         conn.enabled = !conn.enabled;
         renderConnectors();
         logChange(conn.enabled ? 'Connector Enabled' : 'Connector Disabled', conn.name);
+        showToast(`${conn.name} ${conn.enabled ? 'enabled' : 'disabled'}.`, conn.enabled ? 'success' : 'info');
       }
     }
 
@@ -3827,7 +3921,7 @@
           <div class="pt-2 border-t border-slate-800/70 space-y-2">
             <div class="flex items-center justify-between text-[12px] font-mono">
               <div class="flex items-center gap-1.5 text-slate-400">
-                <span class="h-1.5 w-1.5 rounded-full ${feed.enabled ? 'bg-emerald-400' : 'bg-slate-600'}"></span>
+                <span class="h-1.5 w-1.5 rounded-full ${feed.enabled ? 'bg-emerald-400 pulse-dot' : 'bg-slate-600'}"></span>
                 <span>${feed.lastSync}</span>
               </div>
               <span class="text-slate-400">${feed.cadence}</span>
@@ -3945,8 +4039,11 @@
 
       if (found.length === 0) {
         list.innerHTML = `<div class="p-4 text-center text-[13px] font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">None of the entered CVE IDs were found in NVD. Check the IDs and try again.</div>`;
+        showToast('None of the entered CVE IDs were found in NVD.', 'error');
       } else {
         list.innerHTML = renderLiveCveCards(found);
+        flashNewItem(list);
+        showToast(`Looked up ${found.length} of ${ids.length} CVE ID(s) from NVD.`, 'success');
       }
 
       status.textContent = `Looked up ${found.length} of ${ids.length} CVE ID(s) directly by ID — not a date-range pull, so these show regardless of publish date.` + (notFound.length ? ` Not found: ${notFound.join(', ')}.` : '');
@@ -3992,12 +4089,15 @@
           list.innerHTML = `<div class="p-4 text-center text-[13px] font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">No CVEs published in ${windowLabel} (unusual at 24h+, but it happens at the 1-hour setting).</div>`;
         } else {
           list.innerHTML = renderLiveCveCards(top);
+          flashNewItem(list);
         }
 
         status.textContent = `Showing ${top.length} of ${parsed.length} CVEs published in ${windowLabel} (NVD), sorted by CVSS. Pulled ${timeAgo(Date.now())}.`;
         logChange('Live CVE Feed Pulled', `${parsed.length} CVEs published in ${windowLabel} (NVD CVE API, real data)`);
+        showToast(`Pulled ${parsed.length} CVEs from NVD (${windowLabel}).`, 'success');
       } catch (e) {
         status.textContent = 'Could not reach the NVD API — check your internet connection and try again.';
+        showToast('Could not reach the NVD API.', 'error');
       } finally {
         btn.disabled = false;
         btn.classList.remove('opacity-60');
@@ -4010,6 +4110,7 @@
         feed.enabled = !feed.enabled;
         renderFeeds();
         logChange(feed.enabled ? 'Feed Enabled' : 'Feed Disabled', feed.name);
+        showToast(`${feed.name} ${feed.enabled ? 'enabled' : 'disabled'}.`, feed.enabled ? 'success' : 'info');
       }
     }
 
@@ -4303,6 +4404,81 @@
       if (idx !== -1) memoArchive.splice(idx, 1);
       document.getElementById('badgeMemoArchiveCount').textContent = memoArchive.length;
       renderMemoArchive();
+      showToast('Memo removed from archive.', 'success');
+    }
+
+    const ROADMAP_STATUS_META = {
+      idea: { dot: 'bg-slate-500', label: 'Idea', classes: 'bg-slate-800 text-slate-400 border-slate-700' },
+      designed: { dot: 'bg-cyan-500', label: 'Designed', classes: 'bg-cyan-950 text-cyan-300 border-cyan-700' },
+      backend: { dot: 'bg-amber-500', label: 'Needs a real backend', classes: 'bg-amber-950 text-amber-300 border-amber-700' },
+      shipped: { dot: 'bg-emerald-500', label: 'Shipped in this demo', classes: 'bg-emerald-950 text-emerald-300 border-emerald-700' }
+    };
+
+    const ROADMAP_ITEMS = [
+      {
+        title: 'Threat Memo approval workflow',
+        status: 'backend',
+        detail: 'Memo stored & reachable in the portal → "Send for Approval" emails designated personnel a link → they approve or request revisions → status reports back into the portal. Needs a real datastore (so approval status is shared across everyone\'s browser, not just localStorage) plus real email send/receive — same server as the digest below.'
+      },
+      {
+        title: 'Scheduled email digest (CVEs + threat news)',
+        status: 'designed',
+        detail: 'Daily digest of new CVEs (filtered by severity) + matching threat-news headlines, emailed to the team on a cron schedule. Sketch delivered as a Word doc (packages, msmtp config, cti_digest.py script, crontab line) — on hold pending the Debian 12 box being stood up.'
+      },
+      {
+        title: 'Alert Rules actually dispatching to Email/Slack/Jira',
+        status: 'backend',
+        detail: 'Right now rules are saved as configuration only — triggering a real notification needs the same backend + mailer as the digest and approval pieces above.'
+      },
+      {
+        title: 'Real SSO (Okta / Active Directory)',
+        status: 'backend',
+        detail: 'This login screen is a static demo stand-in — real SSO needs an identity provider integration, which only makes sense once there is a real backend to hand sessions to.'
+      },
+      {
+        title: 'Audit log export / retention beyond this browser',
+        status: 'backend',
+        detail: 'Audit log currently persists only in this browser\'s localStorage. Exporting it or keeping it durably needs real shared storage.'
+      },
+      {
+        title: 'Settings — tabbed single-pane layout',
+        status: 'shipped',
+        detail: 'Status / Users / Alerting / Audit / Roadmap are now one pane with tabs instead of a long scroll.'
+      },
+      {
+        title: 'Memo export — real native .docx + risk gauge art',
+        status: 'shipped',
+        detail: 'Memos now generate genuine OOXML .docx (readable in Word and Google Docs), with the matching Low/Medium/High/Critical risk-gauge image placed top-right, 12pt body text throughout.'
+      },
+      {
+        title: 'Live CVE ingestion from NVD',
+        status: 'shipped',
+        detail: 'Real, non-fabricated CVE data pulled from the public NVD API with a configurable lookback window (1h/24h/7d/30d), plus direct-by-ID lookup.'
+      },
+      {
+        title: 'Ongoing cosmetic / UX polish',
+        status: 'idea',
+        detail: 'General layout, spacing, and readability passes as we keep tuning the demo — catch-all for the smaller visual tweaks that come up along the way.'
+      }
+    ];
+
+    function renderRoadmapList() {
+      const list = document.getElementById('roadmapItemList');
+      if (!list) return;
+      list.innerHTML = ROADMAP_ITEMS.map(item => {
+        const meta = ROADMAP_STATUS_META[item.status];
+        return `
+          <div class="p-3 space-y-1.5">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold text-slate-200">${item.title}</span>
+              <span class="shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${meta.classes}">
+                <span class="h-1.5 w-1.5 rounded-full ${meta.dot}"></span>${meta.label}
+              </span>
+            </div>
+            <div class="text-[12px] text-slate-500 leading-relaxed">${item.detail}</div>
+          </div>
+        `;
+      }).join('');
     }
 
     function renderSettingsPanel() {
@@ -4322,6 +4498,7 @@
       const auditFilterInput = document.getElementById('auditLogFilter');
       if (auditFilterInput) auditFilterInput.value = '';
       renderAuditLogList('');
+      renderRoadmapList();
       switchSettingsTab(activeSettingsTab);
     }
 
@@ -4591,9 +4768,11 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
         status.textContent = recipients
           ? `Copied to clipboard — paste into a message to ${recipients}.`
           : 'Copied to clipboard — no recipient entered above, so paste it wherever it needs to go.';
+        showToast('Memo copied to clipboard.', 'success');
         logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
       }).catch(() => {
         status.textContent = 'Copy failed — your browser may be blocking clipboard access.';
+        showToast('Clipboard copy failed.', 'error');
       });
     }
 
@@ -4611,6 +4790,7 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
       URL.revokeObjectURL(url);
       const recipients = document.getElementById('memoRecipientInput').value.trim();
       document.getElementById('memoCopyStatus').textContent = 'Download started.';
+      showToast('Threat memo (.txt) download started.', 'success');
       logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
@@ -4635,6 +4815,7 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
 
       if (typeof window.docx === 'undefined') {
         status.textContent = '.docx export library failed to load (check your internet connection) — use Download .txt instead.';
+        showToast('.docx export library failed to load.', 'error');
         return;
       }
 
@@ -4645,6 +4826,7 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
         ? `includes the ${RISK_RATING_META[activeMemoRiskRating].label} risk gauge, top right`
         : `no risk gauge image for ${RISK_RATING_META[activeMemoRiskRating].label} yet`;
       status.textContent = `.docx download started (${gaugeNote}) — opens correctly in Word and Google Docs.`;
+      showToast('Threat memo (.docx) download started.', 'success');
       logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
@@ -4884,6 +5066,7 @@ Correlation Team does not perform remediation itself.
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       logChange('Weekly Report Exported', `Program summary exported covering ${MOCK_ALERTS.length} correlated findings.`);
+      showToast('Weekly report download started.', 'success');
     }
 
     async function emailMemo() {
@@ -4921,6 +5104,7 @@ Correlation Team does not perform remediation itself.
       }
 
       status.textContent = statusMsg;
+      showToast('Email draft opened — matching .docx downloaded to attach.', 'success');
       logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
@@ -5125,11 +5309,18 @@ Correlation Team does not perform remediation itself.
         renderAlerts();
         populateGraphIncidentSelector();
         logChange('New 0-Day Alert Ingested', newAlert.cve);
+        updateDocumentTitle();
 
-        document.getElementById('statP0Count').textContent = parseInt(document.getElementById('statP0Count').textContent) + 1;
+        const alertsContainer = document.getElementById('alertsContainer');
+        if (alertsContainer.firstElementChild) flashNewItem(alertsContainer.firstElementChild);
+
+        const p0El = document.getElementById('statP0Count');
+        animateCountUp(p0El, parseInt(p0El.textContent, 10) + 1, 600);
         document.getElementById('headerP1Count').textContent = (parseInt(document.getElementById('headerP1Count').textContent) + 1) + ' Active';
-        document.getElementById('badgeTriageCount').textContent = parseInt(document.getElementById('badgeTriageCount').textContent) + 1;
+        const triageBadge = document.getElementById('badgeTriageCount');
+        animateCountUp(triageBadge, parseInt(triageBadge.textContent, 10) + 1, 600);
 
+        showToast(`0-day correlated: ${newAlert.cve} — 1 vulnerable host matched (Risk 100/100).`, 'error');
         showMockModal(
           'REAL-TIME CORRELATION ALERT TRIGGERED',
           'A brand new 0-day threat feed advisory (CVE-2026-55901) was just ingested via our connected TAXII feed. The correlation engine cross-referenced your cloud inventory and identified 1 vulnerable public host: vpn-concentrator-us-west.net (Risk Score: 100/100). Prioritized to top of queue.'
@@ -5151,6 +5342,7 @@ Correlation Team does not perform remediation itself.
       renderFeeds();
       populateGraphIncidentSelector();
       initGraphPanZoom();
+      updateDocumentTitle();
     });
   </script>
 </body>
