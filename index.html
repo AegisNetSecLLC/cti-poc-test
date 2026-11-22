@@ -806,15 +806,15 @@
                 <label class="text-[12px] text-slate-400 font-mono block mb-1">Channel</label>
                 <select id="alertRuleChannel" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
                   <option value="Email">Email</option>
-                  <option value="Slack">Slack</option>
+                  <option value="Teams">Microsoft Teams</option>
                   <option value="Jira Ticket">Jira Ticket</option>
-                  <option value="Email + Slack">Email + Slack</option>
+                  <option value="Email + Teams">Email + Microsoft Teams</option>
                 </select>
               </div>
               <div class="sm:col-span-2">
                 <label class="text-[12px] text-slate-400 font-mono block mb-1">Recipients</label>
-                <input type="text" id="alertRuleRecipients" placeholder="e.g. soc-tier1@corp.com, #soc-tier1-alerts, Jordan Reyes" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
-                <p class="text-[12px] text-slate-500 mt-1">Emails, Slack channels, or team/person names — comma-separated.</p>
+                <input type="text" id="alertRuleRecipients" placeholder="e.g. soc-tier1@corp.com, SOC Tier 1 Alerts, Jordan Reyes" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                <p class="text-[12px] text-slate-500 mt-1">Emails, Teams channels, or team/person names — comma-separated.</p>
               </div>
               <div id="alertRuleErrorMsg" class="hidden sm:col-span-2 text-[13px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"></div>
               <div class="sm:col-span-2 flex items-center gap-2">
@@ -1074,7 +1074,7 @@
             <select id="connCategory" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
               <option value="intel">Threat Intelligence (OSINT / Commercial Feed)</option>
               <option value="asset">Internal Asset & Telemetry (CMDB / EDR / Cloud)</option>
-              <option value="soar">Triage, Alerting & SOAR (SIEM / Slack / Jira)</option>
+              <option value="soar">Triage, Alerting & SOAR (SIEM / Teams / Jira)</option>
               <option value="custom">Custom Internal API / Microservice</option>
             </select>
           </div>
@@ -1375,7 +1375,7 @@
             <span>THREAT MEMO DRAFT</span>
             <span id="memoTlpBadge" class="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border">TLP:AMBER</span>
           </h3>
-          <p class="text-[12px] text-slate-400 mt-0.5">Pre-built format — ready to copy into email, Slack, or your ticketing system.</p>
+          <p class="text-[12px] text-slate-400 mt-0.5">Pre-built format — ready to copy into email, Teams, or your ticketing system.</p>
         </div>
         <button onclick="closeThreatMemoModal()" class="text-slate-400 hover:text-white">✕</button>
       </div>
@@ -1392,7 +1392,7 @@
       <!-- Recipient -->
       <div class="px-4 py-2.5 border-b border-slate-800 bg-slate-950/50 flex items-center gap-2 flex-wrap">
         <label for="memoRecipientInput" class="text-[11px] font-mono text-slate-400 shrink-0">TO:</label>
-        <input id="memoRecipientInput" type="text" placeholder="e.g. ciso@corp.com, #soc-tier1-alerts" class="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+        <input id="memoRecipientInput" type="text" placeholder="e.g. ciso@corp.com, SOC Tier 1 Alerts" class="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500">
         <span id="memoRecipientHint" class="text-[11px] text-slate-500 font-mono"></span>
       </div>
 
@@ -2160,7 +2160,7 @@
       { id: 'conn-8', name: 'ServiceNow CMDB Production Sync', category: 'asset', type: 'REST API', status: 'Active', latency: '610ms', sync: 'Synced 30m ago', icon: 'SNOW', enabled: true, desc: 'Imports service ownership tags, criticality tiers (P0/P1), and business unit boundaries.' , pollCadence: 'Every 30 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
       { id: 'conn-9', name: 'Wiz.io Cloud Security Posture (CSPM)', category: 'asset', type: 'GraphQL', status: 'Active', latency: '290ms', sync: 'Synced 8m ago', icon: 'WIZ', enabled: true, desc: 'Correlates network reachability and IAM privilege escalation pathways in multi-cloud.' , pollCadence: 'Every 15 Minutes', ingestFilter: { minSeverity: 'high', keywords: 'public exposure, privilege escalation' } },
       { id: 'conn-10', name: 'Jira Software & Service Management', category: 'soar', type: 'Webhook / REST', status: 'Active', latency: '110ms', sync: 'Bi-Directional', icon: 'JIRA', enabled: true, desc: 'Creates enriched remediation tickets with MITRE ATT&CK tags and tracks SLA closure.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'high', keywords: '' } },
-      { id: 'conn-11', name: 'Slack SOC Security War Room', category: 'soar', type: 'Incoming Webhook', status: 'Active', latency: '80ms', sync: 'Instant Push', icon: 'SLACK', enabled: true, desc: 'Sends immediate interactive alert cards to #soc-tier1-alerts with 1-click isolate buttons.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'critical', keywords: '' } },
+      { id: 'conn-11', name: 'Microsoft Teams SOC Security War Room', category: 'soar', type: 'Incoming Webhook', status: 'Active', latency: '80ms', sync: 'Instant Push', icon: 'TEAMS', enabled: true, desc: 'Sends immediate adaptive card alerts to the SOC Tier 1 Alerts channel with 1-click isolate buttons.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'critical', keywords: '' } },
       { id: 'conn-12', name: 'AWS WAF & Cloudflare Virtual Patching', category: 'soar', type: 'Edge API', status: 'Active', latency: '220ms', sync: 'Active Orchestration', icon: 'WAF', enabled: true, desc: 'Automates deployment of URI regex blocks to perimeter WAFs when weaponized 0-days hit KEV.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'critical', keywords: 'KEV' } },
       { id: 'conn-13', name: 'Splunk Enterprise SIEM Forwarder', category: 'soar', type: 'HEC', status: 'Active', latency: '90ms', sync: 'Streaming', icon: 'SPL', enabled: true, desc: 'Streams correlated risk incidents and contextual telemetry directly into internal security data lake.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'all', keywords: '' } },
       { id: 'conn-14', name: 'internal-k8s-sbom-collector.prod', category: 'custom', type: 'Internal REST', status: 'Active', latency: '45ms', sync: 'Synced 1m ago', icon: 'K8S', enabled: true, desc: 'Internal Go daemon scanning Kubernetes pod container image manifests and Syft SBOMs.' , pollCadence: 'Every 5 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
@@ -2250,7 +2250,7 @@
     // ALERTING & NOTIFICATIONS (what to notify on, how
     // urgently, and who gets told — saved to this browser,
     // same demo-grade caveat as accounts: configuration only,
-    // nothing actually dispatches to a real inbox/Slack/Jira)
+    // nothing actually dispatches to a real inbox/Teams/Jira)
     // ==========================================
     const ALERT_RULES_STORAGE_KEY = 'aegisCtiDemoAlertRules_v1';
 
@@ -2263,9 +2263,9 @@
     };
 
     const MOCK_ALERT_RULES = [
-      { id: 'rule-1', trigger: 'p1_critical', minSeverity: 'critical', frequency: 'realtime', channel: 'Email + Slack', recipients: 'soc-tier1@corp.com, #soc-tier1-alerts' },
+      { id: 'rule-1', trigger: 'p1_critical', minSeverity: 'critical', frequency: 'realtime', channel: 'Email + Teams', recipients: 'soc-tier1@corp.com, SOC Tier 1 Alerts' },
       { id: 'rule-2', trigger: 'kev_match', minSeverity: 'all', frequency: 'daily', channel: 'Email', recipients: 'ciso@corp.com' },
-      { id: 'rule-3', trigger: 'connector_failure', minSeverity: 'all', frequency: 'realtime', channel: 'Slack', recipients: '#soc-tier1-alerts' }
+      { id: 'rule-3', trigger: 'connector_failure', minSeverity: 'all', frequency: 'realtime', channel: 'Teams', recipients: 'SOC Tier 1 Alerts' }
     ];
 
     function saveAlertRulesToStorage() {
@@ -2306,7 +2306,7 @@
       const errorBox = document.getElementById('alertRuleErrorMsg');
 
       if (!recipients) {
-        errorBox.textContent = 'At least one recipient (email, Slack channel, or team/person name) is required.';
+        errorBox.textContent = 'At least one recipient (email, Teams channel, or team/person name) is required.';
         errorBox.classList.remove('hidden');
         return;
       }
@@ -4453,7 +4453,7 @@
         detail: 'Daily digest of new CVEs (filtered by severity) + matching threat-news headlines, emailed to the team on a cron schedule. Sketch delivered as a Word doc (packages, msmtp config, cti_digest.py script, crontab line) — on hold pending the Debian 12 box being stood up.'
       },
       {
-        title: 'Alert Rules actually dispatching to Email/Slack/Jira',
+        title: 'Alert Rules actually dispatching to Email/Teams/Jira',
         status: 'backend',
         detail: 'Right now rules are saved as configuration only — triggering a real notification needs the same backend + mailer as the digest and approval pieces above.'
       },
@@ -4558,7 +4558,7 @@
       const border = meta.stampChar.repeat(64);
       // Left-aligned, no padding-based centering — centering math assumes a monospace
       // font, which breaks (misaligned border vs. text) once pasted into Google Docs,
-      // Outlook, Slack, etc. where this renders in a proportional font.
+      // Outlook, Teams, etc. where this renders in a proportional font.
       return [
         border,
         `RISK CLASSIFICATION: ${meta.label} — ${meta.tagline}`,
