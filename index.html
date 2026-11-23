@@ -1052,7 +1052,11 @@
       <!-- Quick Template Selector -->
       <div class="space-y-1.5">
         <label class="text-[13px] font-mono text-slate-300 uppercase tracking-wide">Quick Preset Templates</label>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <button type="button" onclick="applyPreset('nvd')" class="p-2 rounded-lg border border-emerald-500/60 bg-emerald-950/20 text-left text-sm transition">
+            <div class="font-bold text-emerald-400 flex items-center gap-1.5">NIST NVD <span class="text-[10px] px-1 py-0.5 rounded bg-emerald-900/60 border border-emerald-700 tracking-wide">LIVE</span></div>
+            <div class="text-[12px] text-slate-400">Real CVE Feed — No Fabricated Data</div>
+          </button>
           <button type="button" onclick="applyPreset('crowdstrike')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-cyan-500/60 text-left text-sm transition">
             <div class="font-bold text-white flex items-center gap-1.5">CrowdStrike</div>
             <div class="text-[12px] text-slate-400">Falcon Intel & EDR</div>
@@ -1065,8 +1069,8 @@
             <div class="font-bold text-white flex items-center gap-1.5">MISP / TAXII</div>
             <div class="text-[12px] text-slate-400">Open Source Threat Feed</div>
           </button>
-          <button type="button" onclick="applyPreset('custom')" class="p-2 rounded-lg border border-emerald-500/60 bg-emerald-950/20 text-left text-sm transition">
-            <div class="font-bold text-emerald-400 flex items-center gap-1.5">Custom API</div>
+          <button type="button" onclick="applyPreset('custom')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-slate-600 text-left text-sm transition">
+            <div class="font-bold text-white flex items-center gap-1.5">Custom API</div>
             <div class="text-[12px] text-slate-400">Internal REST / Webhook</div>
           </button>
         </div>
@@ -2592,7 +2596,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 8;
+    let currentVersionMinor = 9;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3866,7 +3870,14 @@
       const cadenceSelect = document.getElementById('connCadence');
       const parserSelect = document.getElementById('connParser');
 
-      if (presetType === 'crowdstrike') {
+      if (presetType === 'nvd') {
+        nameInput.value = 'NIST NVD — Live CVE Feed';
+        catSelect.value = 'intel';
+        urlInput.value = 'services.nvd.nist.gov/rest/json/cves/2.0';
+        authSelect.value = 'none';
+        cadenceSelect.value = 'Hourly Sync';
+        parserSelect.value = 'Generic JSON (Auto-Map CPE/CVE)';
+      } else if (presetType === 'crowdstrike') {
         nameInput.value = 'CrowdStrike Falcon Exposure & Intel Stream';
         catSelect.value = 'asset';
         urlInput.value = 'api.crowdstrike.com/intel/combined/indicators/v1';
@@ -3925,6 +3936,7 @@
       const cadence = document.getElementById('connCadence').value;
       const parser = document.getElementById('connParser').value;
       const lookback = document.getElementById('connLookback').value;
+      const isLiveNvd = url.includes('services.nvd.nist.gov');
 
       const newId = 'conn-' + (MOCK_CONNECTORS.length + 1);
       const iconMap = { intel: 'INTEL', asset: 'ASSET', soar: 'SOAR', custom: 'API' };
@@ -3937,12 +3949,17 @@
         status: 'Active',
         latency: '78ms',
         sync: cadence,
-        icon: iconMap[category] || 'API',
+        icon: isLiveNvd ? 'NVD' : (iconMap[category] || 'API'),
         enabled: true,
         pollCadence: cadence,
         lookbackWindow: lookback,
         ingestFilter: { minSeverity: 'all', keywords: '' },
-        desc: `Custom connector linked to https://${url}. Ingesting via ${parser}.`
+        desc: isLiveNvd
+          ? 'Genuine live CVE feed pulled directly from the NIST National Vulnerability Database — not fabricated demo data.'
+          : `Custom connector linked to https://${url}. Ingesting via ${parser}.`,
+        isLiveSource: isLiveNvd,
+        liveType: isLiveNvd ? 'nvd' : null,
+        backendId: null
       };
 
       MOCK_CONNECTORS.unshift(newConnector);
@@ -3950,10 +3967,141 @@
       closeAddConnectorModal();
       logChange('Connector Added', `${name} (${category})`);
 
-      showMockModal(
-        'CONNECTOR ACTIVATED',
-        `Successfully initialized and registered "${name}". The ingestion worker has begun indexing events and correlating against your asset inventory.`
-      );
+      if (isLiveNvd) {
+        registerLiveConnector(newConnector, lookback);
+        showMockModal(
+          'CONNECTOR ACTIVATED',
+          `Registered "${name}" with the live NVD backend. Click Execute to pull real, non-fabricated CVE data right now (it will also sync automatically on an hourly schedule from here on).`,
+          () => syncLiveConnector(newConnector.id)
+        );
+      } else {
+        showMockModal(
+          'CONNECTOR ACTIVATED',
+          `Successfully initialized and registered "${name}". The ingestion worker has begun indexing events and correlating against your asset inventory.`
+        );
+      }
+    }
+
+    // ==========================================
+    // LIVE BACKEND INTEGRATION
+    // Real connectors only (currently: NVD). No-ops safely if no backend
+    // is reachable — e.g. the public GitHub Pages demo, which stays mock-only.
+    // ==========================================
+    const LIVE_API_BASE = '/api';
+    const liveAlertIds = new Set();
+
+    async function registerLiveConnector(connector, lookback) {
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/connectors`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: connector.name, type: 'nvd', lookbackWindow: lookback })
+        });
+        if (!res.ok) return;
+        const row = await res.json();
+        connector.backendId = row.id;
+      } catch (e) {
+        showToast('No backend reachable — this connector will stay local/demo-only.', 'info');
+      }
+    }
+
+    async function syncLiveConnector(connectorId) {
+      const conn = MOCK_CONNECTORS.find(c => c.id === connectorId);
+      if (!conn || !conn.backendId) {
+        showToast('This connector has no live backend registration yet.', 'error');
+        return;
+      }
+      showToast(`Pulling live CVE data for "${conn.name}"...`, 'info');
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/connectors/${conn.backendId}/sync`, { method: 'POST' });
+        if (!res.ok) throw new Error('sync failed');
+        const result = await res.json();
+        mergeLiveAlerts(result.alerts || []);
+        conn.sync = `Synced ${new Date().toLocaleTimeString()}`;
+        renderConnectors();
+        renderAlerts();
+        showToast(`Pulled ${result.alerts ? result.alerts.length : 0} real CVE(s) from NVD.`, 'success');
+        logChange('Live Connector Synced', `${conn.name} — ${result.alerts ? result.alerts.length : 0} CVE(s) from NVD`);
+      } catch (e) {
+        showToast('Live sync failed — the backend may be unreachable.', 'error');
+      }
+    }
+
+    async function fetchLiveAlerts() {
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/alerts?limit=200`);
+        if (!res.ok) return;
+        const rows = await res.json();
+        mergeLiveAlerts(rows);
+      } catch (e) { /* no backend reachable — stay on mock/demo data only */ }
+    }
+
+    function mergeLiveAlerts(rows) {
+      let added = false;
+      rows.forEach(row => {
+        const alertId = 'LIVE-' + row.cve;
+        if (liveAlertIds.has(alertId) || MOCK_ALERTS.some(a => a.id === alertId)) return;
+        liveAlertIds.add(alertId);
+        MOCK_ALERTS.unshift(buildLiveAlertObject(row, alertId));
+        added = true;
+      });
+      if (added) renderAlerts();
+    }
+
+    function priorityFromCvss(cvss) {
+      if (cvss >= 9) return 'P1-CRITICAL';
+      if (cvss >= 7) return 'P2-HIGH';
+      if (cvss >= 4) return 'P3-MEDIUM';
+      return 'P4-LOW';
+    }
+
+    function buildLiveAlertObject(row, alertId) {
+      const cvss = row.cvss || 0;
+      const epss = row.epss || 0;
+      return {
+        id: alertId,
+        graphTopology: 'contained',
+        title: row.title,
+        cve: row.cve,
+        cvss: cvss,
+        cvssVector: row.cvssVector || 'N/A',
+        epss: epss,
+        inKev: !!row.inKev,
+        actor: 'Not attributed',
+        actorType: 'Unknown — real NVD data carries no threat-actor attribution',
+        actorDesc: 'Ingested directly from the National Vulnerability Database via the live NVD connector. No fabricated attribution, kill chain, or asset correlation has been added — only what NVD itself publishes about this CVE.',
+        actorTtp: 'N/A',
+        riskScore: Math.round(cvss * 10),
+        status: 'Active',
+        priority: priorityFromCvss(cvss),
+        internetFacing: false,
+        targetHost: 'Not correlated',
+        hostIp: 'N/A',
+        environment: 'No asset match — connect a CMDB/EDR connector to enable host correlation',
+        software: 'N/A',
+        crownJewel: 'None identified',
+        crownJewelPath: 'No crown-jewel path — asset/business-context correlation is not available for live-only CVE data.',
+        crownJewelDesc: 'This finding has not been correlated against any asset inventory yet.',
+        summary: row.description || row.title,
+        mitreTtp: 'Not mapped',
+        killChain: [],
+        owningTeam: 'Unassigned',
+        whatIsThis: row.description || row.title,
+        exploitDetails: 'Exploit mechanics are not detailed beyond what NVD publishes for this CVE. Review the CVSS vector and linked NVD reference for technical specifics.',
+        ifUnremediated: 'Real-world impact depends on where this CVE applies in your environment — no asset correlation is available for this live-ingested finding yet.',
+        iocs: { ips: [], domains: [], hashes: [] },
+        radar: {
+          exploitability: Math.round(epss) || 50,
+          exposure: 50,
+          lateralMovement: 50,
+          assetCriticality: 50,
+          actorSophistication: 50,
+          detectionGap: 50
+        },
+        isLiveSource: true,
+        source: 'NVD (live, non-fabricated)',
+        nvdUrl: `https://nvd.nist.gov/vuln/detail/${row.cve}`
+      };
     }
 
     // ==========================================
@@ -5418,6 +5566,7 @@ Correlation Team does not perform remediation itself.
       renderAssets();
       renderConnectors();
       renderFeeds();
+      fetchLiveAlerts();
       populateGraphIncidentSelector();
       initGraphPanZoom();
       updateDocumentTitle();
