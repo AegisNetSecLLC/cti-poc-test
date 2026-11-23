@@ -294,7 +294,7 @@
               <span class="p-1 rounded bg-rose-500/10 text-rose-400">P0/P1</span>
             </div>
             <div class="text-2xl font-bold font-mono text-rose-400 mt-2" id="statP0Count">3</div>
-            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1">
+            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1" id="statP0Subtext">
               <span class="text-rose-400">●</span> 100% matched to exposed assets
             </div>
           </div>
@@ -304,8 +304,8 @@
               <span>In CISA KEV (Known Exploited)</span>
               <span class="p-1 rounded bg-amber-500/10 text-amber-400">Catalog</span>
             </div>
-            <div class="text-2xl font-bold font-mono text-amber-300 mt-2">12</div>
-            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1">
+            <div class="text-2xl font-bold font-mono text-amber-300 mt-2" id="statKevCount">12</div>
+            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1" id="statKevSubtext">
               <span class="text-amber-400">●</span> 3 actively reachable in prod
             </div>
           </div>
@@ -315,8 +315,8 @@
               <span>High EPSS Probability (&gt;75%)</span>
               <span class="p-1 rounded bg-cyan-500/10 text-cyan-400">Weaponized</span>
             </div>
-            <div class="text-2xl font-bold font-mono text-cyan-300 mt-2">19</div>
-            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1">
+            <div class="text-2xl font-bold font-mono text-cyan-300 mt-2" id="statEpssCount">19</div>
+            <div class="text-[13px] text-slate-400 mt-1 flex items-center gap-1" id="statEpssSubtext">
               <span class="text-cyan-400">●</span> 82.4% avg exploit velocity
             </div>
           </div>
@@ -654,8 +654,8 @@
             <p class="text-sm text-slate-400">Synced via AWS/Azure Cloud Connectors, Osquery, and CrowdStrike EDR Agent Telemetry</p>
           </div>
           <div class="flex items-center gap-2 text-sm font-mono">
-            <span class="px-2 py-1 rounded bg-slate-800 text-slate-300">1,420 Total Hosts</span>
-            <span class="px-2 py-1 rounded bg-rose-950 text-rose-300 border border-rose-800">42 Internet-Exposed</span>
+            <span class="px-2 py-1 rounded bg-slate-800 text-slate-300"><span id="assetsTotalHosts">0</span> Total Hosts</span>
+            <span class="px-2 py-1 rounded bg-rose-950 text-rose-300 border border-rose-800"><span id="assetsExposedCount">0</span> Internet-Exposed</span>
           </div>
         </div>
 
@@ -3547,12 +3547,49 @@
     // ==========================================
     // RENDER ALERTS LIST (CLICKABLE CARDS)
     // ==========================================
+    function renderTriageStatTiles() {
+      const p1Alerts = MOCK_ALERTS.filter(a => a.priority && a.priority.includes('P1'));
+      const kevAlerts = MOCK_ALERTS.filter(a => a.inKev);
+      const highEpssAlerts = MOCK_ALERTS.filter(a => a.epss >= 75);
+
+      animateCountUp(document.getElementById('statP0Count'), p1Alerts.length, 500);
+      animateCountUp(document.getElementById('statKevCount'), kevAlerts.length, 500);
+      animateCountUp(document.getElementById('statEpssCount'), highEpssAlerts.length, 500);
+      document.getElementById('headerP1Count').textContent = p1Alerts.length + ' Active';
+      animateCountUp(document.getElementById('badgeTriageCount'), p1Alerts.length, 500);
+
+      const p0Subtext = document.getElementById('statP0Subtext');
+      if (p1Alerts.length > 0) {
+        const pctExposed = Math.round(p1Alerts.filter(a => a.internetFacing).length / p1Alerts.length * 100);
+        p0Subtext.innerHTML = `<span class="text-rose-400">●</span> ${pctExposed}% matched to exposed assets`;
+      } else {
+        p0Subtext.innerHTML = `<span class="text-slate-600">●</span> No active P1/Critical findings yet`;
+      }
+
+      const kevSubtext = document.getElementById('statKevSubtext');
+      if (kevAlerts.length > 0) {
+        const reachable = kevAlerts.filter(a => a.internetFacing).length;
+        kevSubtext.innerHTML = `<span class="text-amber-400">●</span> ${reachable} actively reachable in prod`;
+      } else {
+        kevSubtext.innerHTML = `<span class="text-slate-600">●</span> No KEV matches yet`;
+      }
+
+      const epssSubtext = document.getElementById('statEpssSubtext');
+      if (highEpssAlerts.length > 0) {
+        const avgEpss = (highEpssAlerts.reduce((sum, a) => sum + a.epss, 0) / highEpssAlerts.length).toFixed(1);
+        epssSubtext.innerHTML = `<span class="text-cyan-400">●</span> ${avgEpss}% avg exploit velocity`;
+      } else {
+        epssSubtext.innerHTML = `<span class="text-slate-600">●</span> No high-EPSS findings yet`;
+      }
+    }
+
     function renderAlerts(filterType = currentFilter, searchTerm = '') {
       const container = document.getElementById('alertsContainer');
       container.innerHTML = '';
 
       const search = searchTerm.toLowerCase();
 
+      renderTriageStatTiles();
       document.getElementById('countFilterAll').textContent = MOCK_ALERTS.length;
       document.getElementById('countFilterP1').textContent = MOCK_ALERTS.filter(a => a.priority.includes('P1')).length;
 
@@ -5163,8 +5200,18 @@ Correlation Team does not perform remediation itself.
     }
 
     function renderAssets() {
+      const assetsCountEl = document.getElementById('headerAssetsCount');
+      if (assetsCountEl) assetsCountEl.textContent = MOCK_ASSETS.length.toLocaleString();
+      const totalHostsEl = document.getElementById('assetsTotalHosts');
+      if (totalHostsEl) totalHostsEl.textContent = MOCK_ASSETS.length.toLocaleString();
+      const exposedCountEl = document.getElementById('assetsExposedCount');
+      if (exposedCountEl) exposedCountEl.textContent = MOCK_ASSETS.filter(a => a.exposed).length;
       const tbody = document.getElementById('assetsTableBody');
       tbody.innerHTML = '';
+      if (MOCK_ASSETS.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500 text-sm font-mono">No assets yet — connect a CMDB, cloud, or EDR connector to start populating inventory.</td></tr>`;
+        return;
+      }
       MOCK_ASSETS.forEach(asset => {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-800/30 transition';
@@ -5350,12 +5397,6 @@ Correlation Team does not perform remediation itself.
 
         const alertsContainer = document.getElementById('alertsContainer');
         if (alertsContainer.firstElementChild) flashNewItem(alertsContainer.firstElementChild);
-
-        const p0El = document.getElementById('statP0Count');
-        animateCountUp(p0El, parseInt(p0El.textContent, 10) + 1, 600);
-        document.getElementById('headerP1Count').textContent = (parseInt(document.getElementById('headerP1Count').textContent) + 1) + ' Active';
-        const triageBadge = document.getElementById('badgeTriageCount');
-        animateCountUp(triageBadge, parseInt(triageBadge.textContent, 10) + 1, 600);
 
         showToast(`0-day correlated: ${newAlert.cve} — 1 vulnerable host matched (Risk 100/100).`, 'error');
         showMockModal(
