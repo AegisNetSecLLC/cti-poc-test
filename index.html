@@ -104,7 +104,7 @@
       <div>
         <div class="flex items-center gap-2">
           <button onclick="switchTab('triage')" class="font-bold tracking-tight text-white text-base hover:opacity-80 transition">AEGIS<span class="text-cyan-400">.INTEL</span></button>
-          <span class="text-[12px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/50" id="platformVersionBadge">v2.7 DYNAMIC GRAPH</span>
+          <span class="text-[12px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/50" id="platformVersionBadge">v2.8 DYNAMIC GRAPH</span>
         </div>
         <p class="text-[12px] text-slate-400 hidden sm:block">Automated Threat-to-Environment Correlation & Triage Engine</p>
       </div>
@@ -1353,7 +1353,7 @@
             <span>ACTIVATE PENDING CHANGES</span>
           </h3>
           <p class="text-[13px] text-slate-400 mt-0.5 font-mono">
-            <span id="activateVersionFrom">v2.7</span> <span class="text-slate-500">➔</span> <span id="activateVersionTo" class="text-cyan-300 font-bold">v2.8</span>
+            <span id="activateVersionFrom">v2.8</span> <span class="text-slate-500">➔</span> <span id="activateVersionTo" class="text-cyan-300 font-bold">v2.9</span>
           </p>
         </div>
         <button onclick="closeActivateModal()" class="text-slate-400 hover:text-white">✕</button>
@@ -2592,7 +2592,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 7;
+    let currentVersionMinor = 8;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
