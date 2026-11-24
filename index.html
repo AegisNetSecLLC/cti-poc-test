@@ -827,6 +827,7 @@
                   <option value="cve">CVE Digest</option>
                   <option value="news">Critical News Digest</option>
                 </select>
+                <input type="email" id="testNotificationRecipient" placeholder="Recipient (optional — defaults to admin@aegissecure.net)" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
                 <button type="button" id="testNotificationBtn" onclick="sendTestNotification()" class="px-3 py-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-sm font-semibold transition whitespace-nowrap">
                   Send Test
                 </button>
@@ -2591,7 +2592,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 11;
+    let currentVersionMinor = 12;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -4022,6 +4023,7 @@
 
     async function sendTestNotification() {
       const type = document.getElementById('testNotificationType').value;
+      const recipient = document.getElementById('testNotificationRecipient').value.trim();
       const btn = document.getElementById('testNotificationBtn');
       const label = type === 'news' ? 'Critical News Digest' : 'CVE Digest';
 
@@ -4031,7 +4033,7 @@
         const res = await fetch(`${LIVE_API_BASE}/digest/send-test`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type })
+          body: JSON.stringify({ type, to: recipient || undefined })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'send failed');
@@ -4039,8 +4041,8 @@
         if (!result.sent) {
           showToast(`${label}: nothing to send yet — ${result.reason || 'no data available'}.`, 'info');
         } else {
-          showToast(`Test ${label} sent — ${result.count} item(s), check your inbox.`, 'success');
-          logChange('Test Notification Sent', `${label} — ${result.count} item(s)`);
+          showToast(`Test ${label} sent to ${result.to} — ${result.count} item(s).`, 'success');
+          logChange('Test Notification Sent', `${label} — ${result.count} item(s) to ${result.to}`);
         }
       } catch (e) {
         showToast(`Test send failed — the live backend may be unreachable (expected on the public demo).`, 'error');
