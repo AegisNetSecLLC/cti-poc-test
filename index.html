@@ -40,6 +40,24 @@
     }
     .pulse-dot { animation: pulseDotGlow 2.4s ease-in-out infinite; }
 
+    /* Crafty cadence slider — custom track/thumb since native <input type=range> is unstyled */
+    .craft-slider {
+      -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 999px;
+      background: linear-gradient(to right, #0e7490, #06b6d4, #67e8f9);
+      outline: none; cursor: pointer;
+    }
+    .craft-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: #0b0f19; border: 3px solid #22d3ee;
+      box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.18), 0 0 12px rgba(34, 211, 238, 0.55);
+      transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    .craft-slider::-webkit-slider-thumb:hover { transform: scale(1.12); box-shadow: 0 0 0 6px rgba(34, 211, 238, 0.22), 0 0 16px rgba(34, 211, 238, 0.7); }
+    .craft-slider::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%; background: #0b0f19; border: 3px solid #22d3ee;
+      box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.18), 0 0 12px rgba(34, 211, 238, 0.55);
+    }
+
     /* Brief highlight when new data lands */
     @keyframes newItemFlash {
       0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.55); border-color: rgba(34, 211, 238, 0.6); }
@@ -1180,15 +1198,17 @@
       <form onsubmit="saveConnectorConfig(event)" class="space-y-4 text-sm font-sans">
         <div>
           <label class="block text-[13px] font-mono text-slate-300 mb-1">Poll Cadence</label>
-          <select id="connConfigCadence" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
-            <option value="Real-time Webhook">Real-time Webhook (Event-Driven Push)</option>
-            <option value="Every 5 Minutes">Every 5 Minutes</option>
-            <option value="Every 15 Minutes">Every 15 Minutes</option>
-            <option value="Every 30 Minutes">Every 30 Minutes</option>
-            <option value="Hourly Sync">Hourly Sync</option>
-            <option value="Daily Sync">Daily Sync (Midnight UTC)</option>
-          </select>
-          <p class="text-[12px] text-slate-500 mt-1">How often this connector polls its source for new data.</p>
+          <div class="rounded-xl bg-slate-950/80 border border-slate-800 p-4 space-y-3">
+            <div class="flex items-center justify-center gap-2">
+              <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span id="cadenceReadout" class="text-lg font-mono font-bold text-cyan-300 tracking-wide">Every 1 Hour</span>
+            </div>
+            <input type="range" id="connConfigCadenceSlider" min="0" max="9" step="1" value="3" oninput="updateCadenceReadout()" class="craft-slider w-full">
+            <div class="flex justify-between text-[10px] font-mono text-slate-600 px-0.5">
+              <span>5m</span><span>15m</span><span>30m</span><span>1h</span><span>2h</span><span>4h</span><span>6h</span><span>8h</span><span>12h</span><span>24h</span>
+            </div>
+          </div>
+          <p class="text-[12px] text-slate-500 mt-1">How often this connector actually re-polls its source — drag to pick any interval, not just a preset.</p>
         </div>
 
         <div>
@@ -2596,7 +2616,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 15;
+    let currentVersionMinor = 16;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3808,6 +3828,37 @@
 
     let configuringConnectorId = null;
 
+    // Evenly-spaced slider stops spanning 5 minutes to 24 hours — a truly linear scale would
+    // cram everything useful (5m-2h) into the first few pixels, so these are curated steps
+    // rather than raw minutes.
+    const CADENCE_STEPS = [
+      { label: '5 Minutes', hours: 5 / 60, short: '5m' },
+      { label: '15 Minutes', hours: 15 / 60, short: '15m' },
+      { label: '30 Minutes', hours: 30 / 60, short: '30m' },
+      { label: '1 Hour', hours: 1, short: '1h' },
+      { label: '2 Hours', hours: 2, short: '2h' },
+      { label: '4 Hours', hours: 4, short: '4h' },
+      { label: '6 Hours', hours: 6, short: '6h' },
+      { label: '8 Hours', hours: 8, short: '8h' },
+      { label: '12 Hours', hours: 12, short: '12h' },
+      { label: '24 Hours', hours: 24, short: '24h' }
+    ];
+
+    function cadenceHoursToStepIndex(hours) {
+      if (!hours) return 3; // default: 1 Hour
+      let closest = 0, closestDiff = Infinity;
+      CADENCE_STEPS.forEach((step, i) => {
+        const diff = Math.abs(step.hours - hours);
+        if (diff < closestDiff) { closestDiff = diff; closest = i; }
+      });
+      return closest;
+    }
+
+    function updateCadenceReadout() {
+      const idx = parseInt(document.getElementById('connConfigCadenceSlider').value, 10);
+      document.getElementById('cadenceReadout').textContent = `Every ${CADENCE_STEPS[idx].label}`;
+    }
+
     function openConnectorConfigModal(id) {
       const conn = MOCK_CONNECTORS.find(c => c.id === id);
       if (!conn) return;
@@ -3815,7 +3866,11 @@
 
       document.getElementById('connConfigTitle').textContent = `Configure ${conn.name}`;
       document.getElementById('connConfigSubtitle').textContent = `${conn.type} · ${conn.status}`;
-      document.getElementById('connConfigCadence').value = conn.pollCadence || 'Hourly Sync';
+
+      const stepIdx = cadenceHoursToStepIndex(conn.syncIntervalHours);
+      document.getElementById('connConfigCadenceSlider').value = stepIdx;
+      updateCadenceReadout();
+
       document.getElementById('connConfigLookback').value = conn.lookbackWindow || 'Last 24 Hours';
       document.getElementById('connConfigSeverity').value = (conn.ingestFilter && conn.ingestFilter.minSeverity) || 'all';
       document.getElementById('connConfigKeywords').value = (conn.ingestFilter && conn.ingestFilter.keywords) || '';
@@ -3828,22 +3883,38 @@
       configuringConnectorId = null;
     }
 
-    function saveConnectorConfig(event) {
+    async function saveConnectorConfig(event) {
       event.preventDefault();
       const conn = MOCK_CONNECTORS.find(c => c.id === configuringConnectorId);
       if (!conn) return;
 
-      conn.pollCadence = document.getElementById('connConfigCadence').value;
+      const stepIdx = parseInt(document.getElementById('connConfigCadenceSlider').value, 10);
+      const step = CADENCE_STEPS[stepIdx];
+      conn.pollCadence = `Every ${step.label}`;
+      conn.syncIntervalHours = step.hours;
       conn.lookbackWindow = document.getElementById('connConfigLookback').value;
       conn.ingestFilter = {
         minSeverity: document.getElementById('connConfigSeverity').value,
         keywords: document.getElementById('connConfigKeywords').value.trim()
       };
 
+      if (conn.isLiveSource && conn.backendId) {
+        try {
+          const res = await fetch(`${LIVE_API_BASE}/connectors/${conn.backendId}/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ syncIntervalHours: step.hours })
+          });
+          if (!res.ok) throw new Error('config save failed');
+        } catch (e) {
+          showToast('Saved locally, but the backend did not confirm — it may still be polling at the old interval.', 'error');
+        }
+      }
+
       renderConnectors();
       logChange('Connector Config Updated', `${conn.name} — ${conn.pollCadence}, looking back ${conn.lookbackWindow}, ${describeIngestFilter(conn.ingestFilter)}`);
       closeConnectorConfigModal();
-      showMockModal('Connector Config Saved', `Updated polling and ingestion rules for "${conn.name}". New settings take effect on the next poll cycle.`);
+      showMockModal('Connector Config Saved', `Updated polling and ingestion rules for "${conn.name}". ${conn.isLiveSource ? 'The backend will now actually poll at this interval.' : 'New settings take effect on the next poll cycle.'}`);
     }
 
     // ==========================================
@@ -4104,7 +4175,8 @@
         sync: row.last_synced_at ? `Synced ${timeAgo(new Date(row.last_synced_at).getTime())}` : 'Not yet synced',
         icon: isRss ? 'RSS' : 'NVD',
         enabled: row.status === 'active',
-        pollCadence: 'Hourly Sync',
+        pollCadence: `Every ${row.sync_interval_hours >= 1 ? row.sync_interval_hours + ' Hour' + (row.sync_interval_hours === 1 ? '' : 's') : Math.round(row.sync_interval_hours * 60) + ' Minutes'}`,
+        syncIntervalHours: row.sync_interval_hours,
         lookbackWindow: `${row.lookback_hours}h`,
         ingestFilter: { minSeverity: 'all', keywords: row.keywords ? JSON.parse(row.keywords).join(', ') : '' },
         desc: isRss
