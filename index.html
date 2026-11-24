@@ -110,29 +110,8 @@
       </div>
     </div>
 
-    <!-- Active Ingestion Stats Ticker -->
-    <div class="hidden lg:flex items-center gap-3 text-xs font-mono border-x border-slate-800 px-4 py-1 whitespace-nowrap">
-      <div class="flex items-center gap-1.5">
-        <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="text-slate-400">CONNECTORS:</span>
-        <span class="text-emerald-300 font-semibold" id="headerConnectorsCount">16 Active</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span class="text-slate-400">ASSETS MONITORED:</span>
-        <span class="text-cyan-300 font-semibold" id="headerAssetsCount">1,420</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span class="text-slate-400">CORRELATED P1:</span>
-        <span class="text-rose-400 font-semibold" id="headerP1Count">3 Active</span>
-      </div>
-    </div>
-
     <!-- Right Actions -->
     <div class="flex items-center gap-2">
-      <button data-write-action onclick="openAddConnectorModal()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition whitespace-nowrap">
-        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        <span>Add Connector / API</span>
-      </button>
       <button data-write-action onclick="triggerSimulation()" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition whitespace-nowrap">
         <svg class="w-3.5 h-3.5 text-cyan-400 animate-spin shrink-0" id="simSpinner" style="display:none;" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
         <span id="simBtnText">Simulate 0-Day Feed Drop</span>
@@ -571,11 +550,11 @@
           <div class="p-3 space-y-2" id="liveCveList"></div>
         </div>
 
-        <!-- OpenCTI-Compatible Feed Subscriptions (STIX / TAXII / RSS) -->
+        <!-- STIX / TAXII / RSS Feed Subscriptions -->
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex flex-wrap justify-between items-center gap-2">
             <div>
-              <span class="text-sm font-semibold text-slate-200">OpenCTI-Compatible Feed Subscriptions</span>
+              <span class="text-sm font-semibold text-slate-200">STIX / TAXII / RSS Feed Subscriptions</span>
               <p class="text-[12px] text-slate-400 mt-0.5">Subscribe directly to any STIX 2.1 bundle URL, TAXII 2.1 collection, or RSS/Atom security feed.</p>
             </div>
             <button data-write-action onclick="openAddFeedModal()" class="px-2.5 py-1 rounded-lg text-[13px] bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-medium transition">
@@ -1260,7 +1239,7 @@
         <div>
           <h3 class="text-base font-bold text-white font-mono flex items-center gap-2">
             <span id="feedModalTitle">SUBSCRIBE TO STIX / TAXII / RSS FEED</span>
-            <span class="text-[12px] text-cyan-400 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800">OpenCTI Compatible</span>
+            <span class="text-[12px] text-cyan-400 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800">STIX 2.1 Compatible</span>
           </h3>
           <p class="text-sm text-slate-400 mt-0.5">Point directly at a STIX 2.1 bundle, TAXII 2.1 collection, or an RSS/Atom security feed URL.</p>
         </div>
@@ -1271,7 +1250,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-[13px] font-mono text-slate-300 mb-1">Feed Name *</label>
-            <input type="text" id="feedName" required placeholder="e.g. OpenCTI OpenSource STIX Bundle" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+            <input type="text" id="feedName" required placeholder="e.g. Open Source STIX Bundle" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
           </div>
           <div>
             <label class="block text-[13px] font-mono text-slate-300 mb-1">Feed Type *</label>
@@ -1287,13 +1266,13 @@
           <label class="block text-[13px] font-mono text-slate-300 mb-1">Feed URL *</label>
           <div class="flex">
             <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-800 bg-slate-900 text-slate-400 font-mono text-[13px]">HTTPS://</span>
-            <input type="text" id="feedUrl" required placeholder="opencti.example.org/taxii2/collections/..." class="w-full bg-slate-950 border border-slate-800 rounded-r-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
+            <input type="text" id="feedUrl" required placeholder="intel.example.org/taxii2/collections/..." class="w-full bg-slate-950 border border-slate-800 rounded-r-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
           </div>
         </div>
 
         <div>
           <label class="block text-[13px] font-mono text-slate-300 mb-1">Source / Description</label>
-          <textarea id="feedDesc" rows="2" placeholder="e.g. Community OpenCTI connector re-publishing MISP galaxy clusters as a public STIX bundle." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 resize-none"></textarea>
+          <textarea id="feedDesc" rows="2" placeholder="e.g. Community-maintained connector re-publishing MISP galaxy clusters as a public STIX bundle." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 resize-none"></textarea>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2208,7 +2187,7 @@
     ];
 
     const MOCK_FEEDS = [
-      { id: 'feed-1', name: 'OpenCTI OpenSource STIX Bundle', type: 'stix', url: 'demo.opencti.io/feeds/opensource-bundle.json', desc: 'Community OpenCTI instance re-publishing MISP galaxy clusters and OSINT reports as a public STIX 2.1 bundle.', cadence: 'Hourly Sync', status: 'Active', lastSync: 'Synced 40m ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: '' } },
+      { id: 'feed-1', name: 'Open Source STIX Bundle', type: 'stix', url: 'intel.example.org/feeds/opensource-bundle.json', desc: 'Community-maintained instance re-publishing MISP galaxy clusters and OSINT reports as a public STIX 2.1 bundle.', cadence: 'Hourly Sync', status: 'Active', lastSync: 'Synced 40m ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: '' } },
       { id: 'feed-2', name: 'MITRE ATT&CK TAXII Collection', type: 'taxii', url: 'cti-taxii.mitre.org/stix/collections/enterprise-attack', desc: 'Official MITRE-hosted TAXII 2.1 server exposing Enterprise ATT&CK techniques and groups as STIX objects.', cadence: 'Daily Sync', status: 'Active', lastSync: 'Synced 6h ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: '' } },
       { id: 'feed-3', name: 'The Hacker News - Security RSS', type: 'rss', url: 'thehackernews.com/feeds/posts/default', desc: 'General security news RSS feed used for analyst situational awareness, not auto-correlated against assets.', cadence: 'Every 5 Minutes', status: 'Active', lastSync: 'Synced 3m ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: 'breach, zero-day, ransomware' } }
     ];
@@ -2612,7 +2591,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 10;
+    let currentVersionMinor = 11;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3575,7 +3554,6 @@
       animateCountUp(document.getElementById('statP0Count'), p1Alerts.length, 500);
       animateCountUp(document.getElementById('statKevCount'), kevAlerts.length, 500);
       animateCountUp(document.getElementById('statEpssCount'), highEpssAlerts.length, 500);
-      document.getElementById('headerP1Count').textContent = p1Alerts.length + ' Active';
       animateCountUp(document.getElementById('badgeTriageCount'), p1Alerts.length, 500);
 
       const p0Subtext = document.getElementById('statP0Subtext');
@@ -3741,7 +3719,6 @@
       document.getElementById('countConnCustom').textContent = MOCK_CONNECTORS.filter(c => c.category === 'custom').length;
       const enabledConnCount = MOCK_CONNECTORS.filter(c => c.enabled).length;
       document.getElementById('badgeConnectorsCount').textContent = enabledConnCount;
-      document.getElementById('headerConnectorsCount').textContent = enabledConnCount + ' Active';
       animateCountUp(document.getElementById('statConnectedSources'), enabledConnCount, 500);
 
       filtered.forEach(conn => {
@@ -4151,7 +4128,7 @@
     }
 
     // ==========================================
-    // OPENCTI FEED SUBSCRIPTIONS (STIX / TAXII / RSS)
+    // FEED SUBSCRIPTIONS (STIX / TAXII / RSS)
     // ==========================================
     const FEED_TYPE_META = {
       stix: { icon: 'STIX', label: 'STIX 2.1 Bundle', color: 'cyan' },
@@ -4403,11 +4380,11 @@
       const type = document.getElementById('feedType').value;
       const urlInput = document.getElementById('feedUrl');
       if (type === 'taxii') {
-        urlInput.placeholder = 'opencti.example.org/taxii2/collections/<uuid>';
+        urlInput.placeholder = 'intel.example.org/taxii2/collections/<uuid>';
       } else if (type === 'rss') {
         urlInput.placeholder = 'example.com/feeds/threat-advisories.rss';
       } else {
-        urlInput.placeholder = 'opencti.example.org/feeds/export-bundle.json';
+        urlInput.placeholder = 'intel.example.org/feeds/export-bundle.json';
       }
     }
 
