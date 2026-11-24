@@ -2458,10 +2458,10 @@
     function logoutUser() {
       currentUser = null;
       saveSessionToStorage();
-      document.getElementById('loginPasswordInput').value = '';
-      document.getElementById('loginErrorMsg').classList.add('hidden');
-      document.getElementById('appShell').classList.add('hidden');
-      document.getElementById('loginGate').classList.remove('hidden');
+      // Force a real reload (not just a DOM toggle) so logging back in always
+      // picks up whatever is currently deployed, not whatever was in memory
+      // from whenever this tab was first opened.
+      location.reload();
     }
 
     let editingUsername = null;
@@ -2592,7 +2592,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 12;
+    let currentVersionMinor = 13;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
