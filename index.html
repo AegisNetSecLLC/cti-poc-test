@@ -837,6 +837,22 @@
               <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Active Alert Rules</span>
               <div class="space-y-1.5" id="alertRuleList"></div>
             </div>
+
+            <div class="border-t border-slate-800 pt-3 space-y-2">
+              <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Send Test Notification</span>
+              <p class="text-[12px] text-slate-500">
+                Sends a real email right now using live data, without affecting the actual schedule. Only works against the live backend (private instance) — no-ops on the public demo.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <select id="testNotificationType" class="w-full sm:w-auto px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                  <option value="cve">CVE Digest</option>
+                  <option value="news">Critical News Digest</option>
+                </select>
+                <button type="button" id="testNotificationBtn" onclick="sendTestNotification()" class="px-3 py-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-sm font-semibold transition whitespace-nowrap">
+                  Send Test
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         </div>
@@ -2596,7 +2612,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 9;
+    let currentVersionMinor = 10;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -4024,6 +4040,36 @@
         logChange('Live Connector Synced', `${conn.name} — ${result.alerts ? result.alerts.length : 0} CVE(s) from NVD`);
       } catch (e) {
         showToast('Live sync failed — the backend may be unreachable.', 'error');
+      }
+    }
+
+    async function sendTestNotification() {
+      const type = document.getElementById('testNotificationType').value;
+      const btn = document.getElementById('testNotificationBtn');
+      const label = type === 'news' ? 'Critical News Digest' : 'CVE Digest';
+
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/digest/send-test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'send failed');
+
+        if (!result.sent) {
+          showToast(`${label}: nothing to send yet — ${result.reason || 'no data available'}.`, 'info');
+        } else {
+          showToast(`Test ${label} sent — ${result.count} item(s), check your inbox.`, 'success');
+          logChange('Test Notification Sent', `${label} — ${result.count} item(s)`);
+        }
+      } catch (e) {
+        showToast(`Test send failed — the live backend may be unreachable (expected on the public demo).`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Test';
       }
     }
 
