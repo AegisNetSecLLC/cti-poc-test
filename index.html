@@ -1228,7 +1228,7 @@
           <p class="text-[12px] text-slate-500">Narrow what this connector ingests, so only relevant findings reach correlation and triage.</p>
         </div>
 
-        <div>
+        <div id="connConfigSeverityWrap">
           <label class="block text-[13px] font-mono text-slate-300 mb-1">Minimum Severity to Ingest</label>
           <select id="connConfigSeverity" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
             <option value="all">All Severities</option>
@@ -1237,6 +1237,7 @@
             <option value="critical">Critical only</option>
           </select>
         </div>
+        <p id="connConfigSeverityNote" class="hidden text-[12px] text-slate-500 -mt-2">RSS/news feeds carry no severity score — keyword matching below is the only real filter available for this source.</p>
 
         <div>
           <label class="block text-[13px] font-mono text-slate-300 mb-1">Keyword / Tag Include Filter</label>
@@ -2616,7 +2617,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 16;
+    let currentVersionMinor = 17;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3777,8 +3778,8 @@
               </div>
               <span class="text-slate-400">Latency: <span class="text-slate-200">${conn.latency}</span></span>
             </div>
-            <div class="text-[12px] font-mono text-slate-500 truncate" title="${describeIngestFilter(conn.ingestFilter)}">
-              Poll: <span class="text-slate-300">${conn.pollCadence || 'Not set'}</span> · Looks back: <span class="text-slate-300">${conn.lookbackWindow || 'Last 24 Hours'}</span> · ${describeIngestFilter(conn.ingestFilter)}
+            <div class="text-[12px] font-mono text-slate-500 truncate" title="${describeIngestFilter(conn.ingestFilter, conn.liveType === "rss")}">
+              Poll: <span class="text-slate-300">${conn.pollCadence || 'Not set'}</span> · Looks back: <span class="text-slate-300">${conn.lookbackWindow || 'Last 24 Hours'}</span> · ${describeIngestFilter(conn.ingestFilter, conn.liveType === "rss")}
             </div>
 
             <div class="flex items-center gap-2 pt-1">
@@ -3796,10 +3797,11 @@
       applyRoleRestrictions();
     }
 
-    function describeIngestFilter(f) {
+    function describeIngestFilter(f, isNewsFeed = false) {
       if (!f) return 'All data accepted';
-      const sevLabel = { all: 'All Severities', medium: 'Medium+', high: 'High+', critical: 'Critical Only' }[f.minSeverity] || 'All Severities';
       const kw = f.keywords && f.keywords.trim() ? `Keywords: ${f.keywords.trim()}` : 'No keyword filter';
+      if (isNewsFeed) return kw; // no severity concept on a plain RSS/news source
+      const sevLabel = { all: 'All Severities', medium: 'Medium+', high: 'High+', critical: 'Critical Only' }[f.minSeverity] || 'All Severities';
       return `${sevLabel} · ${kw}`;
     }
 
@@ -3875,6 +3877,12 @@
       document.getElementById('connConfigSeverity').value = (conn.ingestFilter && conn.ingestFilter.minSeverity) || 'all';
       document.getElementById('connConfigKeywords').value = (conn.ingestFilter && conn.ingestFilter.keywords) || '';
 
+      // RSS/news feeds carry no severity score — showing that control would imply a
+      // filtering capability this data source doesn't actually have.
+      const isNewsFeed = conn.liveType === 'rss';
+      document.getElementById('connConfigSeverityWrap').classList.toggle('hidden', isNewsFeed);
+      document.getElementById('connConfigSeverityNote').classList.toggle('hidden', !isNewsFeed);
+
       document.getElementById('connectorConfigModal').classList.remove('hidden');
     }
 
@@ -3912,7 +3920,7 @@
       }
 
       renderConnectors();
-      logChange('Connector Config Updated', `${conn.name} — ${conn.pollCadence}, looking back ${conn.lookbackWindow}, ${describeIngestFilter(conn.ingestFilter)}`);
+      logChange('Connector Config Updated', `${conn.name} — ${conn.pollCadence}, looking back ${conn.lookbackWindow}, ${describeIngestFilter(conn.ingestFilter, conn.liveType === "rss")}`);
       closeConnectorConfigModal();
       showMockModal('Connector Config Saved', `Updated polling and ingestion rules for "${conn.name}". ${conn.isLiveSource ? 'The backend will now actually poll at this interval.' : 'New settings take effect on the next poll cycle.'}`);
     }
