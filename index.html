@@ -2596,7 +2596,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 14;
+    let currentVersionMinor = 15;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3762,9 +3762,9 @@
             </div>
 
             <div class="flex items-center gap-2 pt-1">
-              <button onclick="testExistingConnector('${conn.name}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
-                Test Sync
-              </button>
+              ${conn.isLiveSource
+                ? `<button onclick="syncLiveConnector('${conn.id}')" class="flex-1 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-600/40 text-[13px] font-mono transition">Sync Now (Live)</button>`
+                : `<button onclick="testExistingConnector('${conn.name}')" class="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">Test Sync</button>`}
               <button data-write-action onclick="openConnectorConfigModal('${conn.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[13px] font-mono transition">
                 Config
               </button>
@@ -4011,17 +4011,23 @@
         showToast('This connector has no live backend registration yet.', 'error');
         return;
       }
-      showToast(`Pulling live CVE data for "${conn.name}"...`, 'info');
+      const isRss = conn.liveType === 'rss';
+      showToast(`Pulling live ${isRss ? 'news' : 'CVE'} data for "${conn.name}"...`, 'info');
       try {
         const res = await fetch(`${LIVE_API_BASE}/connectors/${conn.backendId}/sync`, { method: 'POST' });
         if (!res.ok) throw new Error('sync failed');
         const result = await res.json();
-        mergeLiveAlerts(result.alerts || []);
+        const count = isRss ? (result.newsItems || []).length : (result.alerts || []).length;
+        if (isRss) {
+          mergeLiveNews(result.newsItems || []);
+        } else {
+          mergeLiveAlerts(result.alerts || []);
+          renderAlerts();
+        }
         conn.sync = `Synced ${new Date().toLocaleTimeString()}`;
         renderConnectors();
-        renderAlerts();
-        showToast(`Pulled ${result.alerts ? result.alerts.length : 0} real CVE(s) from NVD.`, 'success');
-        logChange('Live Connector Synced', `${conn.name} — ${result.alerts ? result.alerts.length : 0} CVE(s) from NVD`);
+        showToast(`Pulled ${count} real ${isRss ? 'critical article(s)' : 'CVE(s)'} from ${isRss ? conn.name : 'NVD'}.`, 'success');
+        logChange('Live Connector Synced', `${conn.name} — ${count} ${isRss ? 'article(s)' : 'CVE(s)'}`);
       } catch (e) {
         showToast('Live sync failed — the backend may be unreachable.', 'error');
       }
@@ -4065,6 +4071,62 @@
         const rows = await res.json();
         mergeLiveAlerts(rows);
       } catch (e) { /* no backend reachable — stay on mock/demo data only */ }
+    }
+
+    async function fetchLiveConnectors() {
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/connectors`);
+        if (!res.ok) return;
+        const rows = await res.json();
+        mergeLiveConnectors(rows);
+      } catch (e) { /* no backend reachable — stay on mock/demo data only */ }
+    }
+
+    function mergeLiveConnectors(rows) {
+      let added = false;
+      rows.forEach(row => {
+        if (MOCK_CONNECTORS.some(c => c.backendId === row.id)) return;
+        MOCK_CONNECTORS.unshift(buildLiveConnectorObject(row));
+        added = true;
+      });
+      if (added) renderConnectors();
+    }
+
+    function buildLiveConnectorObject(row) {
+      const isRss = row.type === 'rss';
+      return {
+        id: row.id,
+        name: row.name,
+        category: 'intel',
+        type: isRss ? 'RSS / Atom Feed' : 'REST JSON',
+        status: row.status === 'active' ? 'Active' : 'Disabled',
+        latency: '—',
+        sync: row.last_synced_at ? `Synced ${timeAgo(new Date(row.last_synced_at).getTime())}` : 'Not yet synced',
+        icon: isRss ? 'RSS' : 'NVD',
+        enabled: row.status === 'active',
+        pollCadence: 'Hourly Sync',
+        lookbackWindow: `${row.lookback_hours}h`,
+        ingestFilter: { minSeverity: 'all', keywords: row.keywords ? JSON.parse(row.keywords).join(', ') : '' },
+        desc: isRss
+          ? 'Genuine live security-news feed, keyword-matched for critical stories — not fabricated demo data.'
+          : 'Genuine live CVE feed pulled directly from the NIST National Vulnerability Database — not fabricated demo data.',
+        isLiveSource: true,
+        liveType: row.type,
+        backendId: row.id
+      };
+    }
+
+    const LIVE_NEWS_ITEMS = [];
+    const liveNewsLinks = new Set();
+
+    function mergeLiveNews(rows) {
+      rows.forEach(row => {
+        if (liveNewsLinks.has(row.link)) return;
+        liveNewsLinks.add(row.link);
+        LIVE_NEWS_ITEMS.unshift(row);
+      });
+      // Not yet surfaced in its own dedicated view — stored here for now so the
+      // sync path works end-to-end; display work comes next.
     }
 
     function mergeLiveAlerts(rows) {
@@ -5689,6 +5751,7 @@ Correlation Team does not perform remediation itself.
       renderConnectors();
       renderFeeds();
       fetchLiveAlerts();
+      fetchLiveConnectors();
       populateGraphIncidentSelector();
       initGraphPanZoom();
       updateDocumentTitle();
