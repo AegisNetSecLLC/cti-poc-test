@@ -2203,7 +2203,7 @@
     function saveRemediationToStorage() {
       try {
         const map = {};
-        MOCK_ALERTS.forEach(a => { map[a.id] = { status: a.remediationStatus, resolvedAt: a.resolvedAt }; });
+        MOCK_ALERTS.forEach(a => { map[a.id] = { status: a.remediationStatus, resolvedAt: a.resolvedAt, assignedTo: a.assignedTo || null }; });
         localStorage.setItem(ALERT_REMEDIATION_STORAGE_KEY, JSON.stringify(map));
       } catch (e) { /* ignore */ }
     }
@@ -2217,6 +2217,7 @@
           if (map[a.id]) {
             a.remediationStatus = map[a.id].status;
             a.resolvedAt = map[a.id].resolvedAt;
+            if (map[a.id].assignedTo !== undefined) a.assignedTo = map[a.id].assignedTo;
           }
         });
       } catch (e) { /* ignore */ }
@@ -2251,6 +2252,63 @@
       updateDocumentTitle();
       showToast(`${alert.cve} marked "${REMEDIATION_STATUS_LABELS[status]}".`, 'success');
       if (!document.getElementById('view-overview').classList.contains('hidden')) renderOverviewPanel();
+    }
+
+    function assignButtonHtml(alert) {
+      if (!currentUser) return '';
+      const mine = alert.assignedTo && alert.assignedTo.username === currentUser.username;
+      const label = mine ? 'Unassign Me' : (alert.assignedTo ? 'Reassign to Me' : 'Assign to Me');
+      const title = mine
+        ? 'Stop investigating this — removes your name from the alert'
+        : 'Assign yourself as the investigator — emails you a notification and shows your name on this alert';
+      return `<button data-write-action onclick="event.stopPropagation(); assignAlertToMe('${alert.id}')" title="${title}" class="ml-1 px-2 py-0.5 rounded text-[11px] font-mono border transition ${mine ? 'bg-cyan-950 text-cyan-300 border-cyan-700 hover:bg-cyan-900' : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-cyan-300 hover:border-cyan-800'}">${label}</button>`;
+    }
+
+    function assignAlertToMe(alertId) {
+      if (!currentUser) return;
+      const alert = MOCK_ALERTS.find(a => a.id === alertId);
+      if (!alert) return;
+
+      const alreadyMine = alert.assignedTo && alert.assignedTo.username === currentUser.username;
+      if (alreadyMine) {
+        alert.assignedTo = null;
+        saveRemediationToStorage();
+        logActivity('Investigator Unassigned', `${currentUser.displayName} unassigned themselves from ${alert.cve}`);
+        renderAlerts();
+        showToast(`You're no longer assigned to ${alert.cve}.`, 'success');
+        return;
+      }
+
+      alert.assignedTo = { username: currentUser.username, displayName: currentUser.displayName, email: currentUser.email };
+      saveRemediationToStorage();
+      logActivity('Investigator Assigned', `${alert.cve} assigned to ${currentUser.displayName}`);
+      renderAlerts();
+      updateDocumentTitle();
+      showToast(`You're now investigating ${alert.cve}. Sending notification email…`, 'success');
+      notifyAssignment(alert);
+    }
+
+    async function notifyAssignment(alert) {
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/notify/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: alert.assignedTo.email,
+            displayName: alert.assignedTo.displayName,
+            cve: alert.cve,
+            title: alert.title,
+            alertId: alert.id,
+            priority: alert.priority,
+            assignedBy: currentUser ? currentUser.displayName : 'AegisCTI'
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+        showToast(`Assignment email sent to ${alert.assignedTo.email}.`, 'success');
+      } catch (e) {
+        showToast(`Assigned, but the notification email didn't send (${e.message}).`, 'error');
+      }
     }
 
     const MOCK_CONNECTORS = [
@@ -2686,7 +2744,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 28;
+    let currentVersionMinor = 29;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3788,7 +3846,7 @@
                 ${alert.assignedTo ? `<span class="px-1.5 py-0.5 rounded border border-cyan-800 bg-cyan-950/60 text-cyan-300 font-bold">Investigating: ${alert.assignedTo.displayName}</span>` : ''}
                 <span class="px-1.5 py-0.5 rounded border font-bold ${sla.cls}">${sla.label}</span>
               </div>
-              <div class="flex items-center gap-1">${remediationButtonsHtml(alert)}</div>
+              <div class="flex items-center gap-1">${remediationButtonsHtml(alert)}${assignButtonHtml(alert)}</div>
             </div>
 
             <!-- Summary and Fast Triage Actions -->
@@ -4908,7 +4966,23 @@
     // THREAT MEMO DRAFT (PREBUILT FORMAT FOR LEADERSHIP)
     // ==========================================
     let activeMemoAlertId = null;
-    const memoArchive = [];
+    let memoArchive = [];
+
+    // Real backend persistence (memos table) so the archive survives a page refresh and is
+    // the same list for anyone who opens the platform — not just this one browser tab. Writes
+    // are fire-and-forget: the local array updates immediately for a snappy UI, and on the
+    // public demo (no live backend reachable) these calls simply no-op, same as elsewhere.
+    async function fetchMemoArchive() {
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/memos?limit=50`);
+        if (!res.ok) return;
+        const rows = await res.json();
+        memoArchive = rows.map(r => ({ ...r, lastTouched: Date.parse(r.lastTouched) || Date.now() }));
+        const badge = document.getElementById('badgeMemoArchiveCount');
+        if (badge) badge.textContent = memoArchive.length;
+        renderMemoArchive();
+      } catch (e) { /* live backend unreachable — archive stays empty on the public demo */ }
+    }
 
     function logMemoArchiveEntry(alertId, riskRating, recipients) {
       const alert = MOCK_ALERTS.find(a => a.id === alertId);
@@ -4923,6 +4997,11 @@
       }
       const badge = document.getElementById('badgeMemoArchiveCount');
       if (badge) badge.textContent = memoArchive.length;
+      fetch(`${LIVE_API_BASE}/memos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alertId: alertId, cve: alert.cve, title: alert.title, riskRating: riskRating, recipients: recipients || '' })
+      }).catch(() => { /* live backend unreachable — archive still works for this session */ });
     }
 
     function renderMemoArchive() {
@@ -4964,6 +5043,8 @@
       document.getElementById('badgeMemoArchiveCount').textContent = memoArchive.length;
       renderMemoArchive();
       showToast('Memo removed from archive.', 'success');
+      fetch(`${LIVE_API_BASE}/memos/${encodeURIComponent(alertId)}`, { method: 'DELETE' })
+        .catch(() => { /* live backend unreachable — removal still applied locally */ });
     }
 
     const ROADMAP_STATUS_META = {
@@ -4977,7 +5058,7 @@
       {
         title: 'Threat Memo approval workflow',
         status: 'backend',
-        detail: 'Memo stored & reachable in the portal → "Send for Approval" emails designated personnel a link → they approve or request revisions → status reports back into the portal. Needs a real datastore (so approval status is shared across everyone\'s browser, not just localStorage) — the email send/receive and real backend this depends on already exist now (see the digest + memo-send items below), so this is mostly a workflow-state problem, not an infrastructure one anymore.'
+        detail: 'Memo stored & reachable in the portal → "Send for Approval" emails designated personnel a link → they approve or request revisions → status reports back into the portal. The real datastore this needed now exists — the Memo Archive itself moved off localStorage onto a real backend table (see the memo export item below) — so what remains is purely the approval-state workflow (pending/approved/revision-requested) and the approval-link email, not infrastructure.'
       },
       {
         title: 'Scheduled email digest (CVEs + critical news)',
@@ -5007,7 +5088,12 @@
       {
         title: 'Threat Memo — real .docx export + editable draft',
         status: 'shipped',
-        detail: 'Memos generate genuine OOXML .docx (readable in Word/Google Docs) with a matching Low/Medium/High/Critical risk-gauge image, 12pt body text throughout, gauge images resized and equalized across all four ratings. "Edit mode" lets you hand-edit the generated draft before sending without losing any auto-pulled content — every export path (.txt, .docx, clipboard, mailto, Send via AegisCTI) honors the edited text. The To field is free-text with multi-recipient support (comma-separated) plus a Quick Pick dropdown for platform users. Subject/RE line no longer repeats the CVE ID when live NVD data has no real title.'
+        detail: 'Memos generate genuine OOXML .docx (readable in Word/Google Docs) with a matching Low/Medium/High/Critical risk-gauge image, 12pt body text throughout, gauge images resized and equalized across all four ratings. "Edit mode" lets you hand-edit the generated draft before sending without losing any auto-pulled content — every export path (.txt, .docx, clipboard, mailto, Send via AegisCTI) honors the edited text. The To field is free-text with multi-recipient support (comma-separated) plus a Quick Pick dropdown for platform users. Subject/RE line no longer repeats the CVE ID when live NVD data has no real title. The Memo Archive itself now lives in a real backend table (same pattern as Recent Sends), not a browser-only in-memory list — it survives a refresh and is the same list for every user.'
+      },
+      {
+        title: 'Investigator assignment + notification email',
+        status: 'shipped',
+        detail: 'Correlated Triage rows now have an "Assign to Me" button next to the status buttons — clicking it sets you as the investigator (shown on the alert card, same as Zero Day Demo alerts already did) and fires a real notification email to your account address via the same backend/Resend path as digests and memos. Click again to unassign. Assignment is tracked per-browser today (same storage as remediation status); a shared backend record is the natural next step alongside the approval-workflow item above.'
       },
       {
         title: 'Live CVE + critical-news ingestion (NVD + RSS)',
@@ -5060,7 +5146,7 @@
         <div class="flex justify-between"><span class="text-slate-400">Platform Version</span><span class="text-cyan-300">v${currentVersionMajor}.${currentVersionMinor}</span></div>
         <div class="flex justify-between"><span class="text-slate-400">Active Connectors</span><span class="text-emerald-300">${MOCK_CONNECTORS.filter(c => c.enabled).length} / ${MOCK_CONNECTORS.length}</span></div>
         <div class="flex justify-between"><span class="text-slate-400">Subscribed Feeds</span><span class="text-emerald-300">${MOCK_FEEDS.filter(f => f.enabled).length} / ${MOCK_FEEDS.length}</span></div>
-        <div class="flex justify-between"><span class="text-slate-400">Memos Generated This Session</span><span class="text-indigo-300">${memoArchive.length}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Memos in Archive</span><span class="text-indigo-300">${memoArchive.length}</span></div>
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Authentication</span><span class="text-amber-300 text-right">Static demo login, saved to this browser (no SSO yet)</span></div>
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Signed In As</span><span class="text-cyan-300 text-right">${currentUser ? `${currentUser.displayName} (${currentUser.role})` : '—'}</span></div>
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Saved Demo Accounts</span><span class="text-emerald-300 text-right">${MOCK_USERS.length}</span></div>
@@ -6141,6 +6227,7 @@ Correlation Team does not perform remediation itself.
       fetchLiveAlerts();
       fetchLiveConnectors();
       fetchLiveNews();
+      fetchMemoArchive();
       loadDigestMinPriority();
       populateGraphIncidentSelector();
       initGraphPanZoom();
