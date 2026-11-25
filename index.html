@@ -2254,6 +2254,20 @@
       if (!document.getElementById('view-overview').classList.contains('hidden')) renderOverviewPanel();
     }
 
+    // Collapsed glance row has room for one status chip. "ON TRACK" is the default, non-actionable
+    // state on most rows — showing it on every card is mostly noise, so that space goes to who's
+    // assigned instead. AT RISK / SLA BREACHED are the states someone actually needs to catch while
+    // scanning, so those still win the slot over the assignee.
+    function collapsedStatusHtml(alert, sla) {
+      if (sla.label === 'AT RISK' || sla.label === 'SLA BREACHED') {
+        return `<span class="px-1.5 py-0.5 rounded border font-mono text-[12px] font-bold shrink-0 hidden sm:inline-block ${sla.cls}">${sla.label}</span>`;
+      }
+      if (alert.assignedTo) {
+        return `<span class="px-1.5 py-0.5 rounded border border-cyan-800 bg-cyan-950/60 text-cyan-300 text-[12px] font-mono font-bold shrink-0 hidden sm:inline-block max-w-[130px] truncate" title="Investigating: ${alert.assignedTo.displayName}">${alert.assignedTo.displayName}</span>`;
+      }
+      return `<span class="px-1.5 py-0.5 rounded border border-slate-800 bg-slate-900 text-slate-500 text-[12px] font-mono shrink-0 hidden sm:inline-block" title="No investigator assigned yet — expand to assign one">Unassigned</span>`;
+    }
+
     function assignButtonHtml(alert) {
       if (!currentUser) return '';
       const mine = alert.assignedTo && alert.assignedTo.username === currentUser.username;
@@ -2781,7 +2795,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 30;
+    let currentVersionMinor = 31;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3838,7 +3852,7 @@
             <span class="text-[12px] font-mono text-slate-500 shrink-0 hidden sm:inline">${alert.id}</span>
             ${alert.inKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[11px] font-mono font-bold shrink-0 hidden md:inline-block">KEV</span>' : ''}
             <span class="text-sm text-slate-200 truncate flex-1 min-w-0">${alert.title}</span>
-            <span class="px-1.5 py-0.5 rounded border font-mono text-[12px] font-bold shrink-0 hidden sm:inline-block ${sla.cls}">${sla.label}</span>
+            ${collapsedStatusHtml(alert, sla)}
             <div class="flex items-center gap-1.5 shrink-0" title="CVSS Base Score — Correlated Risk (${alert.riskScore}/100) is in the details below">
               <span class="text-[11px] font-mono text-slate-500">CVSS</span>
               <span class="h-7 min-w-9 px-1.5 rounded-lg border flex items-center justify-center font-mono font-bold text-sm ${scoreColor}">${alert.cvss}</span>
@@ -5130,7 +5144,7 @@
       {
         title: 'Investigator assignment + notification email',
         status: 'shipped',
-        detail: 'Correlated Triage rows now have an "Assign to Me" button plus an "Assign teammate…" dropdown of real platform accounts, right next to the status buttons — picking yourself or a teammate sets them as the investigator (shown on the alert card, same as Zero Day Demo alerts already did) and fires a real notification email to that account\'s address via the same backend/Resend path as digests and memos. Click "Unassign Me" (or re-pick) to clear it. Assignment is tracked per-browser today (same storage as remediation status); a shared backend record is the natural next step alongside the approval-workflow item above.'
+        detail: 'Correlated Triage rows now have an "Assign to Me" button plus an "Assign teammate…" dropdown of real platform accounts, right next to the status buttons — picking yourself or a teammate sets them as the investigator and fires a real notification email to that account\'s address via the same backend/Resend path as digests and memos. Click "Unassign Me" (or re-pick) to clear it. The collapsed glance row now surfaces the assignee directly (or "Unassigned") instead of always showing "ON TRACK" — the SLA pill only takes that slot back when it actually needs attention (AT RISK / SLA BREACHED). Assignment is tracked per-browser today (same storage as remediation status); a shared backend record is the natural next step alongside the approval-workflow item above.'
       },
       {
         title: 'Live CVE + critical-news ingestion (NVD + RSS)',
