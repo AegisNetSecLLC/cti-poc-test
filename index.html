@@ -2264,27 +2264,64 @@
       return `<button data-write-action onclick="event.stopPropagation(); assignAlertToMe('${alert.id}')" title="${title}" class="ml-1 px-2 py-0.5 rounded text-[11px] font-mono border transition ${mine ? 'bg-cyan-950 text-cyan-300 border-cyan-700 hover:bg-cyan-900' : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-cyan-300 hover:border-cyan-800'}">${label}</button>`;
     }
 
+    // Free-text search would also work here, but with a small team a dropdown of real accounts
+    // keeps this a zero-typo action — you're always assigning a real user with a real email.
+    function assignDropdownHtml(alert) {
+      if (!currentUser || MOCK_USERS.length === 0) return '';
+      const options = MOCK_USERS.map(u => {
+        const selected = alert.assignedTo && alert.assignedTo.username === u.username ? 'selected' : '';
+        return `<option value="${u.username}" ${selected}>${u.displayName}${u.username === currentUser.username ? ' (me)' : ''}</option>`;
+      }).join('');
+      return `<select onclick="event.stopPropagation()" onchange="event.stopPropagation(); assignAlertToUser('${alert.id}', this.value); this.selectedIndex = 0;" title="Assign a teammate as investigator — emails them a notification and shows their name on this alert" class="ml-1 h-[22px] px-1.5 rounded text-[11px] font-mono border bg-slate-900 text-slate-400 border-slate-800 hover:text-cyan-300 hover:border-cyan-800 transition">
+        <option value="" selected disabled>Assign teammate…</option>
+        ${options}
+      </select>`;
+    }
+
     function assignAlertToMe(alertId) {
       if (!currentUser) return;
+      const alreadyMine = (() => {
+        const a = MOCK_ALERTS.find(x => x.id === alertId);
+        return a && a.assignedTo && a.assignedTo.username === currentUser.username;
+      })();
+      if (alreadyMine) {
+        unassignAlert(alertId);
+        return;
+      }
+      assignAlertTo(alertId, currentUser);
+    }
+
+    function assignAlertToUser(alertId, username) {
+      if (!username) return;
+      const user = MOCK_USERS.find(u => u.username === username);
+      if (!user) return;
+      assignAlertTo(alertId, user);
+    }
+
+    function unassignAlert(alertId) {
+      const alert = MOCK_ALERTS.find(a => a.id === alertId);
+      if (!alert || !alert.assignedTo) return;
+      const was = alert.assignedTo.displayName;
+      alert.assignedTo = null;
+      saveRemediationToStorage();
+      logActivity('Investigator Unassigned', `${was} unassigned from ${alert.cve}`);
+      renderAlerts();
+      showToast(`${was} is no longer assigned to ${alert.cve}.`, 'success');
+    }
+
+    function assignAlertTo(alertId, user) {
       const alert = MOCK_ALERTS.find(a => a.id === alertId);
       if (!alert) return;
 
-      const alreadyMine = alert.assignedTo && alert.assignedTo.username === currentUser.username;
-      if (alreadyMine) {
-        alert.assignedTo = null;
-        saveRemediationToStorage();
-        logActivity('Investigator Unassigned', `${currentUser.displayName} unassigned themselves from ${alert.cve}`);
-        renderAlerts();
-        showToast(`You're no longer assigned to ${alert.cve}.`, 'success');
-        return;
-      }
+      if (alert.assignedTo && alert.assignedTo.username === user.username) return;
 
-      alert.assignedTo = { username: currentUser.username, displayName: currentUser.displayName, email: currentUser.email };
+      alert.assignedTo = { username: user.username, displayName: user.displayName, email: user.email };
       saveRemediationToStorage();
-      logActivity('Investigator Assigned', `${alert.cve} assigned to ${currentUser.displayName}`);
+      logActivity('Investigator Assigned', `${alert.cve} assigned to ${user.displayName}${currentUser && currentUser.username !== user.username ? ` by ${currentUser.displayName}` : ''}`);
       renderAlerts();
       updateDocumentTitle();
-      showToast(`You're now investigating ${alert.cve}. Sending notification email…`, 'success');
+      const isSelf = currentUser && user.username === currentUser.username;
+      showToast(`${isSelf ? "You're" : `${user.displayName} is`} now investigating ${alert.cve}. Sending notification email…`, 'success');
       notifyAssignment(alert);
     }
 
@@ -2744,7 +2781,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 29;
+    let currentVersionMinor = 30;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3846,7 +3883,7 @@
                 ${alert.assignedTo ? `<span class="px-1.5 py-0.5 rounded border border-cyan-800 bg-cyan-950/60 text-cyan-300 font-bold">Investigating: ${alert.assignedTo.displayName}</span>` : ''}
                 <span class="px-1.5 py-0.5 rounded border font-bold ${sla.cls}">${sla.label}</span>
               </div>
-              <div class="flex items-center gap-1">${remediationButtonsHtml(alert)}${assignButtonHtml(alert)}</div>
+              <div class="flex items-center gap-1">${remediationButtonsHtml(alert)}${assignButtonHtml(alert)}${assignDropdownHtml(alert)}</div>
             </div>
 
             <!-- Summary and Fast Triage Actions -->
@@ -5093,7 +5130,7 @@
       {
         title: 'Investigator assignment + notification email',
         status: 'shipped',
-        detail: 'Correlated Triage rows now have an "Assign to Me" button next to the status buttons — clicking it sets you as the investigator (shown on the alert card, same as Zero Day Demo alerts already did) and fires a real notification email to your account address via the same backend/Resend path as digests and memos. Click again to unassign. Assignment is tracked per-browser today (same storage as remediation status); a shared backend record is the natural next step alongside the approval-workflow item above.'
+        detail: 'Correlated Triage rows now have an "Assign to Me" button plus an "Assign teammate…" dropdown of real platform accounts, right next to the status buttons — picking yourself or a teammate sets them as the investigator (shown on the alert card, same as Zero Day Demo alerts already did) and fires a real notification email to that account\'s address via the same backend/Resend path as digests and memos. Click "Unassign Me" (or re-pick) to clear it. Assignment is tracked per-browser today (same storage as remediation status); a shared backend record is the natural next step alongside the approval-workflow item above.'
       },
       {
         title: 'Live CVE + critical-news ingestion (NVD + RSS)',
