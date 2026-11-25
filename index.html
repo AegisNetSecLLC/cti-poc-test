@@ -431,7 +431,7 @@
           </div>
 
           <!-- Simulation Narrative Caption -->
-          <div id="simCaptionBanner" class="absolute bottom-3 left-3 right-3 sm:right-auto sm:max-w-md z-10 bg-rose-950/90 backdrop-blur p-3 rounded-lg border border-rose-800 text-sm space-y-1 hidden">
+          <div id="simCaptionBanner" class="absolute z-10 w-[calc(100%-1.5rem)] sm:w-[320px] bg-rose-950/90 backdrop-blur p-3 rounded-lg border border-rose-800 text-sm space-y-1 hidden transition-[left,top] duration-150 ease-out">
             <div class="text-rose-300 font-bold font-mono text-[12px]" id="simCaptionLabel">STEP 1 / 5 — THREAT ACTOR</div>
             <p class="text-slate-200 leading-snug" id="simCaptionText"></p>
           </div>
@@ -2945,7 +2945,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 35;
+    let currentVersionMinor = 36;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3086,6 +3086,8 @@
       window.addEventListener('mouseup', () => {
         isPanning = false;
       });
+
+      window.addEventListener('resize', positionSimCaptionBanner);
     }
 
     function zoomGraph(factor) {
@@ -3113,6 +3115,45 @@
       if (indicator) {
         indicator.textContent = Math.round(graphScale * 100) + '%';
       }
+      positionSimCaptionBanner();
+    }
+
+    // Keeps the step-explanation banner anchored next to whichever node the simulation currently
+    // has highlighted, instead of pinned to a fixed spot on the canvas — it was landing far below
+    // the fold on tall graphs. Recomputed on every pan/zoom tick and every step change, so it
+    // genuinely tracks the node rather than just being placed once.
+    function positionSimCaptionBanner() {
+      const banner = document.getElementById('simCaptionBanner');
+      if (!banner || banner.classList.contains('hidden')) return;
+      const node = currentGraphNodesById && currentGraphOrder ? currentGraphNodesById[currentGraphOrder[simIndex]] : null;
+      if (!node) return;
+
+      const container = document.getElementById('graphContainer');
+      const svg = document.getElementById('blastSvg');
+      const containerRect = container.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      const scaleX = svgRect.width / 1140;
+      const scaleY = svgRect.height / 600;
+
+      const nodeSvgX = graphPanX + node.x * graphScale;
+      const nodeSvgY = graphPanY + node.y * graphScale;
+      const nodePixelX = (svgRect.left - containerRect.left) + nodeSvgX * scaleX;
+      const nodePixelY = (svgRect.top - containerRect.top) + nodeSvgY * scaleY;
+
+      const bannerWidth = banner.offsetWidth || 300;
+      const bannerHeight = banner.offsetHeight || 110;
+      const margin = 12;
+      const offset = 36;
+
+      let left = nodePixelX + offset;
+      let top = nodePixelY + offset;
+      if (left + bannerWidth > containerRect.width - margin) left = nodePixelX - bannerWidth - offset;
+      if (top + bannerHeight > containerRect.height - margin) top = nodePixelY - bannerHeight - offset;
+      left = Math.max(margin, Math.min(left, containerRect.width - bannerWidth - margin));
+      top = Math.max(margin, Math.min(top, containerRect.height - bannerHeight - margin));
+
+      banner.style.left = left + 'px';
+      banner.style.top = top + 'px';
     }
 
     function populateGraphIncidentSelector() {
@@ -3635,6 +3676,7 @@
       document.getElementById('simCaptionLabel').textContent = `STEP ${idx + 1} / ${currentGraphOrder.length} — ${SIM_ROLE_LABELS[node.role] || node.role.toUpperCase()}`;
       document.getElementById('simCaptionText').textContent = simCaptionFor(node, alert);
       banner.classList.remove('hidden');
+      positionSimCaptionBanner();
     }
 
     function goToSimStep(idx) {
