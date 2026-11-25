@@ -2651,7 +2651,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 18;
+    let currentVersionMinor = 19;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3699,9 +3699,9 @@
             ${alert.inKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[11px] font-mono font-bold shrink-0 hidden md:inline-block">KEV</span>' : ''}
             <span class="text-sm text-slate-200 truncate flex-1 min-w-0">${alert.title}</span>
             <span class="px-1.5 py-0.5 rounded border font-mono text-[12px] font-bold shrink-0 hidden sm:inline-block ${sla.cls}">${sla.label}</span>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span class="text-[11px] font-mono text-slate-500">RISK</span>
-              <span class="h-7 w-9 rounded-lg border flex items-center justify-center font-mono font-bold text-sm ${scoreColor}">${alert.riskScore}</span>
+            <div class="flex items-center gap-1.5 shrink-0" title="CVSS Base Score — Correlated Risk (${alert.riskScore}/100) is in the details below">
+              <span class="text-[11px] font-mono text-slate-500">CVSS</span>
+              <span class="h-7 min-w-9 px-1.5 rounded-lg border flex items-center justify-center font-mono font-bold text-sm ${scoreColor}">${alert.cvss}</span>
             </div>
             <button type="button" title="${isExpanded ? 'Collapse' : 'Expand'} details" class="shrink-0 h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
               <svg class="w-4 h-4 transition-transform duration-150 ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -3709,9 +3709,12 @@
           </div>
 
           <div class="space-y-3 px-4 pb-4 ${isExpanded ? '' : 'hidden'}">
-            <div class="flex flex-wrap items-center gap-2 -mt-1">
-              ${alert.internetFacing ? '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 text-[11px] font-mono">INTERNET-FACING</span>' : '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-mono">INTERNAL ONLY</span>'}
-              <span class="text-[12px] text-cyan-400 font-mono hover:underline cursor-pointer" onclick="event.stopPropagation(); openDeepDive('${alert.id}')">Inspect Spider Chart ➔</span>
+            <div class="flex flex-wrap items-center justify-between gap-2 -mt-1">
+              <div class="flex flex-wrap items-center gap-2">
+                ${alert.internetFacing ? '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 text-[11px] font-mono">INTERNET-FACING</span>' : '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-mono">INTERNAL ONLY</span>'}
+                <span class="text-[12px] text-cyan-400 font-mono hover:underline cursor-pointer" onclick="event.stopPropagation(); openDeepDive('${alert.id}')">Inspect Spider Chart ➔</span>
+              </div>
+              <span class="text-[12px] font-mono text-slate-400" title="Composite score from asset criticality, blast radius, and threat signal — see Spider Chart for the full breakdown">CORRELATED RISK <span class="font-bold ${scoreColor.split(' ')[0]}">${alert.riskScore}<span class="text-slate-500">/100</span></span></span>
             </div>
 
             <!-- Correlation Proof Box -->
