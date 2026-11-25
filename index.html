@@ -1490,11 +1490,11 @@
       <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2 flex-wrap">
         <span class="text-[11px] text-slate-500 font-mono" id="memoCopyStatus">Not copied yet.</span>
         <div class="flex items-center gap-2 flex-wrap">
-          <button type="button" onclick="downloadMemo()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Download .txt</button>
-          <button type="button" onclick="downloadMemoDocx()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Download .docx</button>
-          <button type="button" onclick="emailMemo()" id="btnEmailMemo" class="px-4 py-2 rounded-lg text-white font-semibold text-sm transition">Email (local client)</button>
-          <button type="button" onclick="sendMemoViaAegis()" id="btnSendMemoAegis" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition">Send via AegisCTI</button>
-          <button type="button" onclick="copyMemoToClipboard()" id="btnCopyMemo" class="px-4 py-2 rounded-lg text-white font-semibold text-sm transition">Copy to Clipboard</button>
+          <button type="button" onclick="downloadMemo()" title="Saves the plain-text draft to your computer. No network, no email sent." class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm transition">Download .txt</button>
+          <button type="button" onclick="downloadMemoDocx()" title="Saves a formatted Word document (with the risk gauge image) to your computer. No network, no email sent." class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm transition">Download .docx</button>
+          <button type="button" onclick="emailMemo()" id="btnEmailMemo" title="Opens your own email app with this memo pre-filled, sent as you. Also downloads a matching .docx, since mailto can't auto-attach — drag it into your draft." class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition">Email (local client)</button>
+          <button type="button" onclick="sendMemoViaAegis()" id="btnSendMemoAegis" title="Fully automated: sends this memo with the .docx attached via AegisCTI's own email address. Needs a valid recipient above — nothing to do afterward, but it won't look like it came from you personally." class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition">Send via AegisCTI</button>
+          <button type="button" onclick="copyMemoToClipboard()" id="btnCopyMemo" title="Copies the memo text to your clipboard — paste into Teams, a ticket, Slack, or anywhere else." class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition">Copy to Clipboard</button>
         </div>
       </div>
 
@@ -2661,7 +2661,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 21;
+    let currentVersionMinor = 22;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5289,11 +5289,16 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
         ? `Suggested ${suggestion.source} — type over it or add more, comma-separated`
         : (alert.assignedTo ? `Defaulted to assigned investigator, ${alert.assignedTo.displayName} — type over it or add more` : 'Type any name or email, or use Quick pick');
 
-      // Fresh modal open always starts read-only / generated — never carries edits from the last alert.
+      // Fresh modal open always starts read-only / generated — never carries edits or a locked
+      // state from the last alert. Reset directly rather than through the toggle, so a stuck
+      // checkbox state can never leave the risk pills / Include checkboxes disabled.
       memoManuallyEdited = false;
-      const editToggle = document.getElementById('memoEditModeToggle');
-      if (editToggle.checked) editToggle.checked = false;
-      toggleMemoEditMode();
+      document.getElementById('memoEditModeToggle').checked = false;
+      document.getElementById('memoBody').readOnly = true;
+      document.getElementById('memoBody').classList.remove('ring-1', 'ring-indigo-600/60');
+      document.getElementById('btnResetMemoDraft').classList.add('hidden');
+      document.querySelectorAll('#threatMemoModal [id^="memoSection-"]').forEach(cb => { cb.disabled = false; });
+      document.querySelectorAll('#threatMemoModal .risk-pill').forEach(btn => { btn.disabled = false; });
 
       document.getElementById('threatMemoModal').classList.remove('hidden');
     }
@@ -5343,10 +5348,6 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
           ? `risk-pill px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border transition ${meta.activeClasses}`
           : `risk-pill px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border transition bg-slate-800 text-slate-400 border-transparent hover:text-slate-200`;
       });
-
-      const activeBtnClasses = RISK_RATING_META[activeMemoRiskRating].btnClasses;
-      document.getElementById('btnEmailMemo').className = `px-4 py-2 rounded-lg font-semibold text-sm transition ${activeBtnClasses}`;
-      document.getElementById('btnCopyMemo').className = `px-4 py-2 rounded-lg font-semibold text-sm transition ${activeBtnClasses}`;
     }
 
     function closeThreatMemoModal() {
