@@ -1458,10 +1458,11 @@
       <!-- Recipient -->
       <div class="px-4 py-2.5 border-b border-slate-800 bg-slate-950/50 flex items-center gap-2 flex-wrap">
         <label for="memoRecipientInput" class="text-[11px] font-mono text-slate-400 shrink-0">TO:</label>
-        <select id="memoRecipientInput" class="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-          <option value="">-- Select recipient --</option>
+        <input type="text" id="memoRecipientInput" placeholder="Type any name or email — e.g. jane@corp.com, SOC Tier 1" class="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+        <select id="memoRecipientQuickPick" onchange="applyMemoRecipientQuickPick()" title="Quick-add a platform user" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-[12px] text-slate-300 focus:outline-none focus:border-indigo-500">
+          <option value="">+ Quick pick...</option>
         </select>
-        <span id="memoRecipientHint" class="text-[11px] text-slate-500 font-mono"></span>
+        <span id="memoRecipientHint" class="text-[11px] text-slate-500 font-mono w-full"></span>
       </div>
 
       <!-- Section Toggles -->
@@ -1475,7 +1476,16 @@
         <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer"><input type="checkbox" id="memoSection-recommendedAction" onchange="toggleMemoSection('recommendedAction')" class="accent-indigo-500"> Recommended Action</label>
       </div>
 
-      <div class="p-5 overflow-y-auto font-mono text-sm leading-relaxed text-slate-200 whitespace-pre-wrap bg-[#0d1119]" id="memoBody"></div>
+      <!-- Edit Mode -->
+      <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between gap-2 flex-wrap">
+        <label class="flex items-center gap-1.5 text-[12px] text-slate-300 cursor-pointer">
+          <input type="checkbox" id="memoEditModeToggle" onchange="toggleMemoEditMode()" class="accent-indigo-500">
+          Edit mode — hand-edit the draft below (locks Include/Risk Rating while editing)
+        </label>
+        <button type="button" id="btnResetMemoDraft" onclick="resetMemoDraft()" class="hidden text-[12px] text-cyan-400 hover:underline font-mono">↺ Reset to generated version</button>
+      </div>
+
+      <textarea id="memoBody" readonly oninput="memoManuallyEdited = true" class="flex-1 p-5 overflow-y-auto font-mono text-sm leading-relaxed text-slate-200 whitespace-pre-wrap bg-[#0d1119] border-0 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-600/60"></textarea>
 
       <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2 flex-wrap">
         <span class="text-[11px] text-slate-500 font-mono" id="memoCopyStatus">Not copied yet.</span>
@@ -2651,7 +2661,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 19;
+    let currentVersionMinor = 20;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5137,31 +5147,49 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
       return blocks.join('\n\n');
     }
 
+    // Shared by both the structured builder and the edited-text builder below — decodes the
+    // risk-gauge PNG into a right-aligned table row, since docx has no simple top-right image anchor.
+    function buildMemoGaugeImageTable(gaugeImageDataUri) {
+      const { Paragraph, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } = window.docx;
+      const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+      const b64 = gaugeImageDataUri.slice(gaugeImageDataUri.indexOf(',') + 1);
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+        rows: [new TableRow({ children: [
+          new TableCell({ width: { size: 65, type: WidthType.PERCENTAGE }, children: [new Paragraph('')] }),
+          new TableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new ImageRun({ data: bytes, transformation: { width: 240, height: Math.round(240 * (768 / 1376)) } })] })] })
+        ]})]
+      });
+    }
+
+    // Used when the analyst hand-edited the draft in Edit Mode — the .docx must match what they
+    // actually wrote, not silently regenerate the original structured version and discard edits.
+    // Loses the per-section heading styling in exchange for being a guaranteed exact match.
+    function buildMemoDocxFromText(text, gaugeImageDataUri) {
+      const { Document, Paragraph, TextRun } = window.docx;
+      const children = [];
+      if (gaugeImageDataUri) children.push(buildMemoGaugeImageTable(gaugeImageDataUri));
+      text.split('\n').forEach(line => {
+        children.push(new Paragraph({ children: [new TextRun({ text: line || ' ', font: 'Courier New', size: 20 })], spacing: { after: 20 } }));
+      });
+      return new Document({ sections: [{ children }] });
+    }
+
     function buildMemoDocxDocument(alert, riskRating, sections, gaugeImageDataUri) {
-      const { Document, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } = window.docx;
+      const { Document, Paragraph, TextRun, BorderStyle } = window.docx;
       const meta = RISK_RATING_META[riskRating];
       const tlp = (alert.inKev || alert.riskScore >= 85) ? 'TLP:AMBER' : 'TLP:GREEN';
       const tlpColor = tlp === 'TLP:AMBER' ? 'B45309' : '047857';
       const ratingColor = { low: '15803D', medium: 'A16207', high: 'C2410C', critical: 'B91C1C' }[riskRating] || '374151';
       const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-      const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
 
       const children = [];
 
-      if (gaugeImageDataUri) {
-        const b64 = gaugeImageDataUri.slice(gaugeImageDataUri.indexOf(',') + 1);
-        const binary = atob(b64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        children.push(new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
-          rows: [new TableRow({ children: [
-            new TableCell({ width: { size: 65, type: WidthType.PERCENTAGE }, children: [new Paragraph('')] }),
-            new TableCell({ width: { size: 35, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new ImageRun({ data: bytes, transformation: { width: 240, height: Math.round(240 * (768 / 1376)) } })] })] })
-          ]})]
-        }));
-      }
+      if (gaugeImageDataUri) children.push(buildMemoGaugeImageTable(gaugeImageDataUri));
 
       children.push(new Paragraph({ children: [new TextRun({ text: 'THREAT INTELLIGENCE MEMORANDUM', bold: true, size: 32 })], spacing: { after: 80 } }));
       children.push(new Paragraph({ children: [new TextRun({ text: `Classification: ${tlp}`, bold: true, color: tlpColor, size: 24 })], spacing: { after: 160 } }));
@@ -5208,14 +5236,27 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
     }
 
     function renderMemoRecipientOptions() {
-      const select = document.getElementById('memoRecipientInput');
-      const current = select.value;
-      select.innerHTML = '<option value="">-- Select recipient --</option>' +
+      const quickPick = document.getElementById('memoRecipientQuickPick');
+      quickPick.innerHTML = '<option value="">+ Quick pick...</option>' +
         MOCK_USERS.map(u => `<option value="${u.email}">${u.displayName} (${u.role})</option>`).join('');
-      select.value = current;
+    }
+
+    // Quick-pick is a helper, not the field itself — it ADDS the chosen user's email into the
+    // free-text TO field (so you can quick-pick a platform user AND type an external address),
+    // rather than replacing whatever's already typed there.
+    function applyMemoRecipientQuickPick() {
+      const pick = document.getElementById('memoRecipientQuickPick');
+      if (!pick.value) return;
+      const input = document.getElementById('memoRecipientInput');
+      const existing = input.value.split(',').map(s => s.trim()).filter(Boolean);
+      if (!existing.includes(pick.value)) existing.push(pick.value);
+      input.value = existing.join(', ');
+      pick.value = '';
+      input.focus();
     }
 
     let activeMemoSections = Object.assign({}, MEMO_SECTION_DEFAULTS);
+    let memoManuallyEdited = false;
 
     function openThreatMemoModal(alertId) {
       const alert = MOCK_ALERTS.find(a => a.id === alertId);
@@ -5236,19 +5277,45 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
         : 'px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border bg-emerald-950 text-emerald-300 border-emerald-700';
 
       renderRiskPills();
-      document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
+      document.getElementById('memoBody').value = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
       document.getElementById('memoCopyStatus').textContent = 'Not copied yet.';
 
       renderMemoRecipientOptions();
       const suggestion = suggestMemoRecipientsForAlert(alert);
-      const select = document.getElementById('memoRecipientInput');
+      const recipientInput = document.getElementById('memoRecipientInput');
       const matchedUser = suggestion.recipients && MOCK_USERS.find(u => suggestion.recipients.includes(u.email));
-      select.value = matchedUser ? matchedUser.email : (alert.assignedTo ? alert.assignedTo.email : '');
+      recipientInput.value = matchedUser ? matchedUser.email : (alert.assignedTo ? alert.assignedTo.email : '');
       document.getElementById('memoRecipientHint').textContent = matchedUser
-        ? `Suggested ${suggestion.source} — change if needed`
-        : (alert.assignedTo ? `Defaulted to assigned investigator, ${alert.assignedTo.displayName}` : 'Select who this memo goes to');
+        ? `Suggested ${suggestion.source} — type over it or add more, comma-separated`
+        : (alert.assignedTo ? `Defaulted to assigned investigator, ${alert.assignedTo.displayName} — type over it or add more` : 'Type any name or email, or use Quick pick');
+
+      // Fresh modal open always starts read-only / generated — never carries edits from the last alert.
+      memoManuallyEdited = false;
+      const editToggle = document.getElementById('memoEditModeToggle');
+      if (editToggle.checked) editToggle.checked = false;
+      toggleMemoEditMode();
 
       document.getElementById('threatMemoModal').classList.remove('hidden');
+    }
+
+    function toggleMemoEditMode() {
+      const on = document.getElementById('memoEditModeToggle').checked;
+      const body = document.getElementById('memoBody');
+      body.readOnly = !on;
+      body.classList.toggle('ring-1', on);
+      body.classList.toggle('ring-indigo-600/60', on);
+      document.querySelectorAll('#threatMemoModal [id^="memoSection-"]').forEach(cb => { cb.disabled = on; });
+      document.querySelectorAll('#threatMemoModal .risk-pill').forEach(btn => { btn.disabled = on; });
+      document.getElementById('btnResetMemoDraft').classList.toggle('hidden', !on);
+      if (on) body.focus();
+    }
+
+    function resetMemoDraft() {
+      const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
+      if (!alert) return;
+      document.getElementById('memoBody').value = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
+      memoManuallyEdited = false;
+      showToast('Draft reset to the generated version — your edits were discarded.', 'info');
     }
 
     function toggleMemoSection(key) {
@@ -5256,7 +5323,7 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
       activeMemoSections[key] = cb ? cb.checked : !activeMemoSections[key];
       const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
       if (!alert) return;
-      document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
+      document.getElementById('memoBody').value = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
     }
 
     function setMemoRiskRating(level) {
@@ -5264,7 +5331,7 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
       const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
       if (!alert) return;
       renderRiskPills();
-      document.getElementById('memoBody').textContent = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
+      document.getElementById('memoBody').value = buildMemoText(alert, activeMemoRiskRating, activeMemoSections);
     }
 
     function renderRiskPills() {
@@ -5288,7 +5355,7 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
     }
 
     function copyMemoToClipboard() {
-      const text = document.getElementById('memoBody').textContent;
+      const text = document.getElementById('memoBody').value;
       const recipients = document.getElementById('memoRecipientInput').value.trim();
       const status = document.getElementById('memoCopyStatus');
       navigator.clipboard.writeText(text).then(() => {
@@ -5305,7 +5372,7 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
 
     function downloadMemo() {
       const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
-      const text = document.getElementById('memoBody').textContent;
+      const text = document.getElementById('memoBody').value;
       const blob = new Blob([text], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -5323,7 +5390,9 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
 
     async function buildAndDownloadMemoDocxBlob(alert) {
       const gaugeImg = MEMO_RISK_GAUGE_IMAGES[activeMemoRiskRating];
-      const doc = buildMemoDocxDocument(alert, activeMemoRiskRating, activeMemoSections, gaugeImg);
+      const doc = memoManuallyEdited
+        ? buildMemoDocxFromText(document.getElementById('memoBody').value, gaugeImg)
+        : buildMemoDocxDocument(alert, activeMemoRiskRating, activeMemoSections, gaugeImg);
       const blob = await window.docx.Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -5599,7 +5668,7 @@ Correlation Team does not perform remediation itself.
     async function emailMemo() {
       const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
       if (!alert) return;
-      const text = document.getElementById('memoBody').textContent;
+      const text = document.getElementById('memoBody').value;
       const subject = `Threat Memo [${RISK_RATING_META[activeMemoRiskRating].label}]: ${alert.cve} — ${alert.title}`;
       const status = document.getElementById('memoCopyStatus');
 
@@ -5647,12 +5716,18 @@ Correlation Team does not perform remediation itself.
     async function sendMemoViaAegis() {
       const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
       if (!alert) return;
-      const to = document.getElementById('memoRecipientInput').value;
+      const to = document.getElementById('memoRecipientInput').value.trim();
       const status = document.getElementById('memoCopyStatus');
       const btn = document.getElementById('btnSendMemoAegis');
 
-      if (!to) {
-        showToast('Pick a recipient from the dropdown first.', 'error');
+      const toTokens = to.split(',').map(s => s.trim()).filter(Boolean);
+      if (!toTokens.length) {
+        showToast('Type at least one recipient email in the To field first.', 'error');
+        return;
+      }
+      const badTokens = toTokens.filter(t => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t));
+      if (badTokens.length) {
+        showToast(`"${badTokens.join(', ')}" doesn't look like a valid email — AegisCTI send needs a real address (names/team labels work fine for Copy/mailto, but not here).`, 'error');
         return;
       }
       if (typeof window.docx === 'undefined') {
@@ -5664,7 +5739,9 @@ Correlation Team does not perform remediation itself.
       btn.textContent = 'Sending...';
       try {
         const gaugeImg = MEMO_RISK_GAUGE_IMAGES[activeMemoRiskRating];
-        const doc = buildMemoDocxDocument(alert, activeMemoRiskRating, activeMemoSections, gaugeImg);
+        const doc = memoManuallyEdited
+          ? buildMemoDocxFromText(document.getElementById('memoBody').value, gaugeImg)
+          : buildMemoDocxDocument(alert, activeMemoRiskRating, activeMemoSections, gaugeImg);
         const blob = await window.docx.Packer.toBlob(doc);
         const docxBase64 = await blobToBase64(blob);
         const subject = `Threat Memo [${RISK_RATING_META[activeMemoRiskRating].label}]: ${alert.cve} — ${alert.title}`;
@@ -5673,21 +5750,21 @@ Correlation Team does not perform remediation itself.
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            to, subject, docxBase64,
+            to: toTokens.join(', '), subject, docxBase64,
             filename: `threat-memo-${alert.cve}.docx`
           })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'send failed');
 
-        const recipientLabel = (MOCK_USERS.find(u => u.email === to) || {}).displayName || to;
+        const recipientLabel = toTokens.map(t => (MOCK_USERS.find(u => u.email === t) || {}).displayName || t).join(', ');
         status.textContent = `Sent to ${recipientLabel} via AegisCTI.`;
         showToast(`Threat memo sent to ${recipientLabel}.`, 'success');
         logChange('Threat Memo Emailed', `${alert.cve} — sent to ${recipientLabel} (${RISK_RATING_META[activeMemoRiskRating].label})`);
         logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, to);
       } catch (e) {
-        showToast('Send failed — the live backend may be unreachable (expected on the public demo).', 'error');
-        status.textContent = 'Send failed — backend unreachable.';
+        showToast(`Send failed — ${e.message || 'the live backend may be unreachable (expected on the public demo)'}.`, 'error');
+        status.textContent = `Send failed — ${e.message || 'backend unreachable'}.`;
       } finally {
         btn.disabled = false;
         btn.textContent = 'Send via AegisCTI';
