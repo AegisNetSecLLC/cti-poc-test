@@ -2268,6 +2268,29 @@
       return `<span class="px-1.5 py-0.5 rounded border border-slate-800 bg-slate-900 text-slate-500 text-[12px] font-mono shrink-0 hidden sm:inline-block" title="No investigator assigned yet — expand to assign one">Unassigned</span>`;
     }
 
+    // Remediation status at a glance, gated to md: so it only shows up once there's room —
+    // same restraint as the KEV badge. Sits just before the assignee/SLA chip at the end of the row.
+    function collapsedRemediationHtml(alert) {
+      const meta = {
+        open: { label: 'Open', cls: 'bg-slate-900 text-slate-400 border-slate-800' },
+        in_progress: { label: 'In Progress', cls: 'bg-cyan-950 text-cyan-300 border-cyan-700' },
+        resolved: { label: 'Resolved', cls: 'bg-emerald-950 text-emerald-300 border-emerald-700' }
+      };
+      const m = meta[alert.remediationStatus] || meta.open;
+      return `<span class="px-1.5 py-0.5 rounded border font-mono text-[11px] font-semibold shrink-0 hidden md:inline-block ${m.cls}" title="Remediation status: ${m.label}">${m.label}</span>`;
+    }
+
+    // Replaces the old redundant "LIVE-CVE-xxxx" / "CORR-xxxx" ID that just repeated the CVE badge
+    // next to it. Shows a short alias/description instead, and only when it actually adds information
+    // — skipped when the alert has no real summary, or when that summary just restates the title.
+    function collapsedAliasHtml(alert) {
+      const raw = (alert.summary || '').trim();
+      if (!raw || raw === alert.title || raw.toLowerCase() === String(alert.cve || '').toLowerCase()) return '';
+      const escaped = raw.replace(/"/g, '&quot;');
+      const short = raw.length > 60 ? raw.slice(0, 57) + '…' : raw;
+      return `<span class="text-[12px] text-slate-500 truncate shrink-0 hidden lg:inline max-w-[260px]" title="${escaped}">${short}</span>`;
+    }
+
     function assignButtonHtml(alert) {
       if (!currentUser) return '';
       const mine = alert.assignedTo && alert.assignedTo.username === currentUser.username;
@@ -2795,7 +2818,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 31;
+    let currentVersionMinor = 32;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3849,9 +3872,10 @@
           <div class="flex items-center gap-2.5 p-3 cursor-pointer" onclick="toggleAlertExpand('${alert.id}')">
             <span class="px-2 py-0.5 rounded text-[12px] font-mono font-bold border shrink-0 ${badgeColor}">${alert.priority}</span>
             <span onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Click to view Attack Path & Blast Radius Graph for ${alert.cve}" class="font-mono text-sm font-bold text-cyan-400 hover:text-cyan-200 hover:underline bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/80 cursor-pointer shrink-0">${alert.cve}</span>
-            <span class="text-[12px] font-mono text-slate-500 shrink-0 hidden sm:inline">${alert.id}</span>
+            ${collapsedAliasHtml(alert)}
             ${alert.inKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[11px] font-mono font-bold shrink-0 hidden md:inline-block">KEV</span>' : ''}
             <span class="text-sm text-slate-200 truncate flex-1 min-w-0">${alert.title}</span>
+            ${collapsedRemediationHtml(alert)}
             ${collapsedStatusHtml(alert, sla)}
             <div class="flex items-center gap-1.5 shrink-0" title="CVSS Base Score — Correlated Risk (${alert.riskScore}/100) is in the details below">
               <span class="text-[11px] font-mono text-slate-500">CVSS</span>
@@ -5144,7 +5168,7 @@
       {
         title: 'Investigator assignment + notification email',
         status: 'shipped',
-        detail: 'Correlated Triage rows now have an "Assign to Me" button plus an "Assign teammate…" dropdown of real platform accounts, right next to the status buttons — picking yourself or a teammate sets them as the investigator and fires a real notification email to that account\'s address via the same backend/Resend path as digests and memos. Click "Unassign Me" (or re-pick) to clear it. The collapsed glance row now surfaces the assignee directly (or "Unassigned") instead of always showing "ON TRACK" — the SLA pill only takes that slot back when it actually needs attention (AT RISK / SLA BREACHED). Assignment is tracked per-browser today (same storage as remediation status); a shared backend record is the natural next step alongside the approval-workflow item above.'
+        detail: 'Correlated Triage rows now have an "Assign to Me" button plus an "Assign teammate…" dropdown of real platform accounts, right next to the status buttons — picking yourself or a teammate sets them as the investigator and fires a real notification email to that account\'s address via the same backend/Resend path as digests and memos. Click "Unassign Me" (or re-pick) to clear it. The collapsed glance row now surfaces the assignee directly (or "Unassigned") instead of always showing "ON TRACK" — the SLA pill only takes that slot back when it actually needs attention (AT RISK / SLA BREACHED) — plus a compact Open/In Progress/Resolved chip right next to it. The old redundant internal ID (e.g. "LIVE-CVE-xxxx" repeating the CVE badge beside it) is gone too, replaced by a short alias/description pulled from the alert\'s own summary when it actually adds information. Assignment is tracked per-browser today (same storage as remediation status); a shared backend record is the natural next step alongside the approval-workflow item above.'
       },
       {
         title: 'Live CVE + critical-news ingestion (NVD + RSS)',
