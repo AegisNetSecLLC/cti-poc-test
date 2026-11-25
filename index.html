@@ -2686,7 +2686,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 27;
+    let currentVersionMinor = 28;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -4977,17 +4977,17 @@
       {
         title: 'Threat Memo approval workflow',
         status: 'backend',
-        detail: 'Memo stored & reachable in the portal → "Send for Approval" emails designated personnel a link → they approve or request revisions → status reports back into the portal. Needs a real datastore (so approval status is shared across everyone\'s browser, not just localStorage) plus real email send/receive — same server as the digest below.'
+        detail: 'Memo stored & reachable in the portal → "Send for Approval" emails designated personnel a link → they approve or request revisions → status reports back into the portal. Needs a real datastore (so approval status is shared across everyone\'s browser, not just localStorage) — the email send/receive and real backend this depends on already exist now (see the digest + memo-send items below), so this is mostly a workflow-state problem, not an infrastructure one anymore.'
       },
       {
-        title: 'Scheduled email digest (CVEs + threat news)',
-        status: 'designed',
-        detail: 'Daily digest of new CVEs (filtered by severity) + matching threat-news headlines, emailed to the team on a cron schedule. Sketch delivered as a Word doc (packages, msmtp config, cti_digest.py script, crontab line) — on hold pending the Debian 12 box being stood up.'
+        title: 'Scheduled email digest (CVEs + critical news)',
+        status: 'shipped',
+        detail: 'Real cron-based digest emails, live on cti.aegissecure.net — CVE digest supports a minimum-severity filter (lower-priority CVEs stay visible in Correlated Triage, just aren\'t mailed) and the news digest\'s "critical only" filter is the RSS connector\'s own keyword match. Test-send button previews either digest without disturbing the real schedule. A "Recent Sends" log (Settings → Alerting) now records the exact moment every real send left the system plus Resend\'s delivery acknowledgment, so "did it actually go out" is a lookup, not a guess.'
       },
       {
         title: 'Alert Rules actually dispatching to Email/Teams/Jira',
         status: 'backend',
-        detail: 'Right now rules are saved as configuration only — triggering a real notification needs the same backend + mailer as the digest and approval pieces above.'
+        detail: 'Right now rules are saved as configuration only — triggering a real notification needs the same backend + mailer already built for the digest and memo-send pieces above, just wired to this form instead.'
       },
       {
         title: 'Real SSO (Okta / Active Directory)',
@@ -4997,7 +4997,7 @@
       {
         title: 'Audit log export / retention beyond this browser',
         status: 'backend',
-        detail: 'Audit log currently persists only in this browser\'s localStorage. Exporting it or keeping it durably needs real shared storage.'
+        detail: 'Audit log currently persists only in this browser\'s localStorage. Exporting it or keeping it durably needs real shared storage. (Note: it\'s now correctly separated from the "pending changes to activate" list — routine actions like sending a memo or syncing a connector log here without falsely requiring a version bump.)'
       },
       {
         title: 'Settings — tabbed single-pane layout',
@@ -5005,14 +5005,29 @@
         detail: 'Status / Users / Alerting / Audit / Roadmap are now one pane with tabs instead of a long scroll.'
       },
       {
-        title: 'Memo export — real native .docx + risk gauge art',
+        title: 'Threat Memo — real .docx export + editable draft',
         status: 'shipped',
-        detail: 'Memos now generate genuine OOXML .docx (readable in Word and Google Docs), with the matching Low/Medium/High/Critical risk-gauge image placed top-right, 12pt body text throughout.'
+        detail: 'Memos generate genuine OOXML .docx (readable in Word/Google Docs) with a matching Low/Medium/High/Critical risk-gauge image, 12pt body text throughout, gauge images resized and equalized across all four ratings. "Edit mode" lets you hand-edit the generated draft before sending without losing any auto-pulled content — every export path (.txt, .docx, clipboard, mailto, Send via AegisCTI) honors the edited text. The To field is free-text with multi-recipient support (comma-separated) plus a Quick Pick dropdown for platform users. Subject/RE line no longer repeats the CVE ID when live NVD data has no real title.'
       },
       {
-        title: 'Live CVE ingestion from NVD',
+        title: 'Live CVE + critical-news ingestion (NVD + RSS)',
         status: 'shipped',
-        detail: 'Real, non-fabricated CVE data pulled from the public NVD API with a configurable lookback window (1h/24h/7d/30d), plus direct-by-ID lookup.'
+        detail: 'Real, non-fabricated CVE data from the public NVD API with a configurable lookback window plus direct-by-ID lookup, and real keyword-matched security news from live RSS feeds (word-boundary matching, not naive substring) surfaced in its own "Live Critical News Ingestion" view. Both connector types have a crafty cadence slider for real poll intervals, and the severity filter is hidden for RSS connectors since it doesn\'t apply to news.'
+      },
+      {
+        title: 'Monitor page decluttering',
+        status: 'shipped',
+        detail: 'Correlated Triage rows collapse to a one-line glance (priority, CVE, title, SLA, score) and expand on click for the full correlation/remediation detail. The glance pill shows CVSS instead of Risk Score, since there\'s no way to judge true organizational risk without an asset-correlation connector yet — Correlated Risk is still one click away in the expanded view.'
+      },
+      {
+        title: 'Enrichment connectors (VirusTotal, AbuseIPDB, GreyNoise, etc.)',
+        status: 'designed',
+        detail: 'A new connector type alongside Ingestion — per-finding "Enrich" button that looks up an indicator (IP/domain/hash/URL/CVE) against real reputation APIs. Modeled on OpenCTI\'s connector pattern (scope, manual/auto trigger, append-only result history with source reliability) without the message-queue infrastructure overhead. Add Connector modal gets a Connector Type toggle; Scope and Trigger are checkboxes (multi-select / independent), Source Reliability and Provider are dropdowns (Provider\'s "Custom/Other" option sits last). VirusTotal is the planned first real integration.'
+      },
+      {
+        title: 'In-platform AI agent (Claude / Gemini / Copilot / custom)',
+        status: 'idea',
+        detail: 'A chat panel inside AegisCTI scoped to the alert/connector/CVE context currently open, backed by a real LLM API — Claude first, with a provider-agnostic backend so other providers (or a custom endpoint) can be added later. The one roadmap item with a real ongoing operating cost once live (per-message API spend), not just a one-time build — intentionally the furthest-out item here.'
       },
       {
         title: 'Ongoing cosmetic / UX polish',
