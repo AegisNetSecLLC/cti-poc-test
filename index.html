@@ -568,6 +568,21 @@
           <div class="p-3 space-y-2" id="liveCveList"></div>
         </div>
 
+        <!-- LIVE RSS News Ingestion — real data, keyword-matched from live security-news feeds -->
+        <div class="rounded-xl border border-purple-800/60 bg-slate-900/40 overflow-hidden">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <span class="text-sm font-semibold text-slate-200">Live Critical News Ingestion <span class="text-[11px] text-emerald-400 font-mono border border-emerald-700 bg-emerald-950/60 px-1.5 py-0.5 rounded ml-1">REAL DATA</span></span>
+              <p class="text-[12px] text-slate-400 mt-0.5">Security news pulled live from subscribed RSS/Atom feeds, kept only when it matches a critical keyword (ransomware, RCE, actively exploited, etc.) — real headlines, not part of the demo's fictional correlation story.</p>
+            </div>
+            <button onclick="fetchLiveNews()" id="btnRefreshLiveNews" class="px-3 py-1.5 rounded-lg text-sm bg-purple-600 hover:bg-purple-500 text-white font-medium transition shrink-0">
+              Refresh
+            </button>
+          </div>
+          <div class="px-3 pt-3 text-[12px] text-slate-500 font-mono" id="liveNewsStatus">Not pulled yet this session — syncing a live RSS connector under Connectors & APIs will populate this automatically.</div>
+          <div class="p-3 space-y-2" id="liveNewsList"></div>
+        </div>
+
         <!-- STIX / TAXII / RSS Feed Subscriptions -->
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
           <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex flex-wrap justify-between items-center gap-2">
@@ -833,6 +848,25 @@
             <div class="border-t border-slate-800 pt-3 space-y-2">
               <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Active Alert Rules</span>
               <div class="space-y-1.5" id="alertRuleList"></div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-3 space-y-2">
+              <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Live Digest Filtering <span class="text-slate-600 normal-case">(real backend)</span></span>
+              <p class="text-[12px] text-slate-500">
+                Sets the minimum severity the real CVE digest will actually email — lower-priority CVEs are still ingested and visible in Correlated Triage, just not mailed. Every alert and the news digest already link out to the source (NVD / the original article) for full detail.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                <select id="digestMinPrioritySelect" onchange="saveDigestMinPriority()" class="w-full sm:w-auto px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                  <option value="P4-LOW">All severities (P1–P4)</option>
+                  <option value="P3-MEDIUM">Medium and above (P1–P3)</option>
+                  <option value="P2-HIGH">High and above (P1–P2)</option>
+                  <option value="P1-CRITICAL">Critical only (P1)</option>
+                </select>
+                <span id="digestMinPriorityStatus" class="text-[12px] text-slate-500 font-mono"></span>
+              </div>
+              <p class="text-[12px] text-slate-500">
+                Critical News Digest has no separate severity dial — the RSS connector's keyword match (ransomware, RCE, actively exploited, etc.) is already its "critical only" filter.
+              </p>
             </div>
 
             <div class="border-t border-slate-800 pt-3 space-y-2">
@@ -2617,7 +2651,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 17;
+    let currentVersionMinor = 18;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -2695,6 +2729,12 @@
     }
 
     let currentFilter = 'all';
+    const expandedAlertIds = new Set();
+    function toggleAlertExpand(id) {
+      if (expandedAlertIds.has(id)) expandedAlertIds.delete(id);
+      else expandedAlertIds.add(id);
+      renderAlerts(currentFilter, document.getElementById('triageSearchInput').value);
+    }
     let currentConnFilter = 'all';
     let activeAlertForModal = null;
     let currentGraphAlertId = 'CORR-2026-065';
@@ -3646,80 +3686,77 @@
         const badgeColor = isCritical ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : (alert.riskScore >= 60 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-800 text-slate-300 border-slate-700');
 
         const card = document.createElement('div');
-        card.className = `p-4 rounded-xl bg-[#090d16] border ${isCritical ? 'border-rose-900/60 hover:border-rose-500/50' : 'border-slate-800/80 hover:border-slate-700'} transition space-y-3 shadow-md group cursor-pointer`;
+        const isExpanded = expandedAlertIds.has(alert.id);
+        card.className = `rounded-xl bg-[#090d16] border ${isCritical ? 'border-rose-900/60 hover:border-rose-500/50' : 'border-slate-800/80 hover:border-slate-700'} transition shadow-md group`;
         const sla = slaStatusForAlert(alert);
 
         card.innerHTML = `
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="px-2 py-0.5 rounded text-[12px] font-mono font-bold border ${badgeColor}">${alert.priority}</span>
-                <span onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Click to view Attack Path & Blast Radius Graph for ${alert.cve}" class="font-mono text-sm font-bold text-cyan-400 hover:text-cyan-200 hover:underline bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/80 cursor-pointer flex items-center gap-1 shadow-sm">
-                  ${alert.cve}
-                  <span class="text-[12px] text-purple-400">↗</span>
-                </span>
-                ${alert.inKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[11px] font-mono font-bold">IN CISA KEV</span>' : ''}
-                ${alert.internetFacing ? '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 text-[11px] font-mono">INTERNET-FACING</span>' : '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-mono">INTERNAL ONLY</span>'}
-                <span class="text-[12px] font-mono text-slate-400">${alert.id}</span>
-                <span class="text-[12px] text-cyan-400 font-mono ml-1 group-hover:inline hidden" onclick="openDeepDive('${alert.id}')">Inspect Spider Chart ➔</span>
-              </div>
-              <h3 onclick="openDeepDive('${alert.id}')" class="text-base font-semibold text-white tracking-tight group-hover:text-cyan-200 transition cursor-pointer">${alert.title}</h3>
+          <!-- Collapsed glance row -->
+          <div class="flex items-center gap-2.5 p-3 cursor-pointer" onclick="toggleAlertExpand('${alert.id}')">
+            <span class="px-2 py-0.5 rounded text-[12px] font-mono font-bold border shrink-0 ${badgeColor}">${alert.priority}</span>
+            <span onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Click to view Attack Path & Blast Radius Graph for ${alert.cve}" class="font-mono text-sm font-bold text-cyan-400 hover:text-cyan-200 hover:underline bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/80 cursor-pointer shrink-0">${alert.cve}</span>
+            <span class="text-[12px] font-mono text-slate-500 shrink-0 hidden sm:inline">${alert.id}</span>
+            ${alert.inKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[11px] font-mono font-bold shrink-0 hidden md:inline-block">KEV</span>' : ''}
+            <span class="text-sm text-slate-200 truncate flex-1 min-w-0">${alert.title}</span>
+            <span class="px-1.5 py-0.5 rounded border font-mono text-[12px] font-bold shrink-0 hidden sm:inline-block ${sla.cls}">${sla.label}</span>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-[11px] font-mono text-slate-500">RISK</span>
+              <span class="h-7 w-9 rounded-lg border flex items-center justify-center font-mono font-bold text-sm ${scoreColor}">${alert.riskScore}</span>
             </div>
-
-            <!-- Risk Score Widget -->
-            <div class="flex items-center gap-3" onclick="openDeepDive('${alert.id}')">
-              <div class="text-right">
-                <div class="text-[12px] font-mono text-slate-400">CORRELATED RISK</div>
-                <div class="text-lg font-mono font-bold ${scoreColor.split(' ')[0]}">${alert.riskScore} <span class="text-sm text-slate-400">/ 100</span></div>
-              </div>
-              <div class="h-9 w-9 rounded-lg border flex items-center justify-center font-mono font-bold text-base ${scoreColor}">
-                ${alert.riskScore}
-              </div>
-            </div>
+            <button type="button" title="${isExpanded ? 'Collapse' : 'Expand'} details" class="shrink-0 h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+              <svg class="w-4 h-4 transition-transform duration-150 ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
           </div>
 
-          <!-- Correlation Proof Box -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 p-2.5 rounded-lg bg-slate-950/70 border border-slate-800/70 text-[13px] font-mono cursor-pointer" onclick="openDeepDive('${alert.id}')">
-            <div>
-              <span class="text-slate-400 block text-[11px]">MATCHED ENVIRONMENT ASSET:</span>
-              <span class="text-cyan-300 font-semibold block">${alert.targetHost}</span>
-              <span class="text-slate-400 text-[12px]">${alert.software}</span>
+          <div class="space-y-3 px-4 pb-4 ${isExpanded ? '' : 'hidden'}">
+            <div class="flex flex-wrap items-center gap-2 -mt-1">
+              ${alert.internetFacing ? '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 text-[11px] font-mono">INTERNET-FACING</span>' : '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-mono">INTERNAL ONLY</span>'}
+              <span class="text-[12px] text-cyan-400 font-mono hover:underline cursor-pointer" onclick="event.stopPropagation(); openDeepDive('${alert.id}')">Inspect Spider Chart ➔</span>
             </div>
-            <div>
-              <span class="text-slate-400 block text-[11px]">EXTERNAL THREAT SIGNAL:</span>
-              <span class="text-rose-300 font-semibold block">${alert.actor}</span>
-              <span class="text-slate-400 text-[12px]">EPSS: ${alert.epss}% | CVSS: ${alert.cvss}</span>
-            </div>
-            <div>
-              <span class="text-slate-400 block text-[11px]">BLAST RADIUS / IMPACT:</span>
-              <span class="text-purple-300 font-semibold block">${alert.crownJewelPath}</span>
-              <span class="text-slate-400 text-[12px]">${alert.mitreTtp}</span>
-            </div>
-          </div>
 
-          <!-- Remediation / SLA Tracking -->
-          <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/70 text-[12px] font-mono" onclick="event.stopPropagation()">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-slate-500">Notified ${timeAgo(alert.notifiedAt)} to ${alert.owningTeam || 'Unassigned'}</span>
-              ${alert.assignedTo ? `<span class="px-1.5 py-0.5 rounded border border-cyan-800 bg-cyan-950/60 text-cyan-300 font-bold">Investigating: ${alert.assignedTo.displayName}</span>` : ''}
-              <span class="px-1.5 py-0.5 rounded border font-bold ${sla.cls}">${sla.label}</span>
+            <!-- Correlation Proof Box -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 p-2.5 rounded-lg bg-slate-950/70 border border-slate-800/70 text-[13px] font-mono cursor-pointer" onclick="event.stopPropagation(); openDeepDive('${alert.id}')">
+              <div>
+                <span class="text-slate-400 block text-[11px]">MATCHED ENVIRONMENT ASSET:</span>
+                <span class="text-cyan-300 font-semibold block">${alert.targetHost}</span>
+                <span class="text-slate-400 text-[12px]">${alert.software}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[11px]">EXTERNAL THREAT SIGNAL:</span>
+                <span class="text-rose-300 font-semibold block">${alert.actor}</span>
+                <span class="text-slate-400 text-[12px]">EPSS: ${alert.epss}% | CVSS: ${alert.cvss}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[11px]">BLAST RADIUS / IMPACT:</span>
+                <span class="text-purple-300 font-semibold block">${alert.crownJewelPath}</span>
+                <span class="text-slate-400 text-[12px]">${alert.mitreTtp}</span>
+              </div>
             </div>
-            <div class="flex items-center gap-1">${remediationButtonsHtml(alert)}</div>
-          </div>
 
-          <!-- Summary and Fast Triage Actions -->
-          <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <p class="text-sm text-slate-400 max-w-xl leading-relaxed">${alert.summary}</p>
-            <div class="flex items-center gap-2">
-              <button onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Open Attack Path in Blast Radius Graph" class="px-2.5 py-1 rounded bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-800 text-sm font-mono transition flex items-center gap-1.5 shadow-sm">
-                <span>View in Graph</span>
-              </button>
-              <button onclick="event.stopPropagation(); openDeepDive('${alert.id}')" title="Open 6-Axis Spider Chart & Full Metrics" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-mono transition flex items-center gap-1">
-                <span>Spider Chart</span>
-              </button>
-              <button onclick="event.stopPropagation(); openThreatMemoModal('${alert.id}')" title="Generate a pre-built Threat Memo for leadership" class="px-2.5 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm transition">
-                Memo
-              </button>
+            <!-- Remediation / SLA Tracking -->
+            <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/70 text-[12px] font-mono" onclick="event.stopPropagation()">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-slate-500">Notified ${timeAgo(alert.notifiedAt)} to ${alert.owningTeam || 'Unassigned'}</span>
+                ${alert.assignedTo ? `<span class="px-1.5 py-0.5 rounded border border-cyan-800 bg-cyan-950/60 text-cyan-300 font-bold">Investigating: ${alert.assignedTo.displayName}</span>` : ''}
+                <span class="px-1.5 py-0.5 rounded border font-bold ${sla.cls}">${sla.label}</span>
+              </div>
+              <div class="flex items-center gap-1">${remediationButtonsHtml(alert)}</div>
+            </div>
+
+            <!-- Summary and Fast Triage Actions -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <p class="text-sm text-slate-400 max-w-xl leading-relaxed">${alert.summary}</p>
+              <div class="flex items-center gap-2">
+                <button onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Open Attack Path in Blast Radius Graph" class="px-2.5 py-1 rounded bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-800 text-sm font-mono transition flex items-center gap-1.5 shadow-sm">
+                  <span>View in Graph</span>
+                </button>
+                <button onclick="event.stopPropagation(); openDeepDive('${alert.id}')" title="Open 6-Axis Spider Chart & Full Metrics" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-mono transition flex items-center gap-1">
+                  <span>Spider Chart</span>
+                </button>
+                <button onclick="event.stopPropagation(); openThreatMemoModal('${alert.id}')" title="Generate a pre-built Threat Memo for leadership" class="px-2.5 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm transition">
+                  Memo
+                </button>
+              </div>
             </div>
           </div>
         `;
@@ -4112,6 +4149,41 @@
       }
     }
 
+    async function loadDigestMinPriority() {
+      const select = document.getElementById('digestMinPrioritySelect');
+      const status = document.getElementById('digestMinPriorityStatus');
+      if (!select) return;
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/settings/digest-priority`);
+        if (!res.ok) throw new Error('unreachable');
+        const data = await res.json();
+        select.value = data.minPriority;
+        if (status) status.textContent = '';
+      } catch (e) {
+        if (status) status.textContent = 'Live backend unreachable — setting unavailable on the public demo.';
+      }
+    }
+
+    async function saveDigestMinPriority() {
+      const select = document.getElementById('digestMinPrioritySelect');
+      const status = document.getElementById('digestMinPriorityStatus');
+      if (!select) return;
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/settings/digest-priority`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ minPriority: select.value })
+        });
+        if (!res.ok) throw new Error('save failed');
+        if (status) status.textContent = 'Saved.';
+        showToast(`CVE digest minimum severity set to "${select.options[select.selectedIndex].text}".`, 'success');
+        logChange('Digest Severity Filter Updated', select.options[select.selectedIndex].text);
+      } catch (e) {
+        if (status) status.textContent = 'Could not save — live backend unreachable.';
+        showToast('Could not save digest severity filter — live backend unreachable.', 'error');
+      }
+    }
+
     async function sendTestNotification() {
       const type = document.getElementById('testNotificationType').value;
       const recipient = document.getElementById('testNotificationRecipient').value.trim();
@@ -4200,13 +4272,57 @@
     const liveNewsLinks = new Set();
 
     function mergeLiveNews(rows) {
+      let added = false;
       rows.forEach(row => {
         if (liveNewsLinks.has(row.link)) return;
         liveNewsLinks.add(row.link);
         LIVE_NEWS_ITEMS.unshift(row);
+        added = true;
       });
-      // Not yet surfaced in its own dedicated view — stored here for now so the
-      // sync path works end-to-end; display work comes next.
+      if (added) renderLiveNewsList();
+    }
+
+    function renderLiveNewsCards(items) {
+      if (!items.length) {
+        return `<div class="p-4 text-center text-[13px] font-mono text-slate-500 border border-dashed border-slate-800 rounded-lg">No critical articles matched yet.</div>`;
+      }
+      return items.map(n => `
+        <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800 space-y-1.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-[11px] font-mono text-slate-500 uppercase tracking-wide">${n.source || 'Unknown Source'}</span>
+            <span class="text-[11px] font-mono text-slate-600">${n.publishedAt ? timeAgo(new Date(n.publishedAt).getTime()) : ''}</span>
+          </div>
+          <a href="${n.link}" target="_blank" rel="noopener noreferrer" class="block text-sm font-semibold text-white hover:text-purple-300 transition">${n.title}</a>
+          ${n.summary ? `<p class="text-[13px] text-slate-400 leading-relaxed">${n.summary}</p>` : ''}
+          <div class="flex flex-wrap gap-1.5">
+            ${(n.matchedKeywords || []).map(k => `<span class="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800 text-[10.5px] font-mono uppercase">${k}</span>`).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderLiveNewsList() {
+      const list = document.getElementById('liveNewsList');
+      const status = document.getElementById('liveNewsStatus');
+      if (!list || !status) return;
+      list.innerHTML = renderLiveNewsCards(LIVE_NEWS_ITEMS.slice(0, 30));
+      status.textContent = LIVE_NEWS_ITEMS.length
+        ? `Showing ${Math.min(30, LIVE_NEWS_ITEMS.length)} of ${LIVE_NEWS_ITEMS.length} matched article(s), most recent first.`
+        : 'Not pulled yet this session — syncing a live RSS connector under Connectors & APIs will populate this automatically.';
+    }
+
+    async function fetchLiveNews() {
+      const btn = document.getElementById('btnRefreshLiveNews');
+      if (btn) { btn.disabled = true; btn.classList.add('opacity-60'); }
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/news?limit=50`);
+        if (res.ok) {
+          const rows = await res.json();
+          mergeLiveNews(rows);
+        }
+      } catch (e) { /* no backend reachable — stay on whatever's already merged */ }
+      renderLiveNewsList();
+      if (btn) { btn.disabled = false; btn.classList.remove('opacity-60'); }
     }
 
     function mergeLiveAlerts(rows) {
@@ -5832,6 +5948,8 @@ Correlation Team does not perform remediation itself.
       renderFeeds();
       fetchLiveAlerts();
       fetchLiveConnectors();
+      fetchLiveNews();
+      loadDigestMinPriority();
       populateGraphIncidentSelector();
       initGraphPanZoom();
       updateDocumentTitle();
