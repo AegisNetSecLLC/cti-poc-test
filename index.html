@@ -2661,7 +2661,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 22;
+    let currentVersionMinor = 23;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5752,7 +5752,8 @@ Correlation Team does not perform remediation itself.
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: toTokens.join(', '), subject, docxBase64,
-            filename: `threat-memo-${alert.cve}.docx`
+            filename: `threat-memo-${alert.cve}.docx`,
+            bodyText: document.getElementById('memoBody').value
           })
         });
         const result = await res.json();
