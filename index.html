@@ -1466,7 +1466,7 @@
             <span>ACTIVATE PENDING CHANGES</span>
           </h3>
           <p class="text-[13px] text-slate-400 mt-0.5 font-mono">
-            <span id="activateVersionFrom">v2.8</span> <span class="text-slate-500">➔</span> <span id="activateVersionTo" class="text-cyan-300 font-bold">v2.9</span>
+            <span id="activatePendingCount" class="text-cyan-300 font-bold">0</span> pending configuration change(s) this session
           </p>
         </div>
         <button onclick="closeActivateModal()" class="text-slate-400 hover:text-white">✕</button>
@@ -2945,7 +2945,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 36;
+    let currentVersionMinor = 37;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5159,8 +5159,7 @@
     }
 
     function openActivateModal() {
-      document.getElementById('activateVersionFrom').textContent = `v${currentVersionMajor}.${currentVersionMinor}`;
-      document.getElementById('activateVersionTo').textContent = `v${currentVersionMajor}.${currentVersionMinor + 1}`;
+      document.getElementById('activatePendingCount').textContent = pendingChanges.length;
 
       const list = document.getElementById('pendingChangesList');
       if (pendingChanges.length === 0) {
@@ -5199,10 +5198,6 @@
       btnText.textContent = 'Deploying...';
 
       setTimeout(() => {
-        currentVersionMinor += 1;
-        const versionLabel = `v${currentVersionMajor}.${currentVersionMinor}`;
-        document.getElementById('platformVersionBadge').textContent = `${versionLabel} DYNAMIC GRAPH`;
-
         pendingChanges.length = 0;
         document.getElementById('pendingChangesBadge').classList.add('hidden');
 
@@ -5215,7 +5210,7 @@
         btnText.textContent = 'Activate & Deploy';
         closeActivateModal();
 
-        showMockModal('DEPLOYED', `${changeCount} change${changeCount === 1 ? '' : 's'} activated and now reflected as the current session baseline (${versionLabel}). This only updates the live view — nothing was pushed to GitHub.`);
+        showMockModal('ACTIVATED', `${changeCount} change${changeCount === 1 ? '' : 's'} activated and now reflected in this session. Connector/feed/alert-rule changes like this don't move the platform version — only a real code deploy does. Nothing was pushed to GitHub.`);
       }, 900);
     }
 
