@@ -2661,7 +2661,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 25;
+    let currentVersionMinor = 26;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5060,6 +5060,18 @@
       critical: { label: 'CRITICAL', color: 'red', activeClasses: 'bg-red-600 text-white border-red-500', btnClasses: 'bg-red-600 hover:bg-red-500 text-white', stampChar: '#', tagline: 'IMMEDIATE ACTION REQUIRED — ESCALATE NOW' }
     };
 
+    // Live NVD-sourced alerts have no real short title — the backend falls back to the CVE ID
+    // itself (see server.js), so alert.title === alert.cve for those. Showing both verbatim
+    // ("CVE-2026-117593 — CVE-2026-117593") is pure clutter, so only append the title when it
+    // actually adds information. Demo alerts have real descriptive titles and are unaffected.
+    function cveAndTitle(alert) {
+      return (alert.title && alert.title !== alert.cve) ? `${alert.cve} — ${alert.title}` : alert.cve;
+    }
+
+    function buildMemoSubject(alert, riskRating) {
+      return `Threat Memo [${RISK_RATING_META[riskRating].label}]: ${cveAndTitle(alert)}`;
+    }
+
     function buildRiskStamp(riskRating) {
       const meta = RISK_RATING_META[riskRating];
       const border = meta.stampChar.repeat(64);
@@ -5140,7 +5152,7 @@ Classification: ${tlp}
 ${buildRiskStamp(riskRating)}
 
 DATE:              ${dateStr}
-RE:                ${alert.cve} — ${alert.title}
+RE:                ${cveAndTitle(alert)}
 ANALYST RISK RATING: ${RISK_RATING_META[riskRating].label}
 PRIORITY:          ${alert.priority}   |   Correlated Risk: ${alert.riskScore}/100
 PREPARED BY:       AEGIS.INTEL Threat Correlation Team
@@ -5207,7 +5219,7 @@ OWNING TEAM:       ${alert.owningTeam || 'Unassigned'}  (action required)`
 
       const metaLine = (label, value) => new Paragraph({ children: [new TextRun({ text: `${label}  `, bold: true, size: 24 }), new TextRun({ text: value, size: 24 })], spacing: { after: 60 } });
       children.push(metaLine('DATE:', dateStr));
-      children.push(metaLine('RE:', `${alert.cve} — ${alert.title}`));
+      children.push(metaLine('RE:', cveAndTitle(alert)));
       children.push(metaLine('ANALYST RISK RATING:', meta.label));
       children.push(metaLine('PRIORITY:', `${alert.priority}   |   Correlated Risk: ${alert.riskScore}/100`));
       children.push(metaLine('PREPARED BY:', 'AEGIS.INTEL Threat Correlation Team'));
@@ -5680,7 +5692,7 @@ Correlation Team does not perform remediation itself.
       const alert = MOCK_ALERTS.find(a => a.id === activeMemoAlertId);
       if (!alert) return;
       const text = document.getElementById('memoBody').value;
-      const subject = `Threat Memo [${RISK_RATING_META[activeMemoRiskRating].label}]: ${alert.cve} — ${alert.title}`;
+      const subject = buildMemoSubject(alert, activeMemoRiskRating);
       const status = document.getElementById('memoCopyStatus');
 
       const recipients = document.getElementById('memoRecipientInput').value.trim();
@@ -5755,7 +5767,7 @@ Correlation Team does not perform remediation itself.
           : buildMemoDocxDocument(alert, activeMemoRiskRating, activeMemoSections, gaugeImg);
         const blob = await window.docx.Packer.toBlob(doc);
         const docxBase64 = await blobToBase64(blob);
-        const subject = `Threat Memo [${RISK_RATING_META[activeMemoRiskRating].label}]: ${alert.cve} — ${alert.title}`;
+        const subject = buildMemoSubject(alert, activeMemoRiskRating);
 
         const res = await fetch(`${LIVE_API_BASE}/memo/send`, {
           method: 'POST',
