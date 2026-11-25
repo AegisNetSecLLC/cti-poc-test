@@ -885,6 +885,31 @@
                 </button>
               </div>
             </div>
+
+            <div class="border-t border-slate-800 pt-3 space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Recent Sends <span class="text-slate-600 normal-case">(proof of delivery)</span></span>
+                <button type="button" onclick="fetchSendLog()" class="text-[12px] text-cyan-400 hover:underline font-mono">Refresh</button>
+              </div>
+              <p class="text-[12px] text-slate-500">
+                Every real email the live backend has sent — memo, digest, or test — with the exact moment it left our system and Resend's own delivery acknowledgment. Shown in your browser's local time. Use this as proof of send if a recipient says they never got something — what we control is confirmed here; anything after that is the recipient's mail gateway.
+              </p>
+              <div class="overflow-x-auto rounded-lg border border-slate-800">
+                <table class="w-full text-[12px] font-mono border-collapse">
+                  <thead>
+                    <tr class="text-left text-slate-500 bg-slate-950/60">
+                      <th class="py-1.5 px-2 font-normal">Sent</th>
+                      <th class="py-1.5 px-2 font-normal">Type</th>
+                      <th class="py-1.5 px-2 font-normal">To</th>
+                      <th class="py-1.5 px-2 font-normal">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sendLogBody">
+                    <tr><td colspan="4" class="py-3 text-center text-slate-600">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
         </div>
@@ -2661,7 +2686,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 26;
+    let currentVersionMinor = 27;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5050,6 +5075,54 @@
             : 'settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent';
         }
       });
+      if (name === 'alerting') fetchSendLog();
+    }
+
+    const SEND_LOG_TYPE_LABELS = {
+      memo: 'Threat Memo',
+      digest: 'CVE Digest',
+      digest_test: 'CVE Digest (test)',
+      news_digest_test: 'News Digest (test)'
+    };
+
+    function renderSendLogRows(rows) {
+      const tbody = document.getElementById('sendLogBody');
+      if (!tbody) return;
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-3 text-center text-slate-600">No sends recorded yet on the live backend.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        // created_at is stored as UTC ISO — new Date() + toLocaleString() renders it in
+        // whatever timezone the PERSON LOOKING AT THIS is actually in, so "what time did this
+        // send" never again depends on mentally converting from the server's own clock.
+        const when = new Date(r.created_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium' });
+        const label = SEND_LOG_TYPE_LABELS[r.type] || r.type;
+        const proofTitle = r.message_id ? `Message-ID: ${r.message_id}${r.smtp_response ? ' — SMTP: ' + r.smtp_response : ''}` : '';
+        const statusPill = r.status === 'sent'
+          ? `<span class="px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-700 text-[11px]" title="${proofTitle}">SENT</span>`
+          : `<span class="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-700 text-[11px]" title="${r.error || 'Send failed'}">FAILED</span>`;
+        return `
+          <tr class="border-t border-slate-900">
+            <td class="py-1.5 px-2 text-slate-400 whitespace-nowrap">${when}</td>
+            <td class="py-1.5 px-2 text-slate-300 whitespace-nowrap">${label}</td>
+            <td class="py-1.5 px-2 text-slate-400 truncate max-w-[180px]" title="${r.recipients || ''}">${r.recipients || '—'}</td>
+            <td class="py-1.5 px-2">${statusPill}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    async function fetchSendLog() {
+      const tbody = document.getElementById('sendLogBody');
+      if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="py-3 text-center text-slate-600">Loading…</td></tr>`;
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/send-log?limit=25`);
+        if (!res.ok) throw new Error('unreachable');
+        const rows = await res.json();
+        renderSendLogRows(rows);
+      } catch (e) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="py-3 text-center text-slate-600">Live backend unreachable — unavailable on the public demo.</td></tr>`;
+      }
     }
     let activeMemoRiskRating = 'medium';
 
