@@ -331,15 +331,40 @@
         </div>
 
         <!-- Filter Bar & Search -->
-        <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-          <div class="flex flex-wrap items-center gap-2">
-            <button onclick="setFilter('all')" id="filter-all" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">All (<span id="countFilterAll">5</span>)</button>
-            <button onclick="setFilter('p1')" id="filter-p1" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Critical P1 (<span id="countFilterP1">3</span>)</button>
-            <button onclick="setFilter('kev')" id="filter-kev" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">CISA KEV Only</button>
-            <button onclick="setFilter('internet')" id="filter-internet" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Internet Exposed Only</button>
+        <div class="p-3 rounded-xl bg-slate-900/40 border border-slate-800 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="setFilter('all')" id="filter-all" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">All (<span id="countFilterAll">5</span>)</button>
+              <button onclick="setFilter('p1')" id="filter-p1" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Critical P1 (<span id="countFilterP1">3</span>)</button>
+              <button onclick="setFilter('kev')" id="filter-kev" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">CISA KEV Only</button>
+              <button onclick="setFilter('internet')" id="filter-internet" class="filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent">Internet Exposed Only</button>
+            </div>
+            <div class="relative w-full sm:w-64">
+              <input type="text" id="triageSearchInput" onkeyup="filterAlerts()" placeholder="Filter CVE, Host, or Actor..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+            </div>
           </div>
-          <div class="relative w-full sm:w-64">
-            <input type="text" id="triageSearchInput" onkeyup="filterAlerts()" placeholder="Filter CVE, Host, or Actor..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+          <div class="flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-800/70">
+            <span class="text-[11px] font-mono text-slate-500 uppercase tracking-wide shrink-0">Refine:</span>
+            <select id="ratingFilterSelect" onchange="setRatingFilter(this.value)" title="Filter by priority rating" class="bg-slate-950 border border-slate-800 rounded-md px-2 py-1 text-[12px] font-mono text-slate-300 focus:outline-none focus:border-cyan-500">
+              <option value="all">All Ratings</option>
+              <option value="P1-CRITICAL">P1 — Critical</option>
+              <option value="P2-HIGH">P2 — High</option>
+              <option value="P3-MEDIUM">P3 — Medium</option>
+              <option value="P4-LOW">P4 — Low</option>
+            </select>
+            <select id="statusFilterSelect" onchange="setStatusFilter(this.value)" title="Filter by remediation status" class="bg-slate-950 border border-slate-800 rounded-md px-2 py-1 text-[12px] font-mono text-slate-300 focus:outline-none focus:border-cyan-500">
+              <option value="all">All Statuses</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+            <select id="assignFilterSelect" onchange="setAssignFilter(this.value)" title="Filter by investigator assignment" class="bg-slate-950 border border-slate-800 rounded-md px-2 py-1 text-[12px] font-mono text-slate-300 focus:outline-none focus:border-cyan-500">
+              <option value="all">Everyone</option>
+              <option value="mine">Assigned to Me</option>
+              <option value="assigned">Assigned (Any)</option>
+              <option value="unassigned">Unassigned</option>
+            </select>
+            <button type="button" onclick="resetRefineFilters()" id="btnResetRefineFilters" title="Clear Rating/Status/Assignment filters" class="hidden text-[12px] font-mono text-slate-500 hover:text-rose-300 transition px-1.5">Clear refine ✕</button>
           </div>
         </div>
 
@@ -2260,12 +2285,12 @@
     // scanning, so those still win the slot over the assignee.
     function collapsedStatusHtml(alert, sla) {
       if (sla.label === 'AT RISK' || sla.label === 'SLA BREACHED') {
-        return `<span class="px-1.5 py-0.5 rounded border font-mono text-[12px] font-bold shrink-0 hidden sm:inline-block ${sla.cls}">${sla.label}</span>`;
+        return `<span class="px-1.5 py-0.5 rounded border font-mono text-[12px] font-bold shrink-0 hidden md:inline-flex items-center justify-center min-w-[80px] text-center ${sla.cls}">${sla.label}</span>`;
       }
       if (alert.assignedTo) {
-        return `<span class="px-1.5 py-0.5 rounded border border-cyan-800 bg-cyan-950/60 text-cyan-300 text-[12px] font-mono font-bold shrink-0 hidden sm:inline-block max-w-[130px] truncate" title="Investigating: ${alert.assignedTo.displayName}">${alert.assignedTo.displayName}</span>`;
+        return `<span class="px-1.5 py-0.5 rounded border border-cyan-800 bg-cyan-950/60 text-cyan-300 text-[12px] font-mono font-bold shrink-0 hidden md:inline-flex items-center justify-center min-w-[80px] max-w-[130px] text-center truncate" title="Investigating: ${alert.assignedTo.displayName}">${alert.assignedTo.displayName}</span>`;
       }
-      return `<span class="px-1.5 py-0.5 rounded border border-slate-800 bg-slate-900 text-slate-500 text-[12px] font-mono shrink-0 hidden sm:inline-block" title="No investigator assigned yet — expand to assign one">Unassigned</span>`;
+      return `<span class="px-1.5 py-0.5 rounded border border-slate-800 bg-slate-900 text-slate-500 text-[12px] font-mono font-bold shrink-0 hidden md:inline-flex items-center justify-center min-w-[80px] text-center" title="No investigator assigned yet — expand to assign one">Unassigned</span>`;
     }
 
     // Remediation status at a glance, gated to md: so it only shows up once there's room —
@@ -2277,18 +2302,24 @@
         resolved: { label: 'Resolved', cls: 'bg-emerald-950 text-emerald-300 border-emerald-700' }
       };
       const m = meta[alert.remediationStatus] || meta.open;
-      return `<span class="px-1.5 py-0.5 rounded border font-mono text-[11px] font-semibold shrink-0 hidden md:inline-block ${m.cls}" title="Remediation status: ${m.label}">${m.label}</span>`;
+      return `<span class="px-1.5 py-0.5 rounded border font-mono text-[12px] font-bold shrink-0 hidden md:inline-flex items-center justify-center min-w-[80px] text-center ${m.cls}" title="Remediation status: ${m.label}">${m.label}</span>`;
     }
 
-    // Replaces the old redundant "LIVE-CVE-xxxx" / "CORR-xxxx" ID that just repeated the CVE badge
-    // next to it. Shows a short alias/description instead, and only when it actually adds information
-    // — skipped when the alert has no real summary, or when that summary just restates the title.
-    function collapsedAliasHtml(alert) {
+    // Single flex-1 slot that used to always show alert.title. For live NVD alerts with no real
+    // short title, alert.title just equals the CVE — showing it here duplicated the CVE badge
+    // immediately to its left. In that case, show the real description instead; otherwise show
+    // the title as before.
+    function collapsedTitleHtml(alert) {
+      const isCveAsTitle = alert.title && alert.cve && alert.title.toLowerCase() === alert.cve.toLowerCase();
+      if (!isCveAsTitle) {
+        return `<span class="text-sm text-slate-200 truncate flex-1 min-w-0">${alert.title}</span>`;
+      }
       const raw = (alert.summary || '').trim();
-      if (!raw || raw === alert.title || raw.toLowerCase() === String(alert.cve || '').toLowerCase()) return '';
+      if (!raw) {
+        return `<span class="text-sm text-slate-500 italic truncate flex-1 min-w-0">No short title available from this source.</span>`;
+      }
       const escaped = raw.replace(/"/g, '&quot;');
-      const short = raw.length > 60 ? raw.slice(0, 57) + '…' : raw;
-      return `<span class="text-[12px] text-slate-500 truncate shrink-0 hidden lg:inline max-w-[260px]" title="${escaped}">${short}</span>`;
+      return `<span class="text-sm text-slate-300 truncate flex-1 min-w-0" title="${escaped}">${raw}</span>`;
     }
 
     function assignButtonHtml(alert) {
@@ -2818,7 +2849,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 32;
+    let currentVersionMinor = 33;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -2906,6 +2937,12 @@
     }
 
     let currentFilter = 'all';
+    // Orthogonal "refine" facets — layered on top of the quick-preset pills above instead of
+    // becoming more pills themselves, since a pill per status/assignment value would have made
+    // that row unreadably long.
+    let currentRatingFilter = 'all';
+    let currentStatusFilter = 'all';
+    let currentAssignFilter = 'all';
     const expandedAlertIds = new Set();
     function toggleAlertExpand(id) {
       if (expandedAlertIds.has(id)) expandedAlertIds.delete(id);
@@ -3836,15 +3873,22 @@
       document.getElementById('countFilterP1').textContent = MOCK_ALERTS.filter(a => a.priority.includes('P1')).length;
 
       const filtered = MOCK_ALERTS.filter(alert => {
-        const matchesSearch = alert.title.toLowerCase().includes(search) || 
-                              alert.cve.toLowerCase().includes(search) || 
+        const matchesSearch = alert.title.toLowerCase().includes(search) ||
+                              alert.cve.toLowerCase().includes(search) ||
                               alert.targetHost.toLowerCase().includes(search) ||
                               alert.actor.toLowerCase().includes(search);
         if (!matchesSearch) return false;
 
-        if (filterType === 'p1') return alert.priority.includes('P1');
-        if (filterType === 'kev') return alert.inKev;
-        if (filterType === 'internet') return alert.internetFacing;
+        if (filterType === 'p1' && !alert.priority.includes('P1')) return false;
+        if (filterType === 'kev' && !alert.inKev) return false;
+        if (filterType === 'internet' && !alert.internetFacing) return false;
+
+        if (currentRatingFilter !== 'all' && alert.priority !== currentRatingFilter) return false;
+        if (currentStatusFilter !== 'all' && alert.remediationStatus !== currentStatusFilter) return false;
+        if (currentAssignFilter === 'assigned' && !alert.assignedTo) return false;
+        if (currentAssignFilter === 'unassigned' && alert.assignedTo) return false;
+        if (currentAssignFilter === 'mine' && !(alert.assignedTo && currentUser && alert.assignedTo.username === currentUser.username)) return false;
+
         return true;
       });
 
@@ -3872,9 +3916,8 @@
           <div class="flex items-center gap-2.5 p-3 cursor-pointer" onclick="toggleAlertExpand('${alert.id}')">
             <span class="px-2 py-0.5 rounded text-[12px] font-mono font-bold border shrink-0 ${badgeColor}">${alert.priority}</span>
             <span onclick="event.stopPropagation(); openGraphForAlert('${alert.id}')" title="Click to view Attack Path & Blast Radius Graph for ${alert.cve}" class="font-mono text-sm font-bold text-cyan-400 hover:text-cyan-200 hover:underline bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/80 cursor-pointer shrink-0">${alert.cve}</span>
-            ${collapsedAliasHtml(alert)}
             ${alert.inKev ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[11px] font-mono font-bold shrink-0 hidden md:inline-block">KEV</span>' : ''}
-            <span class="text-sm text-slate-200 truncate flex-1 min-w-0">${alert.title}</span>
+            ${collapsedTitleHtml(alert)}
             ${collapsedRemediationHtml(alert)}
             ${collapsedStatusHtml(alert, sla)}
             <div class="flex items-center gap-1.5 shrink-0" title="CVSS Base Score — Correlated Risk (${alert.riskScore}/100) is in the details below">
@@ -5178,7 +5221,12 @@
       {
         title: 'Monitor page decluttering',
         status: 'shipped',
-        detail: 'Correlated Triage rows collapse to a one-line glance (priority, CVE, title, SLA, score) and expand on click for the full correlation/remediation detail. The glance pill shows CVSS instead of Risk Score, since there\'s no way to judge true organizational risk without an asset-correlation connector yet — Correlated Risk is still one click away in the expanded view.'
+        detail: 'Correlated Triage rows collapse to a one-line glance (priority, CVE, title, SLA, score) and expand on click for the full correlation/remediation detail. The glance pill shows CVSS instead of Risk Score, since there\'s no way to judge true organizational risk without an asset-correlation connector yet — Correlated Risk is still one click away in the expanded view. The old redundant internal ID/title text for live NVD alerts with no real short title (previously showing the CVE a second time) now shows the real NVD description instead. Remediation status and assignment chips at the end of the row are now matched in size.'
+      },
+      {
+        title: 'Triage filter bar — Rating / Status / Assignment facets',
+        status: 'shipped',
+        detail: 'A second "Refine" row under the existing quick-preset pills (All / Critical P1 / CISA KEV / Internet Exposed) adds three independent dropdowns — Rating (P1–P4), Status (Open / In Progress / Resolved), and Assignment (Everyone / Assigned to Me / Assigned / Unassigned) — that layer on top of the presets and search instead of turning into more pills. A "Clear refine" link appears only once one of the three is actually set.'
       },
       {
         title: 'Enrichment connectors (VirusTotal, AbuseIPDB, GreyNoise, etc.)',
@@ -6059,6 +6107,40 @@ Correlation Team does not perform remediation itself.
     function filterAlerts() {
       const search = document.getElementById('triageSearchInput').value;
       renderAlerts(currentFilter, search);
+    }
+
+    function updateRefineClearButtonVisibility() {
+      const anyActive = currentRatingFilter !== 'all' || currentStatusFilter !== 'all' || currentAssignFilter !== 'all';
+      document.getElementById('btnResetRefineFilters').classList.toggle('hidden', !anyActive);
+    }
+
+    function setRatingFilter(value) {
+      currentRatingFilter = value;
+      updateRefineClearButtonVisibility();
+      renderAlerts(currentFilter, document.getElementById('triageSearchInput').value);
+    }
+
+    function setStatusFilter(value) {
+      currentStatusFilter = value;
+      updateRefineClearButtonVisibility();
+      renderAlerts(currentFilter, document.getElementById('triageSearchInput').value);
+    }
+
+    function setAssignFilter(value) {
+      currentAssignFilter = value;
+      updateRefineClearButtonVisibility();
+      renderAlerts(currentFilter, document.getElementById('triageSearchInput').value);
+    }
+
+    function resetRefineFilters() {
+      currentRatingFilter = 'all';
+      currentStatusFilter = 'all';
+      currentAssignFilter = 'all';
+      document.getElementById('ratingFilterSelect').value = 'all';
+      document.getElementById('statusFilterSelect').value = 'all';
+      document.getElementById('assignFilterSelect').value = 'all';
+      updateRefineClearButtonVisibility();
+      renderAlerts(currentFilter, document.getElementById('triageSearchInput').value);
     }
 
     function renderAssets() {
