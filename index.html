@@ -177,6 +177,13 @@
               </span>
               <span id="badgeTriageCount" class="nav-label px-1.5 py-0.5 rounded text-[12px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30">3</span>
             </button>
+            <button onclick="openMyQueue()" id="nav-myqueue" title="Correlated Triage, pre-filtered to what's assigned to you" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-cyan-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                <span class="nav-label">My Queue</span>
+              </span>
+              <span id="badgeMyQueueCount" class="nav-label px-1.5 py-0.5 rounded text-[12px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">0</span>
+            </button>
 
             <div class="nav-group-label px-2 pt-4 pb-1 text-[10px] font-semibold text-slate-600 tracking-widest uppercase font-mono">Investigate</div>
             <button onclick="switchTab('graph')" id="nav-graph" class="nav-item w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition">
@@ -2272,11 +2279,15 @@
       alert.remediationStatus = status;
       alert.resolvedAt = status === 'resolved' ? Date.now() : null;
       saveRemediationToStorage();
+      syncAlertStateToBackend(alert);
       logActivity('Remediation Status Updated', `${alert.cve} marked "${REMEDIATION_STATUS_LABELS[status]}" for ${alert.owningTeam || 'owning team'}`);
       renderAlerts();
       updateDocumentTitle();
       showToast(`${alert.cve} marked "${REMEDIATION_STATUS_LABELS[status]}".`, 'success');
       if (!document.getElementById('view-overview').classList.contains('hidden')) renderOverviewPanel();
+      if ((status === 'in_progress' || status === 'resolved') && alert.assignedTo) {
+        notifyStatusChange(alert, status);
+      }
     }
 
     // Collapsed glance row has room for one status chip. "ON TRACK" is the default, non-actionable
@@ -2319,7 +2330,21 @@
         return `<span class="text-sm text-slate-500 italic truncate flex-1 min-w-0">No short title available from this source.</span>`;
       }
       const escaped = raw.replace(/"/g, '&quot;');
-      return `<span class="text-sm text-slate-300 truncate flex-1 min-w-0" title="${escaped}">${raw}</span>`;
+      const short = shortDescriptionText(raw);
+      return `<span class="text-sm text-slate-300 truncate flex-1 min-w-0" title="${escaped}">${short}</span>`;
+    }
+
+    // NVD descriptions almost always front-load the actual vulnerability type in sentence one
+    // ("X is affected by a DOM-based XSS vulnerability.") — the rest tends to be boilerplate
+    // ("An attacker could exploit this issue by...") repeated verbatim across huge numbers of
+    // CVEs. Cut at the first sentence instead of a raw character count so the glance row shows
+    // the meaningful clause, not a mid-sentence fragment. Falls back to a hard cutoff only when
+    // there's no sentence boundary early enough to be useful.
+    function shortDescriptionText(raw, maxLen = 110) {
+      const sentenceEnd = raw.indexOf('. ');
+      if (sentenceEnd > -1 && sentenceEnd <= maxLen) return raw.slice(0, sentenceEnd + 1);
+      if (raw.length <= maxLen) return raw;
+      return raw.slice(0, maxLen - 1).trim() + '…';
     }
 
     function assignButtonHtml(alert) {
@@ -2372,6 +2397,7 @@
       const was = alert.assignedTo.displayName;
       alert.assignedTo = null;
       saveRemediationToStorage();
+      syncAlertStateToBackend(alert);
       logActivity('Investigator Unassigned', `${was} unassigned from ${alert.cve}`);
       renderAlerts();
       showToast(`${was} is no longer assigned to ${alert.cve}.`, 'success');
@@ -2385,6 +2411,7 @@
 
       alert.assignedTo = { username: user.username, displayName: user.displayName, email: user.email };
       saveRemediationToStorage();
+      syncAlertStateToBackend(alert);
       logActivity('Investigator Assigned', `${alert.cve} assigned to ${user.displayName}${currentUser && currentUser.username !== user.username ? ` by ${currentUser.displayName}` : ''}`);
       renderAlerts();
       updateDocumentTitle();
@@ -2414,6 +2441,71 @@
       } catch (e) {
         showToast(`Assigned, but the notification email didn't send (${e.message}).`, 'error');
       }
+    }
+
+    // Remediation status + assignment used to live only in this browser's localStorage. This
+    // pushes every change to the real backend too (same alert_state table GET on load merges
+    // from), fire-and-forget like the memo archive — the public demo simply no-ops when
+    // unreachable, same as everywhere else this pattern is used.
+    function syncAlertStateToBackend(alert) {
+      fetch(`${LIVE_API_BASE}/alert-state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          alertId: alert.id,
+          remediationStatus: alert.remediationStatus,
+          resolvedAt: alert.resolvedAt ? new Date(alert.resolvedAt).toISOString() : null,
+          assignedTo: alert.assignedTo || null
+        })
+      }).catch(() => { /* live backend unreachable — local/localStorage state still applies */ });
+    }
+
+    async function notifyStatusChange(alert, status) {
+      if (!alert.assignedTo) return;
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/notify/status-change`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: alert.assignedTo.email,
+            cve: alert.cve,
+            title: alert.title,
+            alertId: alert.id,
+            status: status,
+            changedBy: currentUser ? currentUser.displayName : 'AegisCTI'
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+        showToast(`Status-update email sent to ${alert.assignedTo.email}.`, 'success');
+      } catch (e) {
+        showToast(`Status updated, but the notification email didn't send (${e.message}).`, 'error');
+      }
+    }
+
+    // Pulls backend-persisted remediation/assignment state on load and overlays it onto
+    // whatever localStorage already applied — the backend is the durable source of truth once
+    // an alert has been touched from any browser; alerts no row exists for yet keep their
+    // localStorage/default state untouched.
+    async function fetchAlertState() {
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/alert-state`);
+        if (!res.ok) return;
+        const rows = await res.json();
+        let changed = false;
+        rows.forEach(row => {
+          const alert = MOCK_ALERTS.find(a => a.id === row.alertId);
+          if (!alert) return;
+          alert.remediationStatus = row.remediationStatus;
+          alert.resolvedAt = row.resolvedAt ? Date.parse(row.resolvedAt) : null;
+          alert.assignedTo = row.assignedTo || null;
+          changed = true;
+        });
+        if (changed) {
+          saveRemediationToStorage();
+          renderAlerts();
+        }
+      } catch (e) { /* live backend unreachable — localStorage/default state stands */ }
     }
 
     const MOCK_CONNECTORS = [
@@ -2673,6 +2765,10 @@
       document.getElementById('headerUserRole').textContent = user.role;
       if (persistSession) saveSessionToStorage();
       applyRoleRestrictions();
+      loadFilterStateForCurrentUser();
+      if (document.getElementById('alertsContainer')) {
+        renderAlerts(currentFilter, document.getElementById('triageSearchInput') ? document.getElementById('triageSearchInput').value : '');
+      }
     }
 
     function applyRoleRestrictions() {
@@ -2849,7 +2945,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 33;
+    let currentVersionMinor = 34;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3869,6 +3965,7 @@
       const search = searchTerm.toLowerCase();
 
       renderTriageStatTiles();
+      updateMyQueueBadge();
       document.getElementById('countFilterAll').textContent = MOCK_ALERTS.length;
       document.getElementById('countFilterP1').textContent = MOCK_ALERTS.filter(a => a.priority.includes('P1')).length;
 
@@ -5211,7 +5308,17 @@
       {
         title: 'Investigator assignment + notification email',
         status: 'shipped',
-        detail: 'Correlated Triage rows now have an "Assign to Me" button plus an "Assign teammate…" dropdown of real platform accounts, right next to the status buttons — picking yourself or a teammate sets them as the investigator and fires a real notification email to that account\'s address via the same backend/Resend path as digests and memos. Click "Unassign Me" (or re-pick) to clear it. The collapsed glance row now surfaces the assignee directly (or "Unassigned") instead of always showing "ON TRACK" — the SLA pill only takes that slot back when it actually needs attention (AT RISK / SLA BREACHED) — plus a compact Open/In Progress/Resolved chip right next to it. The old redundant internal ID (e.g. "LIVE-CVE-xxxx" repeating the CVE badge beside it) is gone too, replaced by a short alias/description pulled from the alert\'s own summary when it actually adds information. Assignment is tracked per-browser today (same storage as remediation status); a shared backend record is the natural next step alongside the approval-workflow item above.'
+        detail: 'Correlated Triage rows now have an "Assign to Me" button plus an "Assign teammate…" dropdown of real platform accounts, right next to the status buttons — picking yourself or a teammate sets them as the investigator and fires a real notification email to that account\'s address via the same backend/Resend path as digests and memos. Click "Unassign Me" (or re-pick) to clear it. The collapsed glance row now surfaces the assignee directly (or "Unassigned") instead of always showing "ON TRACK" — the SLA pill only takes that slot back when it actually needs attention (AT RISK / SLA BREACHED) — plus a compact Open/In Progress/Resolved chip right next to it. The old redundant internal ID (e.g. "LIVE-CVE-xxxx" repeating the CVE badge beside it) is gone too, replaced by a short alias/description pulled from the alert\'s own summary when it actually adds information. Remediation status and assignment now live in a real backend table (alert_state), not just localStorage — see the status-change notification item below.'
+      },
+      {
+        title: 'Remediation status + assignment — backend persistence & status-change emails',
+        status: 'shipped',
+        detail: 'Both remediation status and investigator assignment now write through to a real backend table (same pattern as the Memo Archive and send log) in addition to localStorage, and are pulled back on load — so they survive a refresh and are shared across browsers, closing the gap called out above. Moving an alert to "In Progress" or "Resolved" now emails the assigned investigator automatically (same Resend path as the assignment email), so the full lifecycle is: assigned → emailed, in progress → emailed, resolved → emailed. No email fires if nobody is assigned yet.'
+      },
+      {
+        title: 'Per-user remembered Triage filters + "My Queue" shortcut',
+        status: 'shipped',
+        detail: 'Your last-used Triage filters (quick preset, Rating/Status/Assignment refine facets, and search text) are now remembered per account and restored automatically on login — picking up where you left off instead of resetting to "All" every day. A new "My Queue" sidebar item (with its own assigned-to-you count badge) is a permanent one-click shortcut straight to "Assigned to Me," independent of whatever your actual remembered filters are set to. Both are localStorage-keyed per account today, same per-browser caveat as login itself until there\'s a real backend session.'
       },
       {
         title: 'Live CVE + critical-news ingestion (NVD + RSS)',
@@ -5221,7 +5328,7 @@
       {
         title: 'Monitor page decluttering',
         status: 'shipped',
-        detail: 'Correlated Triage rows collapse to a one-line glance (priority, CVE, title, SLA, score) and expand on click for the full correlation/remediation detail. The glance pill shows CVSS instead of Risk Score, since there\'s no way to judge true organizational risk without an asset-correlation connector yet — Correlated Risk is still one click away in the expanded view. The old redundant internal ID/title text for live NVD alerts with no real short title (previously showing the CVE a second time) now shows the real NVD description instead. Remediation status and assignment chips at the end of the row are now matched in size.'
+        detail: 'Correlated Triage rows collapse to a one-line glance (priority, CVE, title, SLA, score) and expand on click for the full correlation/remediation detail. The glance pill shows CVSS instead of Risk Score, since there\'s no way to judge true organizational risk without an asset-correlation connector yet — Correlated Risk is still one click away in the expanded view. The old redundant internal ID/title text for live NVD alerts with no real short title (previously showing the CVE a second time) now shows the real NVD description instead, cut at the first sentence boundary rather than a raw character count — NVD\'s own boilerplate follow-on sentences get dropped instead of the meaningful clause getting cut mid-word. Remediation status and assignment chips at the end of the row are now matched in size.'
       },
       {
         title: 'Triage filter bar — Rating / Status / Assignment facets',
@@ -6102,11 +6209,13 @@ Correlation Team does not perform remediation itself.
       });
       document.getElementById('filter-' + type).className = 'filter-chip px-3 py-1 rounded-md text-sm font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40';
       renderAlerts(type, document.getElementById('triageSearchInput').value);
+      saveFilterStateForCurrentUser();
     }
 
     function filterAlerts() {
       const search = document.getElementById('triageSearchInput').value;
       renderAlerts(currentFilter, search);
+      saveFilterStateForCurrentUser();
     }
 
     function updateRefineClearButtonVisibility() {
@@ -6118,18 +6227,21 @@ Correlation Team does not perform remediation itself.
       currentRatingFilter = value;
       updateRefineClearButtonVisibility();
       renderAlerts(currentFilter, document.getElementById('triageSearchInput').value);
+      saveFilterStateForCurrentUser();
     }
 
     function setStatusFilter(value) {
       currentStatusFilter = value;
       updateRefineClearButtonVisibility();
       renderAlerts(currentFilter, document.getElementById('triageSearchInput').value);
+      saveFilterStateForCurrentUser();
     }
 
     function setAssignFilter(value) {
       currentAssignFilter = value;
       updateRefineClearButtonVisibility();
       renderAlerts(currentFilter, document.getElementById('triageSearchInput').value);
+      saveFilterStateForCurrentUser();
     }
 
     function resetRefineFilters() {
@@ -6141,6 +6253,80 @@ Correlation Team does not perform remediation itself.
       document.getElementById('assignFilterSelect').value = 'all';
       updateRefineClearButtonVisibility();
       renderAlerts(currentFilter, document.getElementById('triageSearchInput').value);
+      saveFilterStateForCurrentUser();
+    }
+
+    // Remembers each account's last-used Triage filter state (localStorage, keyed per username —
+    // same per-browser caveat as everything else until there's a real backend session). Restored
+    // on login so "where I left off yesterday" carries over automatically.
+    function filterStateStorageKey(user) {
+      return user ? ('aegisCtiFilterState_' + user.username) : null;
+    }
+
+    function saveFilterStateForCurrentUser() {
+      if (!currentUser) return;
+      try {
+        const searchInput = document.getElementById('triageSearchInput');
+        const state = {
+          currentFilter: currentFilter,
+          currentRatingFilter: currentRatingFilter,
+          currentStatusFilter: currentStatusFilter,
+          currentAssignFilter: currentAssignFilter,
+          search: searchInput ? searchInput.value : ''
+        };
+        localStorage.setItem(filterStateStorageKey(currentUser), JSON.stringify(state));
+      } catch (e) { /* storage unavailable — filters just won't be remembered this session */ }
+    }
+
+    // Applies a filter-state object to the vars + controls WITHOUT persisting it — used both to
+    // restore a saved state on login and to drive the one-off "My Queue" shortcut, which should
+    // never overwrite a user's actual remembered Triage preferences.
+    function applyFilterStateToControls(state) {
+      currentFilter = state.currentFilter || 'all';
+      currentRatingFilter = state.currentRatingFilter || 'all';
+      currentStatusFilter = state.currentStatusFilter || 'all';
+      currentAssignFilter = state.currentAssignFilter || 'all';
+
+      document.querySelectorAll('.filter-chip').forEach(btn => {
+        btn.className = 'filter-chip px-3 py-1 rounded-md text-sm font-mono bg-slate-800 text-slate-400 hover:text-slate-200 border border-transparent';
+      });
+      const activePill = document.getElementById('filter-' + currentFilter);
+      if (activePill) activePill.className = 'filter-chip px-3 py-1 rounded-md text-sm font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40';
+
+      const ratingSel = document.getElementById('ratingFilterSelect');
+      const statusSel = document.getElementById('statusFilterSelect');
+      const assignSel = document.getElementById('assignFilterSelect');
+      const searchInput = document.getElementById('triageSearchInput');
+      if (ratingSel) ratingSel.value = currentRatingFilter;
+      if (statusSel) statusSel.value = currentStatusFilter;
+      if (assignSel) assignSel.value = currentAssignFilter;
+      if (searchInput) searchInput.value = state.search || '';
+      updateRefineClearButtonVisibility();
+    }
+
+    function loadFilterStateForCurrentUser() {
+      if (!currentUser) return;
+      try {
+        const raw = localStorage.getItem(filterStateStorageKey(currentUser));
+        if (!raw) return;
+        applyFilterStateToControls(JSON.parse(raw));
+      } catch (e) { /* ignore corrupt/blocked storage — defaults stand */ }
+    }
+
+    // Permanent one-click shortcut to "what's assigned to me" — separate from the remembered
+    // filter state above on purpose, so clicking it never overwrites whatever Triage filters
+    // you'd actually built up and expect to see next time you open Triage normally.
+    function openMyQueue() {
+      switchTab('triage');
+      applyFilterStateToControls({ currentFilter: 'all', currentRatingFilter: 'all', currentStatusFilter: 'all', currentAssignFilter: 'mine', search: '' });
+      renderAlerts(currentFilter, '');
+    }
+
+    function updateMyQueueBadge() {
+      const badge = document.getElementById('badgeMyQueueCount');
+      if (!badge) return;
+      const count = currentUser ? MOCK_ALERTS.filter(a => a.assignedTo && a.assignedTo.username === currentUser.username).length : 0;
+      badge.textContent = count;
     }
 
     function renderAssets() {
@@ -6385,6 +6571,7 @@ Correlation Team does not perform remediation itself.
       fetchLiveConnectors();
       fetchLiveNews();
       fetchMemoArchive();
+      fetchAlertState();
       loadDigestMinPriority();
       populateGraphIncidentSelector();
       initGraphPanZoom();
