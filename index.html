@@ -2221,7 +2221,7 @@
       alert.remediationStatus = status;
       alert.resolvedAt = status === 'resolved' ? Date.now() : null;
       saveRemediationToStorage();
-      logChange('Remediation Status Updated', `${alert.cve} marked "${REMEDIATION_STATUS_LABELS[status]}" for ${alert.owningTeam || 'owning team'}`);
+      logActivity('Remediation Status Updated', `${alert.cve} marked "${REMEDIATION_STATUS_LABELS[status]}" for ${alert.owningTeam || 'owning team'}`);
       renderAlerts();
       updateDocumentTitle();
       showToast(`${alert.cve} marked "${REMEDIATION_STATUS_LABELS[status]}".`, 'success');
@@ -2661,7 +2661,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 24;
+    let currentVersionMinor = 25;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -2722,6 +2722,9 @@
       `).join('');
     }
 
+    // Genuine platform configuration changes — adding/editing a connector, feed, or alert
+    // rule, changing what the digest filters on. These are the only things that should ever
+    // require "activating" a new version: something about how the platform is set up changed.
     function logChange(type, summary) {
       pendingChanges.push({ type: type, summary: summary, at: Date.now() });
       const badge = document.getElementById('pendingChangesBadge');
@@ -2731,7 +2734,14 @@
       } else {
         badge.classList.add('hidden');
       }
+      logActivity(type, summary);
+    }
 
+    // Things that HAPPENED on the platform but didn't change its configuration — sending a
+    // memo, syncing a connector, pulling a CVE lookup, triggering a demo. These belong in the
+    // Audit Log (someone should be able to see they occurred) but must never show up as a
+    // "pending change to activate," since nothing about the platform's setup actually changed.
+    function logActivity(type, summary) {
       auditLog.push({ type: type, summary: summary, actor: currentUser ? currentUser.displayName : 'System', at: Date.now() });
       if (auditLog.length > AUDIT_LOG_MAX_ENTRIES) auditLog.splice(0, auditLog.length - AUDIT_LOG_MAX_ENTRIES);
       saveAuditLogToStorage();
@@ -4156,7 +4166,7 @@
         conn.sync = `Synced ${new Date().toLocaleTimeString()}`;
         renderConnectors();
         showToast(`Pulled ${count} real ${isRss ? 'critical article(s)' : 'CVE(s)'} from ${isRss ? conn.name : 'NVD'}.`, 'success');
-        logChange('Live Connector Synced', `${conn.name} — ${count} ${isRss ? 'article(s)' : 'CVE(s)'}`);
+        logActivity('Live Connector Synced', `${conn.name} — ${count} ${isRss ? 'article(s)' : 'CVE(s)'}`);
       } catch (e) {
         showToast('Live sync failed — the backend may be unreachable.', 'error');
       }
@@ -4218,7 +4228,7 @@
           showToast(`${label}: nothing to send yet — ${result.reason || 'no data available'}.`, 'info');
         } else {
           showToast(`Test ${label} sent to ${result.to} — ${result.count} item(s).`, 'success');
-          logChange('Test Notification Sent', `${label} — ${result.count} item(s) to ${result.to}`);
+          logActivity('Test Notification Sent', `${label} — ${result.count} item(s) to ${result.to}`);
         }
       } catch (e) {
         showToast(`Test send failed — the live backend may be unreachable (expected on the public demo).`, 'error');
@@ -4571,7 +4581,7 @@
       }
 
       status.textContent = `Looked up ${found.length} of ${ids.length} CVE ID(s) directly by ID — not a date-range pull, so these show regardless of publish date.` + (notFound.length ? ` Not found: ${notFound.join(', ')}.` : '');
-      logChange('Live CVE Feed Pulled', `Looked up ${found.length} specific CVE ID(s) by ID (NVD CVE API, real data): ${found.map(c => c.id).join(', ')}`);
+      logActivity('Live CVE Feed Pulled', `Looked up ${found.length} specific CVE ID(s) by ID (NVD CVE API, real data): ${found.map(c => c.id).join(', ')}`);
 
       btn.disabled = false;
       btn.classList.remove('opacity-60');
@@ -4617,7 +4627,7 @@
         }
 
         status.textContent = `Showing ${top.length} of ${parsed.length} CVEs published in ${windowLabel} (NVD), sorted by CVSS. Pulled ${timeAgo(Date.now())}.`;
-        logChange('Live CVE Feed Pulled', `${parsed.length} CVEs published in ${windowLabel} (NVD CVE API, real data)`);
+        logActivity('Live CVE Feed Pulled', `${parsed.length} CVEs published in ${windowLabel} (NVD CVE API, real data)`);
         showToast(`Pulled ${parsed.length} CVEs from NVD (${windowLabel}).`, 'success');
       } catch (e) {
         status.textContent = 'Could not reach the NVD API — check your internet connection and try again.';
@@ -5662,7 +5672,7 @@ Correlation Team does not perform remediation itself.
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      logChange('Weekly Report Exported', `Program summary exported covering ${MOCK_ALERTS.length} correlated findings.`);
+      logActivity('Weekly Report Exported', `Program summary exported covering ${MOCK_ALERTS.length} correlated findings.`);
       showToast('Weekly report download started.', 'success');
     }
 
@@ -5762,7 +5772,7 @@ Correlation Team does not perform remediation itself.
         const recipientLabel = toTokens.map(t => (MOCK_USERS.find(u => u.email === t) || {}).displayName || t).join(', ');
         status.textContent = `Sent to ${recipientLabel} via AegisCTI.`;
         showToast(`Threat memo sent to ${recipientLabel}.`, 'success');
-        logChange('Threat Memo Emailed', `${alert.cve} — sent to ${recipientLabel} (${RISK_RATING_META[activeMemoRiskRating].label})`);
+        logActivity('Threat Memo Emailed', `${alert.cve} — sent to ${recipientLabel} (${RISK_RATING_META[activeMemoRiskRating].label})`);
         logMemoArchiveEntry(activeMemoAlertId, activeMemoRiskRating, to);
       } catch (e) {
         showToast(`Send failed — ${e.message || 'the live backend may be unreachable (expected on the public demo)'}.`, 'error');
@@ -6002,7 +6012,7 @@ Correlation Team does not perform remediation itself.
 
         renderAlerts();
         populateGraphIncidentSelector();
-        logChange('Zero Day Demo Triggered', `${newAlert.cve} — assigned to ${investigator ? investigator.displayName : 'unassigned'}`);
+        logActivity('Zero Day Demo Triggered', `${newAlert.cve} — assigned to ${investigator ? investigator.displayName : 'unassigned'}`);
         updateDocumentTitle();
 
         const alertsContainer = document.getElementById('alertsContainer');
