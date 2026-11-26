@@ -2945,7 +2945,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 38;
+    let currentVersionMinor = 39;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5159,8 +5159,12 @@
       // that could silently drift out of sync with each other.
       if (type === 'rss') {
         const keywordsArray = ingestFilter.keywords ? ingestFilter.keywords.split(',').map(k => k.trim()).filter(Boolean) : [];
+        // The form only shows "HTTPS://" as a visual prefix next to the input — it was never
+        // actually prepended to the value, so every feed registered this way got a scheme-less
+        // URL the backend's RSS parser can't fetch. Add it back unless the user already typed one.
+        const fullFeedUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
         closeAddFeedModal();
-        registerLiveConnector(name, lookbackWindow, 'rss', url, keywordsArray).then(row => {
+        registerLiveConnector(name, lookbackWindow, 'rss', fullFeedUrl, keywordsArray).then(row => {
           if (row) {
             mergeLiveConnectors([row]);
             logChange('Connector Added', `${name} (RSS feed, registered as a live connector)`);
