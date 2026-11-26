@@ -2958,7 +2958,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 42;
+    let currentVersionMinor = 43;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3494,9 +3494,16 @@
 
       if (node.role === 'cve') {
         typeLabel.textContent = 'CORRELATED VULNERABILITY';
+        // Same issue as the collapsed Triage row: live NVD alerts with no real short title have
+        // alert.title === alert.cve, so this line used to just repeat the CVE heading directly
+        // above it. Show the real description instead when that's the case.
+        const isCveAsTitle = alert.title && alert.cve && alert.title.toLowerCase() === alert.cve.toLowerCase();
+        const titleLine = isCveAsTitle
+          ? (alert.summary ? `<div class="text-sm text-slate-300">${shortDescriptionText(alert.summary, 140)}</div>` : '')
+          : `<div class="text-sm text-white font-semibold">${alert.title}</div>`;
         body.innerHTML = `
           <div class="text-base font-bold text-amber-400 font-mono">${alert.cve}</div>
-          <div class="text-sm text-white font-semibold">${alert.title}</div>
+          ${titleLine}
 
           <div class="grid grid-cols-2 gap-2 mt-2 font-mono text-sm">
             <div class="p-2 bg-slate-900 rounded border border-slate-800">
@@ -3884,7 +3891,12 @@
 
       document.getElementById('modalRiskBadge').textContent = alert.riskScore;
       document.getElementById('modalCveId').textContent = alert.cve;
-      document.getElementById('modalCveTitle').textContent = alert.title;
+      // Live NVD alerts with no real short title have alert.title === alert.cve — showing it
+      // here just repeated the CVE heading directly above. Fall back to the real description.
+      const modalIsCveAsTitle = alert.title && alert.cve && alert.title.toLowerCase() === alert.cve.toLowerCase();
+      document.getElementById('modalCveTitle').textContent = modalIsCveAsTitle
+        ? (alert.summary ? shortDescriptionText(alert.summary, 160) : 'No short title available from this source.')
+        : alert.title;
       document.getElementById('modalCvssVal').textContent = alert.cvss;
       document.getElementById('modalCvssVector').textContent = alert.cvssVector;
       document.getElementById('modalEpssVal').textContent = alert.epss + '%';
@@ -5487,7 +5499,17 @@
       {
         title: 'News-to-memo correlation & enrichment',
         status: 'idea',
-        detail: 'Right now a Threat Memo only generates from a correlated CVE alert — the live news articles ingested from RSS (Threat Intel & KEV) are read-only, with no path into a memo or into the rest of triage. The idea: surface real relationships between an ingested article and what\'s already in the platform (a CVE it discusses, a threat actor it names, an asset/software match) and let a memo be generated straight from that correlation — "this article is about a CVE already on your Triage board" is a very different, more actionable memo than "here\'s a news headline." Two different ways to get there, not yet decided: (1) a genuinely smart script — regex/NER-style entity extraction (CVE IDs, actor group names, product/vendor names) cross-referenced against existing alerts/assets, no LLM involved, or (2) hand this correlation step to the in-platform AI agent above once that exists. Blast Radius (the attack-path graph) is a plausible place to visualize a found relationship once one exists — e.g. dropping a correlated article in as context on an existing node — rather than a mechanism for finding the relationship itself. Revisit once there\'s been a chance to see what real ingested articles and their relationships actually look like in practice.'
+        detail: 'Right now a Threat Memo only generates from a correlated CVE alert — the live news articles ingested from RSS (Threat Intel & KEV) are read-only, with no path into a memo or into the rest of triage. The idea covers two layers, confirmed worth pursuing (2026-11-26) but expected to take real time to get right: (1) the ability to generate a Threat Memo directly from an article at all — even a basic version of this needs real design work, since a memo today is built from an alert\'s existing CVSS/EPSS/correlation fields that a raw article doesn\'t have; and (2) the harder stretch goal — surfacing real relationships between an article and what\'s already in the platform (a CVE it discusses, a threat actor it names, an asset/software match), so the generated memo says "this article is about a CVE already on your Triage board" instead of just restating a headline. Two ways to get to the relationship-finding part, not yet decided: a genuinely smart script (regex/NER-style entity extraction — CVE IDs, actor group names, product/vendor names — cross-referenced against existing alerts/assets, no LLM needed), or handing it to the in-platform AI agent above once that exists. Blast Radius is a plausible place to visualize a found relationship once one exists, not a mechanism for finding it. Revisit once there\'s been a chance to see what real ingested articles and their relationships actually look like in practice.'
+      },
+      {
+        title: 'Status & assignment parity for RSS news articles',
+        status: 'idea',
+        detail: 'Correlated Triage alerts have real Open/In Progress/Resolved status and Assign-to-Me/teammate controls with email notifications (shipped) — the news article tiles under Live Critical News Ingestion have none of that today, even though an analyst may well need to "own" chasing down a critical headline the same way they own a CVE. Needs its own backend state (articles are keyed by `link`, not an alert id, so this can\'t just reuse `alert_state` as-is) but should otherwise mirror the exact same UI pattern and notification emails already built for alerts, for consistency.'
+      },
+      {
+        title: 'Deep link from assignment/status emails straight to the CVE',
+        status: 'designed',
+        detail: 'The "you\'ve been assigned" and status-change emails currently just say "open Correlated Triage in AegisCTI" with no actual link — confirmed working well enough to use as-is for now, but the natural next step is a real clickable link in the email that opens the platform and jumps straight to that specific finding (auto-switch to Correlated Triage, expand that exact card, scroll it into view) instead of landing on the general list and making the recipient search for it. Needs a URL query param the frontend reads on load (e.g. `?alert=<id>`) plus the backend including that link when it builds the notification emails.'
       },
       {
         title: 'Ongoing cosmetic / UX polish',
