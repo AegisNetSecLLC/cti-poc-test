@@ -530,9 +530,22 @@
             <h2 class="text-base font-semibold text-white">Threat Intelligence Ingestion Feeds</h2>
             <p class="text-sm text-slate-400">Real-time ingestion pipelines: CISA KEV, EPSS Daily Scores, TAXII 2.1 Feeds & Threat Actors</p>
           </div>
-          <button data-write-action onclick="openAddFeedModal()" class="px-3 py-1.5 rounded-lg text-sm bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition">
-            + Connect New Feed
-          </button>
+        </div>
+
+        <!-- STIX / TAXII / RSS Feed Subscriptions — moved to the top (2026-11-26): this and the
+             old "+ Connect New Feed" header button both opened the exact same modal, which was
+             redundant. One entry point now, up front where it's immediately visible. -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex flex-wrap justify-between items-center gap-2">
+            <div>
+              <span class="text-sm font-semibold text-slate-200">STIX / TAXII / RSS Feed Subscriptions</span>
+              <p class="text-[12px] text-slate-400 mt-0.5">Subscribe directly to any STIX 2.1 bundle URL, TAXII 2.1 collection, or RSS/Atom security feed.</p>
+            </div>
+            <button data-write-action onclick="openAddFeedModal()" class="px-2.5 py-1 rounded-lg text-[13px] bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-medium transition">
+              + Add STIX / TAXII / RSS Feed
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-3" id="feedsGrid"></div>
         </div>
 
         <!-- Feed Sources Grid -->
@@ -613,20 +626,6 @@
           </div>
           <div class="px-3 pt-3 text-[12px] text-slate-500 font-mono" id="liveNewsStatus">Not pulled yet this session — syncing a live RSS connector under Connectors & APIs will populate this automatically.</div>
           <div class="p-3 space-y-2" id="liveNewsList"></div>
-        </div>
-
-        <!-- STIX / TAXII / RSS Feed Subscriptions -->
-        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
-          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex flex-wrap justify-between items-center gap-2">
-            <div>
-              <span class="text-sm font-semibold text-slate-200">STIX / TAXII / RSS Feed Subscriptions</span>
-              <p class="text-[12px] text-slate-400 mt-0.5">Subscribe directly to any STIX 2.1 bundle URL, TAXII 2.1 collection, or RSS/Atom security feed.</p>
-            </div>
-            <button data-write-action onclick="openAddFeedModal()" class="px-2.5 py-1 rounded-lg text-[13px] bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-medium transition">
-              + Add STIX / TAXII / RSS Feed
-            </button>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-3" id="feedsGrid"></div>
         </div>
 
         <!-- Threat Actor Library -->
@@ -2958,7 +2957,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 43;
+    let currentVersionMinor = 44;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
