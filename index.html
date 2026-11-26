@@ -2945,7 +2945,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 37;
+    let currentVersionMinor = 38;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -4216,11 +4216,24 @@
 
     function toggleConnector(id) {
       const conn = MOCK_CONNECTORS.find(c => c.id === id);
-      if (conn) {
-        conn.enabled = !conn.enabled;
-        renderConnectors();
-        logChange(conn.enabled ? 'Connector Enabled' : 'Connector Disabled', conn.name);
-        showToast(`${conn.name} ${conn.enabled ? 'enabled' : 'disabled'}.`, conn.enabled ? 'success' : 'info');
+      if (!conn) return;
+      conn.enabled = !conn.enabled;
+      renderConnectors();
+      logChange(conn.enabled ? 'Connector Enabled' : 'Connector Disabled', conn.name);
+      showToast(`${conn.name} ${conn.enabled ? 'enabled' : 'disabled'}.`, conn.enabled ? 'success' : 'info');
+
+      // Previously this only flipped the local flag — the real backend cron kept polling a
+      // "disabled" connector regardless, since it never heard about the toggle at all.
+      if (conn.isLiveSource && conn.backendId) {
+        fetch(`${LIVE_API_BASE}/connectors/${conn.backendId}/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: conn.enabled })
+        }).then(res => {
+          if (!res.ok) throw new Error('backend rejected the update');
+        }).catch(() => {
+          showToast(`${conn.name}: backend didn't confirm — it may still be polling at the old state.`, 'error');
+        });
       }
     }
 
@@ -4308,14 +4321,20 @@
 
       if (conn.isLiveSource && conn.backendId) {
         try {
+          // Lookback and keyword-filter edits used to stay purely local — the real cron sync
+          // kept using whatever it was registered with, silently diverging from what this form
+          // claimed to have changed.
+          const keywordsArray = conn.liveType === 'rss' && conn.ingestFilter.keywords
+            ? conn.ingestFilter.keywords.split(',').map(k => k.trim()).filter(Boolean)
+            : [];
           const res = await fetch(`${LIVE_API_BASE}/connectors/${conn.backendId}/config`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ syncIntervalHours: step.hours })
+            body: JSON.stringify({ syncIntervalHours: step.hours, lookbackWindow: conn.lookbackWindow, keywords: keywordsArray })
           });
           if (!res.ok) throw new Error('config save failed');
         } catch (e) {
-          showToast('Saved locally, but the backend did not confirm — it may still be polling at the old interval.', 'error');
+          showToast('Saved locally, but the backend did not confirm — it may still be polling at the old settings.', 'error');
         }
       }
 
@@ -4447,7 +4466,12 @@
       logChange('Connector Added', `${name} (${category})`);
 
       if (isLiveNvd) {
-        registerLiveConnector(newConnector, lookback);
+        registerLiveConnector(newConnector.name, lookback, 'nvd').then(row => {
+          if (row) {
+            newConnector.backendId = row.id;
+            renderConnectors();
+          }
+        });
         showMockModal(
           'CONNECTOR ACTIVATED',
           `Registered "${name}" with the live NVD backend. Click Execute to pull real, non-fabricated CVE data right now (it will also sync automatically on an hourly schedule from here on).`,
@@ -4469,18 +4493,27 @@
     const LIVE_API_BASE = '/api';
     const liveAlertIds = new Set();
 
-    async function registerLiveConnector(connector, lookback) {
+    // Generalized registration for any backend-capable live source (NVD, RSS, and whatever else
+    // the backend learns to support later) — returns the created row so the caller can decide how
+    // to reflect it in the UI, or null if the backend couldn't be reached (demo-only fallback).
+    async function registerLiveConnector(name, lookback, type, feedUrl, keywords) {
       try {
+        const body = { name: name, type: type || 'nvd', lookbackWindow: lookback };
+        if (feedUrl) body.feedUrl = feedUrl;
+        if (keywords && keywords.length) body.keywords = keywords;
         const res = await fetch(`${LIVE_API_BASE}/connectors`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: connector.name, type: 'nvd', lookbackWindow: lookback })
+          body: JSON.stringify(body)
         });
-        if (!res.ok) return;
-        const row = await res.json();
-        connector.backendId = row.id;
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `request failed (${res.status})`);
+        }
+        return await res.json();
       } catch (e) {
-        showToast('No backend reachable — this connector will stay local/demo-only.', 'info');
+        showToast(`No live backend reachable for "${name}" — it will stay local/demo-only (${e.message}).`, 'info');
+        return null;
       }
     }
 
@@ -5119,6 +5152,35 @@
         ingestFilter: ingestFilter
       };
 
+      // RSS is the one feed type the backend can actually honor (STIX/TAXII stay decorative —
+      // there's no real parser for either on the backend yet). A real RSS subscription becomes
+      // a genuine live connector instead of a second, disconnected "feed" entry — that avoids
+      // tracking the same source in two places with two different enable/disable/remove paths
+      // that could silently drift out of sync with each other.
+      if (type === 'rss') {
+        const keywordsArray = ingestFilter.keywords ? ingestFilter.keywords.split(',').map(k => k.trim()).filter(Boolean) : [];
+        closeAddFeedModal();
+        registerLiveConnector(name, lookbackWindow, 'rss', url, keywordsArray).then(row => {
+          if (row) {
+            mergeLiveConnectors([row]);
+            logChange('Connector Added', `${name} (RSS feed, registered as a live connector)`);
+            showMockModal(
+              'FEED SUBSCRIBED — NOW LIVE',
+              `"${name}" is registered with the live backend as a real RSS connector and now appears under Connectors & APIs (not here in Subscribed Feeds) — that's where you manage its polling, keywords, and enable/disable from now on. Click Execute to pull real articles right now.`,
+              () => syncLiveConnector(row.id)
+            );
+          } else {
+            // Backend unreachable — fall back to the old decorative behavior so the demo never
+            // dead-ends, it just stays local-only until a backend is reachable.
+            MOCK_FEEDS.push(newFeed);
+            renderFeeds();
+            logChange('Feed Subscribed', name);
+            showMockModal('FEED SUBSCRIBED (LOCAL ONLY)', `No live backend was reachable, so "${name}" was added here as a local/demo-only subscription instead of a real connector.`);
+          }
+        });
+        return;
+      }
+
       MOCK_FEEDS.push(newFeed);
       renderFeeds();
       closeAddFeedModal();
@@ -5360,7 +5422,7 @@
       {
         title: 'Live CVE + critical-news ingestion (NVD + RSS)',
         status: 'shipped',
-        detail: 'Real, non-fabricated CVE data from the public NVD API with a configurable lookback window plus direct-by-ID lookup, and real keyword-matched security news from live RSS feeds (word-boundary matching, not naive substring) surfaced in its own "Live Critical News Ingestion" view. Both connector types have a crafty cadence slider for real poll intervals, and the severity filter is hidden for RSS connectors since it doesn\'t apply to news.'
+        detail: 'Real, non-fabricated CVE data from the public NVD API with a configurable lookback window plus direct-by-ID lookup, and real keyword-matched security news from live RSS feeds (word-boundary matching, not naive substring) surfaced in its own "Live Critical News Ingestion" view. Both connector types have a crafty cadence slider for real poll intervals, and the severity filter is hidden for RSS connectors since it doesn\'t apply to news. Subscribing to a new RSS feed (Threat Intel & KEV → Add Feed) now actually registers it as a real backend connector — it shows up under Connectors & APIs, not a disconnected decorative "Feed" entry — and the enable/disable toggle, lookback window, and keyword filter on any live connector now genuinely reach the backend cron instead of silently drifting from what the UI claims. A pre-existing bug also meant every new connector\'s lookback window was ignored and silently fixed at 24h regardless of what was selected — fixed.'
       },
       {
         title: 'Monitor page decluttering',
