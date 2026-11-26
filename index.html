@@ -2487,24 +2487,36 @@
     // whatever localStorage already applied — the backend is the durable source of truth once
     // an alert has been touched from any browser; alerts no row exists for yet keep their
     // localStorage/default state untouched.
+    //
+    // Cached at module scope and re-applied from mergeLiveAlerts() too: this fetch and
+    // fetchLiveAlerts() both fire from DOMContentLoaded unawaited, so there's no guarantee this
+    // resolves AFTER a live (NVD-ingested) CVE has been merged into MOCK_ALERTS. Without the
+    // cache, an assignment on a live-ingested alert could silently fail to restore on refresh
+    // depending on which network call happened to finish first.
+    let cachedAlertStateRows = null;
+
+    function applyAlertStateRows(rows) {
+      let changed = false;
+      rows.forEach(row => {
+        const alert = MOCK_ALERTS.find(a => a.id === row.alertId);
+        if (!alert) return;
+        alert.remediationStatus = row.remediationStatus;
+        alert.resolvedAt = row.resolvedAt ? Date.parse(row.resolvedAt) : null;
+        alert.assignedTo = row.assignedTo || null;
+        changed = true;
+      });
+      if (changed) {
+        saveRemediationToStorage();
+        renderAlerts();
+      }
+    }
+
     async function fetchAlertState() {
       try {
         const res = await fetch(`${LIVE_API_BASE}/alert-state`);
         if (!res.ok) return;
-        const rows = await res.json();
-        let changed = false;
-        rows.forEach(row => {
-          const alert = MOCK_ALERTS.find(a => a.id === row.alertId);
-          if (!alert) return;
-          alert.remediationStatus = row.remediationStatus;
-          alert.resolvedAt = row.resolvedAt ? Date.parse(row.resolvedAt) : null;
-          alert.assignedTo = row.assignedTo || null;
-          changed = true;
-        });
-        if (changed) {
-          saveRemediationToStorage();
-          renderAlerts();
-        }
+        cachedAlertStateRows = await res.json();
+        applyAlertStateRows(cachedAlertStateRows);
       } catch (e) { /* live backend unreachable — localStorage/default state stands */ }
     }
 
@@ -2945,7 +2957,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 40;
+    let currentVersionMinor = 41;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -4730,7 +4742,12 @@
         MOCK_ALERTS.unshift(buildLiveAlertObject(row, alertId));
         added = true;
       });
-      if (added) renderAlerts();
+      if (added) {
+        renderAlerts();
+        // Re-apply any already-fetched remediation/assignment state in case fetchAlertState()
+        // resolved before these alerts existed to match against — see note on that function.
+        if (cachedAlertStateRows) applyAlertStateRows(cachedAlertStateRows);
+      }
     }
 
     function priorityFromCvss(cvss) {
