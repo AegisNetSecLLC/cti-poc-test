@@ -2945,7 +2945,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 39;
+    let currentVersionMinor = 40;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5447,6 +5447,11 @@
         title: 'In-platform AI agent (Claude / Gemini / Copilot / custom)',
         status: 'idea',
         detail: 'A chat panel inside AegisCTI scoped to the alert/connector/CVE context currently open, backed by a real LLM API — Claude first, with a provider-agnostic backend so other providers (or a custom endpoint) can be added later. The one roadmap item with a real ongoing operating cost once live (per-message API spend), not just a one-time build — intentionally the furthest-out item here.'
+      },
+      {
+        title: 'News-to-memo correlation & enrichment',
+        status: 'idea',
+        detail: 'Right now a Threat Memo only generates from a correlated CVE alert — the live news articles ingested from RSS (Threat Intel & KEV) are read-only, with no path into a memo or into the rest of triage. The idea: surface real relationships between an ingested article and what\'s already in the platform (a CVE it discusses, a threat actor it names, an asset/software match) and let a memo be generated straight from that correlation — "this article is about a CVE already on your Triage board" is a very different, more actionable memo than "here\'s a news headline." Two different ways to get there, not yet decided: (1) a genuinely smart script — regex/NER-style entity extraction (CVE IDs, actor group names, product/vendor names) cross-referenced against existing alerts/assets, no LLM involved, or (2) hand this correlation step to the in-platform AI agent above once that exists. Blast Radius (the attack-path graph) is a plausible place to visualize a found relationship once one exists — e.g. dropping a correlated article in as context on an existing node — rather than a mechanism for finding the relationship itself. Revisit once there\'s been a chance to see what real ingested articles and their relationships actually look like in practice.'
       },
       {
         title: 'Ongoing cosmetic / UX polish',
