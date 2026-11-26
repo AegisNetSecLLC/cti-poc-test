@@ -1373,6 +1373,7 @@
               <option value="taxii">TAXII 2.1 Collection</option>
               <option value="rss">RSS / Atom Security Feed</option>
             </select>
+            <p id="feedTypeLiveNote" class="text-[12px] mt-1"></p>
           </div>
         </div>
 
@@ -2957,7 +2958,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 41;
+    let currentVersionMinor = 42;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -4509,24 +4510,29 @@
     // the backend learns to support later) — returns the created row so the caller can decide how
     // to reflect it in the UI, or null if the backend couldn't be reached (demo-only fallback).
     async function registerLiveConnector(name, lookback, type, feedUrl, keywords) {
+      let res;
       try {
         const body = { name: name, type: type || 'nvd', lookbackWindow: lookback };
         if (feedUrl) body.feedUrl = feedUrl;
         if (keywords && keywords.length) body.keywords = keywords;
-        const res = await fetch(`${LIVE_API_BASE}/connectors`, {
+        res = await fetch(`${LIVE_API_BASE}/connectors`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `request failed (${res.status})`);
-        }
-        return await res.json();
       } catch (e) {
-        showToast(`No live backend reachable for "${name}" — it will stay local/demo-only (${e.message}).`, 'info');
+        // A real network failure — fetch itself threw, no response at all.
+        showToast(`No live backend reachable for "${name}" — it will stay local/demo-only.`, 'info');
         return null;
       }
+      if (!res.ok) {
+        // The backend responded but rejected the request (bad input, etc.) — surfacing this as
+        // "unreachable" would hide a real, fixable problem behind a misleading message.
+        const data = await res.json().catch(() => ({}));
+        showToast(`"${name}" was rejected by the backend: ${data.error || `request failed (${res.status})`}`, 'error');
+        return null;
+      }
+      return await res.json();
     }
 
     async function syncLiveConnector(connectorId) {
@@ -5058,12 +5064,25 @@
     function updateFeedUrlPlaceholder() {
       const type = document.getElementById('feedType').value;
       const urlInput = document.getElementById('feedUrl');
+      const note = document.getElementById('feedTypeLiveNote');
       if (type === 'taxii') {
         urlInput.placeholder = 'intel.example.org/taxii2/collections/<uuid>';
       } else if (type === 'rss') {
         urlInput.placeholder = 'example.com/feeds/threat-advisories.rss';
       } else {
         urlInput.placeholder = 'intel.example.org/feeds/export-bundle.json';
+      }
+      // RSS is the only feed type with a real backend parser right now — STIX/TAXII silently
+      // stayed demo-only even though nothing in the form said so, which made it easy to submit
+      // one expecting it to actually poll. Spelled out here instead of discovered by surprise.
+      if (note) {
+        if (type === 'rss') {
+          note.className = 'text-[12px] mt-1 text-emerald-400';
+          note.textContent = '● Real — this registers a live backend connector that actually polls.';
+        } else {
+          note.className = 'text-[12px] mt-1 text-amber-400';
+          note.textContent = '● Demo only — no real backend parser exists for STIX/TAXII yet; this stays local to your browser.';
+        }
       }
     }
 
