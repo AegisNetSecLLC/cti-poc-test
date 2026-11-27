@@ -3060,7 +3060,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 50;
+    let currentVersionMinor = 51;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -4952,15 +4952,71 @@
     const LIVE_NEWS_ITEMS = [];
     const liveNewsLinks = new Set();
 
+    // Article links go through onclick attributes, which use double-quote delimiters here —
+    // a raw link containing a stray quote or ampersand would break the attribute. Base64 is a
+    // cheap, reliable way to pass it through untouched instead of hand-rolling escaping.
+    function newsToken(link) {
+      try { return btoa(unescape(encodeURIComponent(link))); } catch (e) { return btoa(link); }
+    }
+    function fromNewsToken(token) {
+      try { return decodeURIComponent(escape(atob(token))); } catch (e) { return atob(token); }
+    }
+
     function mergeLiveNews(rows) {
       let added = false;
       rows.forEach(row => {
         if (liveNewsLinks.has(row.link)) return;
         liveNewsLinks.add(row.link);
+        row.remediationStatus = row.remediationStatus || 'open';
+        row.assignedTo = row.assignedTo || null;
         LIVE_NEWS_ITEMS.unshift(row);
         added = true;
       });
-      if (added) renderLiveNewsList();
+      if (added) {
+        renderLiveNewsList();
+        // Same race-condition guard as mergeLiveAlerts(): fetchNewsState() may have already
+        // resolved before these articles existed to match against.
+        if (cachedNewsStateRows) applyNewsStateRows(cachedNewsStateRows);
+      }
+    }
+
+    function newsRemediationButtonsHtml(n) {
+      const token = newsToken(n.link);
+      return ['open', 'in_progress', 'resolved'].map(val => {
+        const active = n.remediationStatus === val;
+        return `<button data-write-action onclick="event.stopPropagation(); setNewsItemStatus('${token}','${val}')" class="px-2 py-0.5 rounded text-[11px] font-mono border transition ${active ? 'bg-slate-700 text-white border-slate-600' : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'}">${REMEDIATION_STATUS_LABELS[val]}</button>`;
+      }).join('');
+    }
+
+    function newsAssignButtonHtml(n) {
+      if (!currentUser) return '';
+      const token = newsToken(n.link);
+      const mine = n.assignedTo && n.assignedTo.username === currentUser.username;
+      const label = mine ? 'Unassign Me' : (n.assignedTo ? 'Reassign to Me' : 'Assign to Me');
+      const title = mine
+        ? 'Stop owning this — removes your name from the article'
+        : 'Assign yourself as owner — emails you a notification and shows your name on this article';
+      return `<button data-write-action onclick="event.stopPropagation(); assignNewsItemToMe('${token}')" title="${title}" class="px-2 py-0.5 rounded text-[11px] font-mono border transition ${mine ? 'bg-cyan-950 text-cyan-300 border-cyan-700 hover:bg-cyan-900' : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-cyan-300 hover:border-cyan-800'}">${label}</button>`;
+    }
+
+    function newsAssignDropdownHtml(n) {
+      if (!currentUser || MOCK_USERS.length === 0) return '';
+      const token = newsToken(n.link);
+      const options = MOCK_USERS.map(u => {
+        const selected = n.assignedTo && n.assignedTo.username === u.username ? 'selected' : '';
+        return `<option value="${u.username}" ${selected}>${u.displayName}${u.username === currentUser.username ? ' (me)' : ''}</option>`;
+      }).join('');
+      return `<select onclick="event.stopPropagation()" onchange="event.stopPropagation(); assignNewsItemToUser('${token}', this.value); this.selectedIndex = 0;" title="Assign a teammate to own chasing this down — emails them a notification" class="h-[22px] px-1.5 rounded text-[11px] font-mono border bg-slate-900 text-slate-400 border-slate-800 hover:text-cyan-300 hover:border-cyan-800 transition">
+        <option value="" selected disabled>Assign teammate…</option>
+        ${options}
+      </select>`;
+    }
+
+    function newsAssigneeChipHtml(n) {
+      if (n.assignedTo) {
+        return `<span class="text-[11px] font-mono text-cyan-400" title="Owner: ${n.assignedTo.displayName}">${n.assignedTo.displayName}</span>`;
+      }
+      return `<span class="text-[11px] font-mono text-slate-600">Unassigned</span>`;
     }
 
     function renderLiveNewsCards(items) {
@@ -4977,6 +5033,13 @@
           ${n.summary ? `<p class="text-[13px] text-slate-400 leading-relaxed">${n.summary}</p>` : ''}
           <div class="flex flex-wrap gap-1.5">
             ${(n.matchedKeywords || []).map(k => `<span class="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800 text-[10.5px] font-mono uppercase">${k}</span>`).join('')}
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-800/80">
+            ${newsRemediationButtonsHtml(n)}
+            <span class="flex-1"></span>
+            ${newsAssigneeChipHtml(n)}
+            ${newsAssignButtonHtml(n)}
+            ${newsAssignDropdownHtml(n)}
           </div>
         </div>
       `).join('');
@@ -5004,6 +5067,149 @@
       } catch (e) { /* no backend reachable — stay on whatever's already merged */ }
       renderLiveNewsList();
       if (btn) { btn.disabled = false; btn.classList.remove('opacity-60'); }
+    }
+
+    // Remediation status + assignment for news articles — same backend-persistence pattern as
+    // alert_state, just keyed by the article's link instead of an alert id (there's no CVE/alert
+    // id for a headline). Cached + re-applied from mergeLiveNews() for the same reason
+    // cachedAlertStateRows exists: fetchNewsState() and fetchLiveNews() both fire unawaited from
+    // DOMContentLoaded with no guaranteed order.
+    let cachedNewsStateRows = null;
+
+    function applyNewsStateRows(rows) {
+      let changed = false;
+      rows.forEach(row => {
+        const item = LIVE_NEWS_ITEMS.find(n => n.link === row.link);
+        if (!item) return;
+        item.remediationStatus = row.remediationStatus;
+        item.resolvedAt = row.resolvedAt ? Date.parse(row.resolvedAt) : null;
+        item.assignedTo = row.assignedTo || null;
+        changed = true;
+      });
+      if (changed) renderLiveNewsList();
+    }
+
+    async function fetchNewsState() {
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/news-state`);
+        if (!res.ok) return;
+        cachedNewsStateRows = await res.json();
+        applyNewsStateRows(cachedNewsStateRows);
+      } catch (e) { /* live backend unreachable — default open/unassigned state stands */ }
+    }
+
+    function syncNewsStateToBackend(item) {
+      fetch(`${LIVE_API_BASE}/news-state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          link: item.link,
+          remediationStatus: item.remediationStatus,
+          resolvedAt: item.resolvedAt ? new Date(item.resolvedAt).toISOString() : null,
+          assignedTo: item.assignedTo || null
+        })
+      }).catch(() => { /* live backend unreachable — in-memory state still applies this session */ });
+    }
+
+    function setNewsItemStatus(token, status) {
+      const link = fromNewsToken(token);
+      const item = LIVE_NEWS_ITEMS.find(n => n.link === link);
+      if (!item || item.remediationStatus === status) return;
+      item.remediationStatus = status;
+      item.resolvedAt = status === 'resolved' ? Date.now() : null;
+      syncNewsStateToBackend(item);
+      logActivity('News Remediation Status Updated', `"${item.title}" marked "${REMEDIATION_STATUS_LABELS[status]}"`);
+      renderLiveNewsList();
+      showToast(`Article marked "${REMEDIATION_STATUS_LABELS[status]}".`, 'success');
+      if (status !== 'open' && item.assignedTo) notifyNewsStatusChange(item, status);
+    }
+
+    function assignNewsItemToMe(token) {
+      if (!currentUser) return;
+      const link = fromNewsToken(token);
+      const item = LIVE_NEWS_ITEMS.find(n => n.link === link);
+      if (!item) return;
+      if (item.assignedTo && item.assignedTo.username === currentUser.username) {
+        unassignNewsItem(token);
+        return;
+      }
+      assignNewsItemTo(token, currentUser);
+    }
+
+    function assignNewsItemToUser(token, username) {
+      if (!username) return;
+      const user = MOCK_USERS.find(u => u.username === username);
+      if (!user) return;
+      assignNewsItemTo(token, user);
+    }
+
+    function unassignNewsItem(token) {
+      const link = fromNewsToken(token);
+      const item = LIVE_NEWS_ITEMS.find(n => n.link === link);
+      if (!item || !item.assignedTo) return;
+      const was = item.assignedTo.displayName;
+      item.assignedTo = null;
+      syncNewsStateToBackend(item);
+      logActivity('News Article Unassigned', `${was} unassigned from "${item.title}"`);
+      renderLiveNewsList();
+      showToast(`${was} is no longer assigned to this article.`, 'success');
+    }
+
+    function assignNewsItemTo(token, user) {
+      const link = fromNewsToken(token);
+      const item = LIVE_NEWS_ITEMS.find(n => n.link === link);
+      if (!item) return;
+      if (item.assignedTo && item.assignedTo.username === user.username) return;
+      item.assignedTo = { username: user.username, displayName: user.displayName, email: user.email };
+      syncNewsStateToBackend(item);
+      logActivity('News Article Assigned', `"${item.title}" assigned to ${user.displayName}${currentUser && currentUser.username !== user.username ? ` by ${currentUser.displayName}` : ''}`);
+      renderLiveNewsList();
+      const isSelf = currentUser && user.username === currentUser.username;
+      showToast(`${isSelf ? "You're" : `${user.displayName} is`} now tracking this article. Sending notification email…`, 'success');
+      notifyNewsAssignment(item);
+    }
+
+    async function notifyNewsAssignment(item) {
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/notify/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: item.assignedTo.email,
+            displayName: item.assignedTo.displayName,
+            title: item.title,
+            alertId: item.link,
+            assignedBy: currentUser ? currentUser.displayName : 'AegisCTI'
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+        showToast(`Assignment email sent to ${item.assignedTo.email}.`, 'success');
+      } catch (e) {
+        showToast(`Assigned, but the notification email didn't send (${e.message}).`, 'error');
+      }
+    }
+
+    async function notifyNewsStatusChange(item, status) {
+      if (!item.assignedTo) return;
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/notify/status-change`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: item.assignedTo.email,
+            title: item.title,
+            alertId: item.link,
+            status: status,
+            changedBy: currentUser ? currentUser.displayName : 'AegisCTI'
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+        showToast(`Status-update email sent to ${item.assignedTo.email}.`, 'success');
+      } catch (e) {
+        showToast(`Status updated, but the notification email didn't send (${e.message}).`, 'error');
+      }
     }
 
     function mergeLiveAlerts(rows) {
@@ -7053,6 +7259,7 @@ Correlation Team does not perform remediation itself.
       fetchLiveNews();
       fetchMemoArchive();
       fetchAlertState();
+      fetchNewsState();
       loadDigestEnabled();
       loadDigestMinPriority();
       populateGraphIncidentSelector();
@@ -7112,17 +7319,23 @@ Correlation Team does not perform remediation itself.
   const $ = (id) => document.getElementById(id);
   const history = [];
   let greeted = false;
+  // How T found its last answer isn't shown unless asked — keeps normal answers uncluttered,
+  // but the info is never thrown away, so "what query did you use?" still works right after.
+  let lastTrace = null;
+  const METHOD_QUESTION_RE = /\b(what|which)\b[\s\S]{0,40}\b(quer(y|ies)|filters?|tools?|sources?)\b|how (did|do) (you|t) (find|get|search|look|know|query)|show (me )?(your|the) (work|trace|query|source)/i;
 
   function add(cls, text) {
     const d = document.createElement('div');
     d.className = 'askT-msg ' + cls; d.textContent = text;
     $('askT-log').appendChild(d); $('askT-log').scrollTop = 1e9; return d;
   }
-  function trace(steps) {
-    if (!steps || !steps.length) return;
-    const d = document.createElement('div'); d.className = 'askT-trace';
-    d.textContent = steps.map(s => (s.where === 'internet' ? '\u{1F310} searched the internet: ' : '\u{1F5C4} searched the platform: ') + s.tool).join('\n');
-    $('askT-log').appendChild(d);
+  function describeTrace(steps) {
+    if (!steps || !steps.length) return "I haven't searched anything yet this conversation — ask a real question first, then ask how I found it.";
+    return steps.map(s => {
+      const where = s.where === 'internet' ? 'the internet' : 'the platform';
+      const args = s.args && Object.keys(s.args).length ? ` with ${JSON.stringify(s.args)}` : ' with no filters';
+      return `I searched ${where} using the "${s.tool}" tool${args}.`;
+    }).join('\n');
   }
 
   async function open() {
@@ -7144,12 +7357,20 @@ Correlation Team does not perform remediation itself.
     e.preventDefault();
     const msg = $('askT-input').value.trim(); if (!msg) return;
     $('askT-input').value = ''; add('askT-me', msg);
+
+    if (METHOD_QUESTION_RE.test(msg)) {
+      const answer = describeTrace(lastTrace);
+      add('askT-t', answer);
+      history.push({ role: 'user', content: msg }, { role: 'assistant', content: answer });
+      return;
+    }
+
     const thinking = add('askT-t', 'T is consulting the abyss…'); $('askT-send').disabled = true;
     try {
       const r = await fetch(API + '/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, history }) });
       const j = await r.json();
       thinking.textContent = j.answer || j.error || 'No answer.';
-      trace(j.trace);
+      lastTrace = j.trace || null;
       history.push({ role: 'user', content: msg }, { role: 'assistant', content: thinking.textContent });
     } catch { thinking.textContent = 'The gate is sealed: the backend did not respond.'; }
     finally { $('askT-send').disabled = false; $('askT-input').focus(); }
