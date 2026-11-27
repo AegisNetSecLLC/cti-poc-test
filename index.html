@@ -740,6 +740,7 @@
           <button onclick="switchSettingsTab('status')" id="settingsTab-status" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Platform Status</button>
           <button onclick="switchSettingsTab('users')" id="settingsTab-users" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">User Setup</button>
           <button onclick="switchSettingsTab('alerting')" id="settingsTab-alerting" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Alerting & Notifications</button>
+          <button onclick="switchSettingsTab('askt')" id="settingsTab-askt" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Ask T</button>
           <button onclick="switchSettingsTab('audit')" id="settingsTab-audit" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Audit Log</button>
           <button onclick="switchSettingsTab('roadmap')" id="settingsTab-roadmap" class="settings-tab px-3 py-1.5 rounded-md text-sm font-mono transition">Roadmap</button>
         </div>
@@ -954,6 +955,93 @@
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <div id="settingsPane-askt" class="max-w-xl hidden space-y-4">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-200">Ask T (Tartarus) <span class="text-[11px] text-slate-500 font-normal">(real backend — takes effect immediately, no restart)</span></span>
+          </div>
+          <div class="p-4 space-y-5">
+            <p class="text-[13px] text-slate-400 leading-relaxed">
+              T answers from the platform's own data first (CVE counts, correlated alerts, ingested news) and only reaches outside for things that aren't in AegisCTI. With no model configured below, T still works — it falls back to rule-based answers for counts and CVE lookups.
+            </p>
+
+            <div class="space-y-3">
+              <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">AI Model Provider</span>
+              <div>
+                <label class="text-[12px] text-slate-400 font-mono block mb-1">Provider</label>
+                <select id="asktProviderSelect" onchange="updateAsktProviderFields()" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                  <option value="none">None — rule-based answers only</option>
+                  <option value="openai_compatible">OpenAI-compatible (OpenAI, Azure, Ollama, Groq, OpenRouter...)</option>
+                  <option value="anthropic">Anthropic (Claude)</option>
+                </select>
+              </div>
+              <div id="asktProviderFields" class="grid grid-cols-1 sm:grid-cols-2 gap-3 hidden">
+                <div class="sm:col-span-2">
+                  <label class="text-[12px] text-slate-400 font-mono block mb-1">Base URL</label>
+                  <input type="text" id="asktBaseUrl" placeholder="e.g. http://localhost:11434/v1 or https://api.anthropic.com" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                </div>
+                <div>
+                  <label class="text-[12px] text-slate-400 font-mono block mb-1">Model</label>
+                  <input type="text" id="asktModel" placeholder="e.g. llama3.1, gpt-4o, claude-sonnet-5" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                </div>
+                <div id="asktAzureField" class="hidden">
+                  <label class="text-[12px] text-slate-400 font-mono block mb-1">Azure API Version</label>
+                  <input type="text" id="asktAzureApiVersion" placeholder="e.g. 2024-10-21" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="text-[12px] text-slate-400 font-mono block mb-1">API Key <span id="asktApiKeyStatus" class="text-slate-600 normal-case"></span></label>
+                  <input type="password" id="asktApiKey" autocomplete="off" placeholder="leave blank to keep the key already saved" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                  <label class="inline-flex items-center gap-1.5 mt-1 text-[12px] text-slate-500 cursor-pointer">
+                    <input type="checkbox" id="asktClearApiKey" class="rounded bg-slate-900 border-slate-700">
+                    Clear the saved key instead
+                  </label>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" data-write-action onclick="saveAsktAiProvider()" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">Save Model Settings</button>
+                <span id="asktAiStatus" class="text-[12px] text-slate-500 font-mono"></span>
+              </div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-4 space-y-3">
+              <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Web Search <span class="text-slate-600 normal-case">(for things outside AegisCTI)</span></span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[12px] text-slate-400 font-mono block mb-1">Provider</label>
+                  <select id="asktWebSearchProviderSelect" onchange="updateAsktWebSearchFields()" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                    <option value="none">None — web search disabled</option>
+                    <option value="tavily">Tavily</option>
+                  </select>
+                </div>
+                <div id="asktWebSearchKeyField" class="hidden">
+                  <label class="text-[12px] text-slate-400 font-mono block mb-1">API Key <span id="asktWebSearchKeyStatus" class="text-slate-600 normal-case"></span></label>
+                  <input type="password" id="asktWebSearchApiKey" autocomplete="off" placeholder="leave blank to keep the key already saved" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                  <label class="inline-flex items-center gap-1.5 mt-1 text-[12px] text-slate-500 cursor-pointer">
+                    <input type="checkbox" id="asktClearWebSearchApiKey" class="rounded bg-slate-900 border-slate-700">
+                    Clear the saved key instead
+                  </label>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" data-write-action onclick="saveAsktWebSearch()" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-sm font-semibold transition">Save Web Search Settings</button>
+                <span id="asktWebSearchStatus" class="text-[12px] text-slate-500 font-mono"></span>
+              </div>
+              <p class="text-[12px] text-slate-500">Outbound queries are automatically scrubbed of IPs, emails, and internal hostnames before they leave AegisCTI — see <code>INTERNAL_TERMS</code> on the backend to add more.</p>
+            </div>
+
+            <div class="border-t border-slate-800 pt-4 space-y-2">
+              <span class="text-[12px] text-slate-500 font-mono uppercase tracking-wider">Quick Test</span>
+              <p class="text-[12px] text-slate-500">Asks T right now, using whatever is saved above — same as using the floating Ask T button.</p>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input type="text" id="asktTestMessage" placeholder="e.g. How many critical CVEs do we have today?" class="flex-1 px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                <button type="button" onclick="testAskt()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-semibold transition whitespace-nowrap">Ask T</button>
+              </div>
+              <div id="asktTestResult" class="text-[13px] text-slate-300 bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2 hidden"></div>
             </div>
           </div>
         </div>
@@ -2972,7 +3060,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 49;
+    let currentVersionMinor = 50;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -4589,6 +4677,122 @@
       }
     }
 
+    function updateAsktProviderFields() {
+      const provider = document.getElementById('asktProviderSelect').value;
+      document.getElementById('asktProviderFields').classList.toggle('hidden', provider === 'none');
+      document.getElementById('asktAzureField').classList.toggle('hidden', provider !== 'openai_compatible');
+    }
+
+    function updateAsktWebSearchFields() {
+      const provider = document.getElementById('asktWebSearchProviderSelect').value;
+      document.getElementById('asktWebSearchKeyField').classList.toggle('hidden', provider === 'none');
+    }
+
+    async function loadAsktSettings() {
+      const aiStatus = document.getElementById('asktAiStatus');
+      const webStatus = document.getElementById('asktWebSearchStatus');
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/settings/ai-provider`);
+        if (!res.ok) throw new Error('unreachable');
+        const data = await res.json();
+        document.getElementById('asktProviderSelect').value = data.provider;
+        document.getElementById('asktBaseUrl').value = data.baseUrl || '';
+        document.getElementById('asktModel').value = data.model || '';
+        document.getElementById('asktAzureApiVersion').value = data.azureApiVersion || '';
+        document.getElementById('asktApiKeyStatus').textContent = data.apiKeySet ? '(a key is saved)' : '(no key saved)';
+        document.getElementById('asktApiKey').value = '';
+        document.getElementById('asktClearApiKey').checked = false;
+        updateAsktProviderFields();
+        if (aiStatus) aiStatus.textContent = '';
+      } catch (e) {
+        if (aiStatus) aiStatus.textContent = 'Live backend unreachable — settings unavailable on the public demo.';
+      }
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/settings/web-search`);
+        if (!res.ok) throw new Error('unreachable');
+        const data = await res.json();
+        document.getElementById('asktWebSearchProviderSelect').value = data.provider;
+        document.getElementById('asktWebSearchKeyStatus').textContent = data.apiKeySet ? '(a key is saved)' : '(no key saved)';
+        document.getElementById('asktWebSearchApiKey').value = '';
+        document.getElementById('asktClearWebSearchApiKey').checked = false;
+        updateAsktWebSearchFields();
+        if (webStatus) webStatus.textContent = '';
+      } catch (e) {
+        if (webStatus) webStatus.textContent = 'Live backend unreachable — settings unavailable on the public demo.';
+      }
+    }
+
+    async function saveAsktAiProvider() {
+      const status = document.getElementById('asktAiStatus');
+      const provider = document.getElementById('asktProviderSelect').value;
+      const body = {
+        provider,
+        baseUrl: document.getElementById('asktBaseUrl').value.trim(),
+        model: document.getElementById('asktModel').value.trim(),
+        azureApiVersion: document.getElementById('asktAzureApiVersion').value.trim()
+      };
+      const apiKey = document.getElementById('asktApiKey').value;
+      if (document.getElementById('asktClearApiKey').checked) body.clearApiKey = true;
+      else if (apiKey) body.apiKey = apiKey;
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/settings/ai-provider`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'save failed');
+        showToast(`Ask T model provider set to "${provider}". Takes effect immediately, no restart needed.`, 'success');
+        logChange('Ask T Model Provider Updated', provider);
+        loadAsktSettings();
+      } catch (e) {
+        if (status) status.textContent = `Could not save: ${e.message}`;
+        showToast(`Could not save Ask T model settings: ${e.message}`, 'error');
+      }
+    }
+
+    async function saveAsktWebSearch() {
+      const status = document.getElementById('asktWebSearchStatus');
+      const provider = document.getElementById('asktWebSearchProviderSelect').value;
+      const body = { provider };
+      const apiKey = document.getElementById('asktWebSearchApiKey').value;
+      if (document.getElementById('asktClearWebSearchApiKey').checked) body.clearApiKey = true;
+      else if (apiKey) body.apiKey = apiKey;
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/settings/web-search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'save failed');
+        showToast(`Ask T web search set to "${provider}".`, 'success');
+        logChange('Ask T Web Search Updated', provider);
+        loadAsktSettings();
+      } catch (e) {
+        if (status) status.textContent = `Could not save: ${e.message}`;
+        showToast(`Could not save Ask T web search settings: ${e.message}`, 'error');
+      }
+    }
+
+    async function testAskt() {
+      const input = document.getElementById('asktTestMessage');
+      const result = document.getElementById('asktTestResult');
+      const message = input.value.trim();
+      if (!message) return;
+      result.classList.remove('hidden');
+      result.textContent = 'T is consulting the abyss…';
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/ask`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        result.textContent = data.answer || data.error || 'No answer.';
+      } catch (e) {
+        result.textContent = `Could not reach T: ${e.message}`;
+      }
+    }
+
     async function loadDigestEnabled() {
       const toggle = document.getElementById('digestEnabledToggle');
       const status = document.getElementById('digestEnabledStatus');
@@ -5650,7 +5854,7 @@
 
     function switchSettingsTab(name) {
       activeSettingsTab = name;
-      ['status', 'users', 'alerting', 'audit', 'roadmap'].forEach(t => {
+      ['status', 'users', 'alerting', 'askt', 'audit', 'roadmap'].forEach(t => {
         const pane = document.getElementById('settingsPane-' + t);
         if (pane) pane.classList.toggle('hidden', t !== name);
         const tab = document.getElementById('settingsTab-' + t);
@@ -5661,6 +5865,7 @@
         }
       });
       if (name === 'alerting') fetchSendLog();
+      if (name === 'askt') loadAsktSettings();
     }
 
     const SEND_LOG_TYPE_LABELS = {
