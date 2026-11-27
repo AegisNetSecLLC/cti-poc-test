@@ -2972,7 +2972,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 46;
+    let currentVersionMinor = 47;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5480,7 +5480,7 @@
       {
         title: 'Scheduled email digest (CVEs + critical news)',
         status: 'shipped',
-        detail: 'Real cron-based digest emails, live on cti.aegissecure.net — CVE digest supports a minimum-severity filter (lower-priority CVEs stay visible in Correlated Triage, just aren\'t mailed) and the news digest\'s "critical only" filter is the RSS connector\'s own keyword match. Test-send button previews either digest without disturbing the real schedule. A "Recent Sends" log (Settings → Alerting) now records the exact moment every real send left the system plus Resend\'s delivery acknowledgment, so "did it actually go out" is a lookup, not a guess.'
+        detail: 'Real cron-based digest emails, live on cti.aegissecure.net — CVE digest supports a minimum-severity filter (lower-priority CVEs stay visible in Correlated Triage, just aren\'t mailed) and the news digest\'s "critical only" filter is the RSS connector\'s own keyword match. Test-send button previews either digest without disturbing the real schedule. A "Recent Sends" log (Settings → Alerting) now records the exact moment every real send left the system plus Resend\'s delivery acknowledgment, so "did it actually go out" is a lookup, not a guess. A real on/off switch (Settings → Alerting → "Scheduled CVE Digest") now pauses the digest entirely — the "Active Alert Rules" list above it is still demo-only/browser-saved and was never wired to real email, which is exactly the confusion this toggle exists to resolve.'
       },
       {
         title: 'Alert Rules actually dispatching to Email/Teams/Jira',
