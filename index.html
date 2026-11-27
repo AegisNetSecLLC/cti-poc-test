@@ -3060,7 +3060,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 51;
+    let currentVersionMinor = 52;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5974,8 +5974,8 @@
       },
       {
         title: 'Status & assignment parity for RSS news articles',
-        status: 'idea',
-        detail: 'Correlated Triage alerts have real Open/In Progress/Resolved status and Assign-to-Me/teammate controls with email notifications (shipped) — the news article tiles under Live Critical News Ingestion have none of that today, even though an analyst may well need to "own" chasing down a critical headline the same way they own a CVE. Needs its own backend state (articles are keyed by `link`, not an alert id, so this can\'t just reuse `alert_state` as-is) but should otherwise mirror the exact same UI pattern and notification emails already built for alerts, for consistency.'
+        status: 'shipped',
+        detail: 'Live, not an idea anymore. News article tiles under Live Critical News Ingestion now have the same Open/In Progress/Resolved and Assign-to-Me/teammate controls alerts have, with the same real assignment/status-change emails. Backed by a new `news_state` table keyed by the article\'s own `link` (articles never had an alert id to key off of) — same upsert pattern as `alert_state`, same race-condition-safe fetch-and-cache on load. The assignment/status-change email endpoints were relaxed to make `cve` optional so the same mailer code covers both a CVE alert and a plain headline.'
       },
       {
         title: 'Deep link from assignment/status emails straight to the CVE',
