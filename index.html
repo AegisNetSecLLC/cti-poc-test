@@ -2972,7 +2972,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 48;
+    let currentVersionMinor = 49;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5543,9 +5543,19 @@
         detail: 'A new connector type alongside Ingestion — per-finding "Enrich" button that looks up an indicator (IP/domain/hash/URL/CVE) against real reputation APIs. Modeled on OpenCTI\'s connector pattern (scope, manual/auto trigger, append-only result history with source reliability) without the message-queue infrastructure overhead. Add Connector modal gets a Connector Type toggle; Scope and Trigger are checkboxes (multi-select / independent), Source Reliability and Provider are dropdowns (Provider\'s "Custom/Other" option sits last). VirusTotal is the planned first real integration.'
       },
       {
-        title: 'In-platform AI agent (Claude / Gemini / Copilot / custom)',
+        title: 'Ask T (Tartarus) — in-platform AI assistant',
+        status: 'shipped',
+        detail: 'Live, not an idea anymore — the "Ask T" button in the bottom-right opens a real assistant backed by the backend\'s own data. Five read-only tools (count_alerts, search_alerts, search_news, correlate_cve, web_search), each wrapping outside text in `<untrusted>` tags so a poisoned feed or web result can\'t steer it. Running today in rule-based "offline" mode (AI_PROVIDER=none) — it still answers real counts and CVE lookups correctly, just without open-ended natural language. Turning on full conversational answers is a config change, not a build: set AI_PROVIDER/AI_API_KEY to an OpenAI-compatible endpoint or Anthropic, no code changes needed. Web search is off by default (WEB_SEARCH_PROVIDER unset) — flip that on once there\'s an approved provider. No get_asset tool yet, on purpose: there\'s no real asset/CMDB connector for it to query honestly (see that item below). No auth gate on T\'s endpoints yet either, matching every other route on this backend today — ships alongside Real SSO, not before it.'
+      },
+      {
+        title: 'MCP server — let Claude / Copilot use T\'s tools directly',
+        status: 'designed',
+        detail: 'A thin bridge (stdio for VS Code/Claude Desktop, Streamable HTTP for Claude Enterprise/Copilot Studio) that calls T\'s exact same /api/tools/* endpoints, so any connected assistant gets the same data and the same guardrails T itself has — nothing bypasses the backend. Code exists (ported alongside T itself) but isn\'t deployed or auth-gated yet, and needs a real decision on whether/how it\'s exposed outside this machine before it goes anywhere near Claude Enterprise or Copilot Studio.'
+      },
+      {
+        title: 'Real asset / CMDB correlation',
         status: 'idea',
-        detail: 'A chat panel inside AegisCTI scoped to the alert/connector/CVE context currently open, backed by a real LLM API — Claude first, with a provider-agnostic backend so other providers (or a custom endpoint) can be added later. The one roadmap item with a real ongoing operating cost once live (per-message API spend), not just a one-time build — intentionally the furthest-out item here.'
+        detail: 'The one gap underneath two different features right now: Correlated Triage can\'t show true organizational risk (just CVSS) without knowing what\'s actually running where, and Ask T has no get_asset tool because there\'s nothing real to ask. Needs an actual inventory source — an export from a CMDB, Qualys, or Defender device inventory — plus version-aware matching (today\'s thinking would match "Windows" to every Windows CVE; needs real CPE version-range comparison to mean anything). Foundational enough that it\'s worth its own line instead of staying a footnote on other items.'
       },
       {
         title: 'News-to-memo correlation & enrichment',
