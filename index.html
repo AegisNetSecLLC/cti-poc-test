@@ -626,7 +626,15 @@
           </div>
           <div class="px-3 pt-3 space-y-2">
             <div class="flex flex-col sm:flex-row gap-2">
-              <input type="text" id="newsSearchInput" oninput="setNewsSearch(this.value)" placeholder="Search title or summary..." class="flex-1 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500">
+              <div class="relative flex-1">
+                <input type="text" id="newsSearchInput" autocomplete="off"
+                  oninput="setNewsSearch(this.value)"
+                  onfocus="showNewsSearchSuggestions()"
+                  onblur="hideNewsSearchSuggestions()"
+                  placeholder="Keyword, title, description, summary, etc..."
+                  class="w-full px-3 py-1.5 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500">
+                <div id="newsSearchSuggestions" class="hidden absolute z-20 left-0 right-0 mt-1 rounded-lg border border-slate-700 bg-slate-900 shadow-xl max-h-56 overflow-y-auto"></div>
+              </div>
               <select id="newsSortSelect" onchange="setNewsSort(this.value)" class="px-3 py-1.5 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
                 <option value="recent">Sort: Most Recent</option>
                 <option value="oldest">Sort: Oldest First</option>
@@ -639,9 +647,6 @@
               <span class="text-[11px] text-slate-500 font-mono uppercase tracking-wide">Refine:</span>
               <select id="newsFilterSourceSelect" onchange="setNewsFilter('source', this.value)" class="px-2 py-1 rounded-lg bg-slate-950/80 border border-slate-700 text-[12px] text-slate-300 focus:outline-none focus:border-purple-500">
                 <option value="">All Sources</option>
-              </select>
-              <select id="newsFilterKeywordSelect" onchange="setNewsFilter('keyword', this.value)" class="px-2 py-1 rounded-lg bg-slate-950/80 border border-slate-700 text-[12px] text-slate-300 focus:outline-none focus:border-purple-500">
-                <option value="">All Keywords</option>
               </select>
               <select id="newsFilterStatusSelect" onchange="setNewsFilter('status', this.value)" class="px-2 py-1 rounded-lg bg-slate-950/80 border border-slate-700 text-[12px] text-slate-300 focus:outline-none focus:border-purple-500">
                 <option value="">All Statuses</option>
@@ -3094,7 +3099,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 53;
+    let currentVersionMinor = 54;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5083,7 +5088,6 @@
     // Triage quick-preset + Refine row pattern for consistency, scoped to this list only.
     let newsSortMode = 'recent';
     let newsFilterSource = '';
-    let newsFilterKeyword = '';
     let newsFilterStatus = '';
     let newsFilterAssign = '';
     let newsSearchText = '';
@@ -5096,20 +5100,19 @@
     function setNewsSearch(val) {
       newsSearchText = val;
       renderLiveNewsList();
+      renderNewsSearchSuggestions();
     }
 
     function setNewsFilter(kind, val) {
       if (kind === 'source') newsFilterSource = val;
-      else if (kind === 'keyword') newsFilterKeyword = val;
       else if (kind === 'status') newsFilterStatus = val;
       else if (kind === 'assign') newsFilterAssign = val;
       renderLiveNewsList();
     }
 
     function resetNewsFilters() {
-      newsFilterSource = ''; newsFilterKeyword = ''; newsFilterStatus = ''; newsFilterAssign = '';
+      newsFilterSource = ''; newsFilterStatus = ''; newsFilterAssign = '';
       const src = document.getElementById('newsFilterSourceSelect'); if (src) src.value = '';
-      const kw = document.getElementById('newsFilterKeywordSelect'); if (kw) kw.value = '';
       const st = document.getElementById('newsFilterStatusSelect'); if (st) st.value = '';
       const asg = document.getElementById('newsFilterAssignSelect'); if (asg) asg.value = '';
       renderLiveNewsList();
@@ -5117,29 +5120,75 @@
 
     function updateNewsRefineOptions() {
       const sourceSelect = document.getElementById('newsFilterSourceSelect');
-      const keywordSelect = document.getElementById('newsFilterKeywordSelect');
-      if (!sourceSelect || !keywordSelect) return;
+      if (!sourceSelect) return;
 
       const sources = [...new Set(LIVE_NEWS_ITEMS.map(n => n.source).filter(Boolean))].sort();
       const currentSource = sourceSelect.value;
       sourceSelect.innerHTML = '<option value="">All Sources</option>' + sources.map(s => `<option value="${s}">${s}</option>`).join('');
       sourceSelect.value = sources.includes(currentSource) ? currentSource : '';
 
-      const keywords = [...new Set(LIVE_NEWS_ITEMS.flatMap(n => n.matchedKeywords || []))].sort();
-      const currentKeyword = keywordSelect.value;
-      keywordSelect.innerHTML = '<option value="">All Keywords</option>' + keywords.map(k => `<option value="${k}">${k}</option>`).join('');
-      keywordSelect.value = keywords.includes(currentKeyword) ? currentKeyword : '';
-
       const clearBtn = document.getElementById('btnClearNewsRefine');
-      if (clearBtn) clearBtn.classList.toggle('hidden', !(newsFilterSource || newsFilterKeyword || newsFilterStatus || newsFilterAssign));
+      if (clearBtn) clearBtn.classList.toggle('hidden', !(newsFilterSource || newsFilterStatus || newsFilterAssign));
+    }
+
+    // Keyword is no longer its own dropdown — it's one more thing the single search box matches
+    // against (along with title/summary/source), so "ransomware" or "actively exploited" both
+    // work typed directly into search instead of needing a separate control.
+    function newsSearchHaystack(n) {
+      return `${n.title} ${n.summary || ''} ${n.source || ''} ${(n.matchedKeywords || []).join(' ')}`.toLowerCase();
+    }
+
+    // Suggestions pool: distinct matched keywords + sources, since those are short, finite,
+    // and exactly what a Refine dropdown would have offered — just surfaced as you type instead.
+    function newsSuggestionPool() {
+      const keywords = [...new Set(LIVE_NEWS_ITEMS.flatMap(n => n.matchedKeywords || []))].map(k => ({ label: k, kind: 'Keyword' }));
+      const sources = [...new Set(LIVE_NEWS_ITEMS.map(n => n.source).filter(Boolean))].map(s => ({ label: s, kind: 'Source' }));
+      return [...keywords, ...sources];
+    }
+
+    function renderNewsSearchSuggestions() {
+      const box = document.getElementById('newsSearchSuggestions');
+      if (!box) return;
+      const q = newsSearchText.trim().toLowerCase();
+      const pool = newsSuggestionPool();
+      const matches = (q ? pool.filter(s => s.label.toLowerCase().includes(q) && s.label.toLowerCase() !== q) : pool).slice(0, 8);
+      if (!matches.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+      box.innerHTML = matches.map(s => `
+        <button type="button" onclick="pickNewsSearchSuggestion('${s.label.replace(/'/g, "\\'")}')" class="w-full text-left px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 flex items-center justify-between gap-2">
+          <span class="truncate">${s.label}</span>
+          <span class="text-[10px] font-mono uppercase text-slate-600 shrink-0">${s.kind}</span>
+        </button>
+      `).join('');
+      box.classList.remove('hidden');
+    }
+
+    function showNewsSearchSuggestions() {
+      renderNewsSearchSuggestions();
+    }
+
+    // blur fires before a click on a suggestion button registers — delay the hide just long
+    // enough for that click to land, same trick any typeahead needs without a library.
+    function hideNewsSearchSuggestions() {
+      setTimeout(() => {
+        const box = document.getElementById('newsSearchSuggestions');
+        if (box) box.classList.add('hidden');
+      }, 150);
+    }
+
+    function pickNewsSearchSuggestion(label) {
+      const input = document.getElementById('newsSearchInput');
+      if (input) { input.value = label; input.focus(); }
+      newsSearchText = label;
+      renderLiveNewsList();
+      const box = document.getElementById('newsSearchSuggestions');
+      if (box) box.classList.add('hidden');
     }
 
     function filterAndSortNewsItems() {
       const q = newsSearchText.trim().toLowerCase();
       let items = LIVE_NEWS_ITEMS.filter(n => {
-        if (q && !`${n.title} ${n.summary || ''}`.toLowerCase().includes(q)) return false;
+        if (q && !newsSearchHaystack(n).includes(q)) return false;
         if (newsFilterSource && n.source !== newsFilterSource) return false;
-        if (newsFilterKeyword && !(n.matchedKeywords || []).includes(newsFilterKeyword)) return false;
         if (newsFilterStatus && (n.remediationStatus || 'open') !== newsFilterStatus) return false;
         if (newsFilterAssign === 'me' && !(n.assignedTo && currentUser && n.assignedTo.username === currentUser.username)) return false;
         if (newsFilterAssign === 'assigned' && !n.assignedTo) return false;
