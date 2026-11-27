@@ -624,6 +624,40 @@
               Refresh
             </button>
           </div>
+          <div class="px-3 pt-3 space-y-2">
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input type="text" id="newsSearchInput" oninput="setNewsSearch(this.value)" placeholder="Search title or summary..." class="flex-1 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500">
+              <select id="newsSortSelect" onchange="setNewsSort(this.value)" class="px-3 py-1.5 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                <option value="recent">Sort: Most Recent</option>
+                <option value="oldest">Sort: Oldest First</option>
+                <option value="keywords">Sort: Most Keyword Matches</option>
+                <option value="unassigned">Sort: Unassigned First</option>
+                <option value="source">Sort: Source (A-Z)</option>
+              </select>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[11px] text-slate-500 font-mono uppercase tracking-wide">Refine:</span>
+              <select id="newsFilterSourceSelect" onchange="setNewsFilter('source', this.value)" class="px-2 py-1 rounded-lg bg-slate-950/80 border border-slate-700 text-[12px] text-slate-300 focus:outline-none focus:border-purple-500">
+                <option value="">All Sources</option>
+              </select>
+              <select id="newsFilterKeywordSelect" onchange="setNewsFilter('keyword', this.value)" class="px-2 py-1 rounded-lg bg-slate-950/80 border border-slate-700 text-[12px] text-slate-300 focus:outline-none focus:border-purple-500">
+                <option value="">All Keywords</option>
+              </select>
+              <select id="newsFilterStatusSelect" onchange="setNewsFilter('status', this.value)" class="px-2 py-1 rounded-lg bg-slate-950/80 border border-slate-700 text-[12px] text-slate-300 focus:outline-none focus:border-purple-500">
+                <option value="">All Statuses</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+              </select>
+              <select id="newsFilterAssignSelect" onchange="setNewsFilter('assign', this.value)" class="px-2 py-1 rounded-lg bg-slate-950/80 border border-slate-700 text-[12px] text-slate-300 focus:outline-none focus:border-purple-500">
+                <option value="">Everyone</option>
+                <option value="me">Assigned to Me</option>
+                <option value="assigned">Assigned</option>
+                <option value="unassigned">Unassigned</option>
+              </select>
+              <button type="button" id="btnClearNewsRefine" onclick="resetNewsFilters()" class="hidden text-[12px] text-purple-400 hover:text-purple-300 font-mono underline underline-offset-2">Clear refine</button>
+            </div>
+          </div>
           <div class="px-3 pt-3 text-[12px] text-slate-500 font-mono" id="liveNewsStatus">Not pulled yet this session — syncing a live RSS connector under Connectors & APIs will populate this automatically.</div>
           <div class="p-3 space-y-2" id="liveNewsList"></div>
         </div>
@@ -3060,7 +3094,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 52;
+    let currentVersionMinor = 53;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -5045,14 +5079,100 @@
       `).join('');
     }
 
+    // Sort/refine state for the Live Critical News Ingestion list — mirrors the Correlated
+    // Triage quick-preset + Refine row pattern for consistency, scoped to this list only.
+    let newsSortMode = 'recent';
+    let newsFilterSource = '';
+    let newsFilterKeyword = '';
+    let newsFilterStatus = '';
+    let newsFilterAssign = '';
+    let newsSearchText = '';
+
+    function setNewsSort(val) {
+      newsSortMode = val;
+      renderLiveNewsList();
+    }
+
+    function setNewsSearch(val) {
+      newsSearchText = val;
+      renderLiveNewsList();
+    }
+
+    function setNewsFilter(kind, val) {
+      if (kind === 'source') newsFilterSource = val;
+      else if (kind === 'keyword') newsFilterKeyword = val;
+      else if (kind === 'status') newsFilterStatus = val;
+      else if (kind === 'assign') newsFilterAssign = val;
+      renderLiveNewsList();
+    }
+
+    function resetNewsFilters() {
+      newsFilterSource = ''; newsFilterKeyword = ''; newsFilterStatus = ''; newsFilterAssign = '';
+      const src = document.getElementById('newsFilterSourceSelect'); if (src) src.value = '';
+      const kw = document.getElementById('newsFilterKeywordSelect'); if (kw) kw.value = '';
+      const st = document.getElementById('newsFilterStatusSelect'); if (st) st.value = '';
+      const asg = document.getElementById('newsFilterAssignSelect'); if (asg) asg.value = '';
+      renderLiveNewsList();
+    }
+
+    function updateNewsRefineOptions() {
+      const sourceSelect = document.getElementById('newsFilterSourceSelect');
+      const keywordSelect = document.getElementById('newsFilterKeywordSelect');
+      if (!sourceSelect || !keywordSelect) return;
+
+      const sources = [...new Set(LIVE_NEWS_ITEMS.map(n => n.source).filter(Boolean))].sort();
+      const currentSource = sourceSelect.value;
+      sourceSelect.innerHTML = '<option value="">All Sources</option>' + sources.map(s => `<option value="${s}">${s}</option>`).join('');
+      sourceSelect.value = sources.includes(currentSource) ? currentSource : '';
+
+      const keywords = [...new Set(LIVE_NEWS_ITEMS.flatMap(n => n.matchedKeywords || []))].sort();
+      const currentKeyword = keywordSelect.value;
+      keywordSelect.innerHTML = '<option value="">All Keywords</option>' + keywords.map(k => `<option value="${k}">${k}</option>`).join('');
+      keywordSelect.value = keywords.includes(currentKeyword) ? currentKeyword : '';
+
+      const clearBtn = document.getElementById('btnClearNewsRefine');
+      if (clearBtn) clearBtn.classList.toggle('hidden', !(newsFilterSource || newsFilterKeyword || newsFilterStatus || newsFilterAssign));
+    }
+
+    function filterAndSortNewsItems() {
+      const q = newsSearchText.trim().toLowerCase();
+      let items = LIVE_NEWS_ITEMS.filter(n => {
+        if (q && !`${n.title} ${n.summary || ''}`.toLowerCase().includes(q)) return false;
+        if (newsFilterSource && n.source !== newsFilterSource) return false;
+        if (newsFilterKeyword && !(n.matchedKeywords || []).includes(newsFilterKeyword)) return false;
+        if (newsFilterStatus && (n.remediationStatus || 'open') !== newsFilterStatus) return false;
+        if (newsFilterAssign === 'me' && !(n.assignedTo && currentUser && n.assignedTo.username === currentUser.username)) return false;
+        if (newsFilterAssign === 'assigned' && !n.assignedTo) return false;
+        if (newsFilterAssign === 'unassigned' && n.assignedTo) return false;
+        return true;
+      });
+
+      const byRecent = (a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
+      if (newsSortMode === 'oldest') items = items.slice().sort((a, b) => new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0));
+      else if (newsSortMode === 'keywords') items = items.slice().sort((a, b) => (b.matchedKeywords || []).length - (a.matchedKeywords || []).length || byRecent(a, b));
+      else if (newsSortMode === 'unassigned') items = items.slice().sort((a, b) => (!!a.assignedTo - !!b.assignedTo) || byRecent(a, b));
+      else if (newsSortMode === 'source') items = items.slice().sort((a, b) => (a.source || '').localeCompare(b.source || '') || byRecent(a, b));
+      else items = items.slice().sort(byRecent);
+
+      return items;
+    }
+
     function renderLiveNewsList() {
       const list = document.getElementById('liveNewsList');
       const status = document.getElementById('liveNewsStatus');
       if (!list || !status) return;
-      list.innerHTML = renderLiveNewsCards(LIVE_NEWS_ITEMS.slice(0, 30));
-      status.textContent = LIVE_NEWS_ITEMS.length
-        ? `Showing ${Math.min(30, LIVE_NEWS_ITEMS.length)} of ${LIVE_NEWS_ITEMS.length} matched article(s), most recent first.`
-        : 'Not pulled yet this session — syncing a live RSS connector under Connectors & APIs will populate this automatically.';
+
+      updateNewsRefineOptions();
+      const filtered = filterAndSortNewsItems();
+      list.innerHTML = renderLiveNewsCards(filtered.slice(0, 30));
+
+      if (!LIVE_NEWS_ITEMS.length) {
+        status.textContent = 'Not pulled yet this session — syncing a live RSS connector under Connectors & APIs will populate this automatically.';
+      } else if (filtered.length !== LIVE_NEWS_ITEMS.length) {
+        status.textContent = `Showing ${Math.min(30, filtered.length)} of ${filtered.length} matching article(s) (${LIVE_NEWS_ITEMS.length} total ingested).`;
+      } else {
+        status.textContent = `Showing ${Math.min(30, filtered.length)} of ${filtered.length} matched article(s).`;
+      }
     }
 
     async function fetchLiveNews() {
