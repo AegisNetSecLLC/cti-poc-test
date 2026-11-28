@@ -1773,575 +1773,7 @@
     }
 
     // COMPREHENSIVE DATA STORE (EVERY ALERT MAPS TO ITS OWN COMPLETE GRAPH & DETAILS)
-    const MOCK_ALERTS = [
-      {
-        id: 'CORR-2026-065',
-        graphTopology: 'diamond',
-        title: 'KubeProxy Ingress Filter Authorization Bypass',
-        cve: 'CVE-2026-10332',
-        cvss: 9.1,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
-        epss: 88.5,
-        inKev: true,
-        actor: 'VoltSpider / CryptoMining botnet',
-        actorType: 'Financially Motivated Threat Actor',
-        actorDesc: 'Automated adversary targeting Kubernetes API and ingress reverse proxies to hijack cloud compute clusters, deploy high-throughput cryptominers, and exfiltrate internal billing API credentials.',
-        actorTtp: 'T1611 - Escape to Host & Ingress Bypass',
-        riskScore: 92,
-        status: 'Active',
-        priority: 'P1-CRITICAL',
-        internetFacing: true,
-        targetHost: 'k8s-ingress-prod-eu.corp',
-        hostIp: '203.0.113.88',
-        environment: 'Azure westeurope (AKS Cluster)',
-        software: 'KubeProxy v1.32.0 (VULNERABLE)',
-        secondaryNode: {
-          name: 'k8s-worker-pool-02',
-          type: 'NODE POOL',
-          sw: 'Containerd 1.7.12',
-          desc: 'Internal worker pool hosting microservices.'
-        },
-        crownJewel: 'Customer Billing Microservice & Stripe Vault',
-        crownJewelPath: 'Can pivot to Customer Billing Microservice',
-        crownJewelDesc: 'Houses live Stripe API secret keys and customer transaction processing webhooks. Unauthenticated ingress allows internal token forgery.',
-        summary: 'Internet-exposed Kubernetes Ingress running unpatched proxy filter. KEV confirmed in active botnet recruitment with direct traversal to Billing services.',
-        mitreTtp: 'T1611 - Escape to Host',
-        killChain: ['Initial Access (T1190)', 'Execution (T1059.004)', 'Privilege Escalation (T1611)', 'Lateral Movement to Billing API'],
-        owningTeam: 'Platform Engineering — Kubernetes / Cloud Infra Team',
-        whatIsThis: "This is an authorization bypass in Kubernetes' ingress proxy component (KubeProxy), letting unauthenticated requests reach backend services that should require a valid session. It needs no credentials and no user interaction, which is exactly what automated botnets scan the internet for at scale.",
-        exploitDetails: "The attacker sends an HTTP request with a manipulated authorization header straight to the ingress proxy. KubeProxy's filter fails to properly validate that header, so it forwards the request to backend services as if it had already passed a login check — handing over access to internal APIs with no password or token ever required.",
-        ifUnremediated: 'An attacker can impersonate internal services, pivot from the ingress node into the worker pool, and reach the Customer Billing Microservice and its Stripe API vault — opening the door to fraudulent transactions, stolen payment credentials, or a full compute hijack for cryptomining at your cloud bill\'s expense.',
-        iocs: {
-          ips: ['185.220.101.47 (VoltSpider C2 relay)', '45.142.214.90 (scanning infrastructure)'],
-          domains: ['voltspider-c2.ru', 'k8s-miner-pool[.]top'],
-          hashes: ['a3f1c9b7...e821 (XMRig cryptominer variant)']
-        },
-        radar: {
-          exploitability: 90,
-          exposure: 92,
-          lateralMovement: 85,
-          assetCriticality: 88,
-          actorSophistication: 70,
-          detectionGap: 65
-        }
-      },
-      {
-        id: 'CORR-2026-091',
-        graphTopology: 'longchain',
-        title: 'Active Exploitation: HyperMesh Gateway Remote Code Execution',
-        cve: 'CVE-2026-44201',
-        cvss: 9.8,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
-        epss: 96.4,
-        inKev: true,
-        actor: 'APT-88 (Vanguard Viper)',
-        actorType: 'State-Sponsored Advanced Persistent Threat',
-        actorDesc: 'Sophisticated group exploiting perimeter VPN and gateway edge software to establish persistent interactive C2 channels inside fintech organizations.',
-        actorTtp: 'T1190 - Exploit Public-Facing Application',
-        riskScore: 99,
-        status: 'Active',
-        priority: 'P1-CRITICAL',
-        internetFacing: true,
-        targetHost: 'gw-prod-east-01.company.net',
-        hostIp: '198.51.100.24',
-        environment: 'AWS us-east-1 (Public Ingress)',
-        software: 'HyperMesh Edge Gateway v2.4.1 (VULNERABLE)',
-        secondaryNode: {
-          name: 'sso-portal.corp.internal',
-          type: 'AUTH PROXY',
-          sw: 'Cloudflare Tunnel Daemon',
-          desc: 'Internal single-sign-on routing proxy.'
-        },
-        hop2: {
-          name: 'pci-db-proxy-02.internal',
-          type: 'DB PROXY',
-          sw: 'PgBouncer 1.21',
-          desc: 'Connection pooler sitting directly in front of the PCI vault database — the last hop before the data itself.'
-        },
-        crownJewel: 'PCI-VAULT-DB Production Cluster',
-        crownJewelPath: 'Connects directly to PCI-VAULT-DB via VPC Peering',
-        crownJewelDesc: 'Stores tokenized customer cardholder data and cryptographic signing keys. An edge gateway compromise permits direct uninspected transit to PCI enclave.',
-        summary: 'Target is public-facing and running unpatched HyperMesh v2.4.1. Ingested via CISA KEV connector; active in-the-wild PoC actively used by APT-88.',
-        mitreTtp: 'T1190 - Exploit Public-Facing Application',
-        killChain: ['Initial Access (T1190)', 'Execution (T1059)', 'Privilege Escalation (T1068)', 'Lateral Movement to PCI-DB'],
-        owningTeam: 'Network Engineering — Edge / Perimeter Team',
-        whatIsThis: 'A remote code execution vulnerability in the HyperMesh Edge Gateway, triggered by a single maliciously crafted HTTP request with no authentication required. It hands an attacker the same level of control as a local administrator on the gateway itself.',
-        exploitDetails: 'The attacker sends a single HTTP request containing an oversized input field to the gateway. HyperMesh copies that field into a fixed-size memory buffer without checking its length first, so the extra data spills past the buffer\'s boundary and overwrites nearby memory with attacker-chosen instructions. The gateway then executes those instructions directly — giving the attacker a remote shell with no login step at all.',
-        ifUnremediated: 'APT-88 has a confirmed working exploit for this in the wild. Left unpatched, they keep a direct foothold on your public-facing gateway with a verified network path into the PCI-VAULT-DB cluster — meaning tokenized cardholder data and signing keys are one lateral hop away from exposure.',
-        iocs: {
-          ips: ['103.224.182.19 (APT-88 C2)', '194.26.29.133 (staging server)'],
-          domains: ['vanguard-viper-relay.net', 'hypermesh-updates[.]biz (typosquat)'],
-          hashes: ['7e2b84f1...f930 (HyperMesh RCE payload dropper)']
-        },
-        radar: {
-          exploitability: 98,
-          exposure: 95,
-          lateralMovement: 92,
-          assetCriticality: 95,
-          actorSophistication: 90,
-          detectionGap: 85
-        }
-      },
-      {
-        id: 'CORR-2026-088',
-        graphTopology: 'direct',
-        title: 'SSO Session Bypass & Privileged Token Impersonation',
-        cve: 'CVE-2026-21890',
-        cvss: 8.7,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:N',
-        epss: 78.1,
-        inKev: true,
-        actor: 'FIN-12 (Silver Fox Affiliates)',
-        actorType: 'Ransomware Access Broker',
-        actorDesc: 'Monetizes initial network access by selling elevated enterprise SSO credentials to ransomware-as-a-service (RaaS) affiliates on illicit marketplaces.',
-        actorTtp: 'T1078 - Valid Accounts & Token Impersonation',
-        riskScore: 88,
-        status: 'Investigating',
-        priority: 'P1-CRITICAL',
-        internetFacing: true,
-        targetHost: 'auth-sso.corp.internal',
-        hostIp: '10.240.12.8',
-        environment: 'GCP europe-west1 (Cloudflare Access)',
-        software: 'AuthShield Enterprise SSO v4.2 (VULNERABLE)',
-        secondaryNode: {
-          name: 'corp-admin-vpn.internal',
-          type: 'VPN GW',
-          sw: 'WireGuard Mesh v1.2',
-          desc: 'Internal corporate administrator jump host.'
-        },
-        crownJewel: 'IAM Root Admin Enclave & SSO Directory',
-        crownJewelPath: 'Grants root access to all corporate AWS roles',
-        crownJewelDesc: 'Contains master SAML signing certificates and Okta/Google Workspace delegation keys granting organization-wide cloud administrative control.',
-        summary: 'Cloudflare-fronted SSO endpoint matches vulnerable version. Active underground chatter selling access tokens.',
-        mitreTtp: 'T1078 - Valid Accounts',
-        killChain: ['Initial Access (T1078)', 'Credential Access (T1528)', 'Defense Evasion (T1550)', 'Lateral Movement to IAM Enclave'],
-        owningTeam: 'Identity & Access Management Team',
-        whatIsThis: "A session-validation flaw in AuthShield's SSO layer that lets an attacker forge or replay a privileged session token without ever needing the user's actual password.",
-        exploitDetails: "The attacker obtains or guesses a session token — often bought from underground marketplaces — and replays it against the SSO service. AuthShield fails to properly check whether that token has expired or already been used elsewhere, so it accepts the replayed token as a valid login and grants the attacker whatever access the original user had, admin privileges included.",
-        ifUnremediated: "Forged tokens grant access to the SAML signing certificates and delegation keys behind your IAM Root Admin Enclave — effectively organization-wide cloud administrative control, not just one compromised account.",
-        iocs: {
-          ips: ['91.219.237.14 (token marketplace relay)'],
-          domains: ['silverfox-market[.]onion-mirror.to'],
-          hashes: ['c91a4d6e...22ab (token-forging toolkit)']
-        },
-        radar: {
-          exploitability: 80,
-          exposure: 85,
-          lateralMovement: 95,
-          assetCriticality: 90,
-          actorSophistication: 75,
-          detectionGap: 70
-        }
-      },
-      {
-        id: 'CORR-2026-074',
-        graphTopology: 'contained',
-        title: 'NexusDB Remote Unauthenticated Memory Disclosure',
-        cve: 'CVE-2025-99411',
-        cvss: 7.5,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N',
-        epss: 42.0,
-        inKev: false,
-        actor: 'Known Exploit Kit (Masscan Scanners)',
-        actorType: 'Automated Opportunistic Scanner',
-        actorDesc: 'Broad-spectrum automated scanners scanning IPv4 ranges for vulnerable database ports and unauthenticated cache services.',
-        actorTtp: 'T1046 - Network Service Scanning',
-        riskScore: 62,
-        status: 'Triage',
-        priority: 'P2-HIGH',
-        internetFacing: false,
-        targetHost: 'analytics-worker-04.dev',
-        hostIp: '10.0.84.112',
-        environment: 'Private Dev Subnet',
-        software: 'NexusDB Engine v1.9.0 (VULNERABLE)',
-        secondaryNode: {
-          name: 'staging-redis-cache.dev',
-          type: 'CACHE NODE',
-          sw: 'Redis 7.0.8',
-          desc: 'Dev staging cache instance.'
-        },
-        crownJewel: 'Sanitized Staging Data Lake',
-        crownJewelPath: 'Contains sanitized staging data only',
-        crownJewelDesc: 'Contains synthetic user activity datasets for testing. Strictly segregated from customer PII or production payment rails.',
-        summary: 'Memory leak vulnerability exists on internal dev node. Low blast radius because node is strictly air-gapped from production.',
-        mitreTtp: 'T1005 - Data from Local System',
-        killChain: ['Reconnaissance (T1046)', 'Initial Access (T1190)', 'Discovery (T1083)', 'Data Exfiltration (T1005)'],
-        owningTeam: 'Data Engineering — Analytics Platform Team',
-        whatIsThis: 'An unauthenticated memory-disclosure bug in NexusDB that lets a remote caller read small chunks of process memory, potentially leaking cached query fragments.',
-        exploitDetails: "The attacker sends a deliberately malformed query to NexusDB's network listener. Instead of cleanly rejecting the bad input, the database's error-handling code echoes back a chunk of raw memory alongside the error message — leaking fragments of other queries that happened to still be sitting in memory, with no login required to trigger it.",
-        ifUnremediated: 'Real-world impact is low here specifically because this host only holds synthetic staging data and is network-isolated from production — but the underlying binary is still vulnerable and should be patched before it is ever exposed anywhere closer to production.',
-        iocs: {
-          ips: ['Opportunistic mass-scanners — no single attributable IP'],
-          domains: [],
-          hashes: []
-        },
-        radar: {
-          exploitability: 60,
-          exposure: 20,
-          lateralMovement: 35,
-          assetCriticality: 40,
-          actorSophistication: 30,
-          detectionGap: 50
-        }
-      },
-      {
-        id: 'CORR-2026-051',
-        graphTopology: 'sparse',
-        title: 'OpenSSH Terrapin Prefix Truncation Weakness',
-        cve: 'CVE-2023-48795',
-        cvss: 5.9,
-        cvssVector: 'CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N',
-        epss: 12.1,
-        inKev: false,
-        actor: 'No Active In-The-Wild Threat Actor',
-        actorType: 'Theoretical Academic Exploit',
-        actorDesc: 'Adversary in an active MitM position capable of tampering with cryptographic sequence numbers during SSH handshake.',
-        actorTtp: 'T1557 - Adversary-in-the-Middle',
-        riskScore: 35,
-        status: 'Suppressed',
-        priority: 'P3-MEDIUM',
-        internetFacing: false,
-        targetHost: 'bastion-mgmt-jump.internal',
-        hostIp: '10.100.1.5',
-        environment: 'AWS Management VPC',
-        software: 'OpenSSH 8.9p1 (VULNERABLE)',
-        secondaryNode: {
-          name: 'internal-ssh-cluster',
-          type: 'INTERNAL JUMP',
-          sw: 'OpenSSH 8.9',
-          desc: 'Internal server admin shell cluster.'
-        },
-        crownJewel: 'Internal Bastion Shell Access',
-        crownJewelPath: 'Requires pre-existing Man-In-The-Middle network position',
-        crownJewelDesc: 'Provides terminal access to private infrastructure; however host requires hardware MFA tokens making downgrade attacks ineffective.',
-        summary: 'Theoretical downgrade attack on SSH handshake. Deprioritized because host requires MFA and is private only.',
-        mitreTtp: 'T1557 - Adversary-in-the-Middle',
-        killChain: ['MitM Positioning (T1557)', 'Handshake Downgrade (T1562)', 'Session Interception (T1040)'],
-        owningTeam: 'IT Operations — Infrastructure Team',
-        whatIsThis: 'A cryptographic downgrade weakness in the SSH handshake (the "Terrapin" attack) that lets an attacker already positioned as a man-in-the-middle strip certain security extensions during connection setup.',
-        exploitDetails: "An attacker sitting on the network path between client and server intercepts the SSH handshake and quietly deletes certain negotiation messages before they get signed and checked. Both sides end up silently agreeing to a weaker connection than they intended, without any alarm being raised, because the deleted messages are never missed by the handshake's own integrity check.",
-        ifUnremediated: 'Exploitation requires an attacker already sitting on the network path between client and server — a high bar here since this bastion sits in a private management VPC behind hardware MFA. Impact stays low unless network segmentation changes.',
-        iocs: {
-          ips: [],
-          domains: [],
-          hashes: []
-        },
-        radar: {
-          exploitability: 25,
-          exposure: 15,
-          lateralMovement: 30,
-          assetCriticality: 50,
-          actorSophistication: 20,
-          detectionGap: 35
-        }
-      },
-      {
-        id: 'CORR-2026-150',
-        graphTopology: 'diamond',
-        title: 'F5 BIG-IP iRule PEM::subscriber Stack Buffer Overflow (RCE)',
-        cve: 'CVE-2026-121805',
-        cvss: 9.8,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
-        epss: 0.7,
-        inKev: false,
-        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
-        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
-        actorDesc: 'No confirmed exploitation in the wild yet — this is an emergency vendor patch released ahead of expected mass scanning, which historically follows BIG-IP RCE disclosures within days.',
-        actorTtp: 'T1190 - Exploit Public-Facing Application',
-        riskScore: 78,
-        status: 'Active',
-        priority: 'P1-CRITICAL',
-        internetFacing: true,
-        targetHost: 'bigip-edge-prod-us1.corp',
-        hostIp: '198.51.100.21',
-        environment: 'On-Prem DMZ (US-East Primary Data Center)',
-        software: 'F5 BIG-IP TMOS 17.1.x (VULNERABLE, PEM::subscriber iRule active)',
-        secondaryNode: {
-          name: 'payment-gateway-prod-01',
-          type: 'APPLICATION SERVER',
-          sw: 'Payment Processing Service',
-          desc: 'Processes card-present and card-not-present customer transactions.'
-        },
-        crownJewel: 'Customer Payment Gateway',
-        crownJewelPath: 'Fronts the Customer Payment Gateway — direct data-plane path, no intermediate hop',
-        crownJewelDesc: 'Handles live payment transactions; a TMM crash or RCE here sits directly in front of cardholder transaction flow.',
-        summary: 'F5 released an emergency patch for an unauthenticated stack-based buffer overflow in a PEM::subscriber iRule on this edge BIG-IP. No active exploitation observed yet — patching ahead of the expected post-disclosure scanning wave.',
-        mitreTtp: 'T1190 - Exploit Public-Facing Application',
-        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
-        owningTeam: 'Network Engineering — Edge / Perimeter Team',
-        whatIsThis: "A stack-based buffer overflow in BIG-IP's Traffic Management Microkernel (TMM), triggered when a configured iRule processes client traffic through the PEM::subscriber command. An unauthenticated remote request can crash TMM and, under the right conditions, achieve code execution on the appliance itself.",
-        exploitDetails: 'An attacker sends specially crafted requests to a virtual server configured with the vulnerable iRule. The malformed input overruns a fixed-size buffer inside TMM, corrupting adjacent memory — enough to crash the traffic-management process outright, and potentially enough to redirect execution to attacker-controlled code. No authentication or prior access is required.',
-        ifUnremediated: 'Every TMM restart drops in-flight traffic for every virtual server on this appliance, including the Payment Gateway. If RCE is achieved rather than just a crash, the attacker gains a foothold on the data-plane device sitting directly in front of transaction processing — a direct path to one of the environment\'s highest-value systems.',
-        iocs: {
-          ips: [],
-          domains: [],
-          hashes: []
-        },
-        radar: {
-          exploitability: 85,
-          exposure: 80,
-          lateralMovement: 60,
-          assetCriticality: 90,
-          actorSophistication: 20,
-          detectionGap: 55
-        }
-      },
-      {
-        id: 'CORR-2026-151',
-        graphTopology: 'direct',
-        title: 'F5 BIG-IP iRule MR::message Route Stack Buffer Overflow (RCE)',
-        cve: 'CVE-2026-120292',
-        cvss: 9.8,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
-        epss: 0.7,
-        inKev: false,
-        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
-        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
-        actorDesc: 'No confirmed exploitation in the wild yet — same emergency F5 advisory as the other five BIG-IP findings below, covering a family of iRule-triggered TMM crashes across the fleet.',
-        actorTtp: 'T1190 - Exploit Public-Facing Application',
-        riskScore: 76,
-        status: 'Active',
-        priority: 'P1-CRITICAL',
-        internetFacing: true,
-        targetHost: 'bigip-api-gateway-prod.corp',
-        hostIp: '198.51.100.34',
-        environment: 'AWS us-east-1 (Public API Edge)',
-        software: 'F5 BIG-IP TMOS 17.1.x (VULNERABLE, MR::message iRule active)',
-        secondaryNode: {
-          name: 'api-backend-cluster-03',
-          type: 'API CLUSTER',
-          sw: 'Internal Microservices Mesh',
-          desc: 'Backend services powering mobile and partner-facing APIs.'
-        },
-        crownJewel: 'Public Partner & Mobile API Gateway',
-        crownJewelPath: 'Sits directly in front of the Partner & Mobile API Gateway',
-        crownJewelDesc: 'All mobile app and partner API traffic routes through this appliance before reaching backend microservices.',
-        summary: 'Same emergency F5 advisory, different iRule command (MR::message route) on the public API edge BIG-IP. Unauthenticated, no RCE observed in the wild yet.',
-        mitreTtp: 'T1190 - Exploit Public-Facing Application',
-        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
-        owningTeam: 'API Platform Engineering',
-        whatIsThis: "The same class of TMM stack-based buffer overflow as the other findings in this advisory, this time triggered via an iRule using the MR::message route command alongside an HTTP profile on this virtual server.",
-        exploitDetails: 'An unauthenticated attacker sends crafted requests that the vulnerable iRule routes through MR::message, overflowing a fixed buffer in TMM. Traffic is disrupted while TMM restarts, with RCE a realistic possibility depending on exact memory layout.',
-        ifUnremediated: 'This appliance fronts every mobile and partner API call. Repeated crashes degrade API availability for customers and partners; a successful RCE would hand an attacker a foothold with visibility into all API traffic passing through it.',
-        iocs: {
-          ips: [],
-          domains: [],
-          hashes: []
-        },
-        radar: {
-          exploitability: 85,
-          exposure: 75,
-          lateralMovement: 55,
-          assetCriticality: 85,
-          actorSophistication: 20,
-          detectionGap: 55
-        }
-      },
-      {
-        id: 'CORR-2026-152',
-        graphTopology: 'sparse',
-        title: 'F5 BIG-IP iRule PSC::ip_address Stack Buffer Overflow (RCE)',
-        cve: 'CVE-2026-120285',
-        cvss: 9.8,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
-        epss: 0.7,
-        inKev: false,
-        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
-        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
-        actorDesc: 'No confirmed exploitation in the wild yet — part of the same emergency F5 advisory affecting the BIG-IP fleet.',
-        actorTtp: 'T1190 - Exploit Public-Facing Application',
-        riskScore: 74,
-        status: 'Active',
-        priority: 'P1-CRITICAL',
-        internetFacing: true,
-        targetHost: 'bigip-vpn-concentrator-eu1.corp',
-        hostIp: '203.0.113.56',
-        environment: 'On-Prem DMZ (EU-West Data Center, Dublin)',
-        software: 'F5 BIG-IP TMOS 16.1.x (VULNERABLE, PSC::ip_address iRule active)',
-        secondaryNode: {
-          name: 'ad-sync-agent-eu-01',
-          type: 'IDENTITY BRIDGE',
-          sw: 'Samba / Winbind',
-          desc: 'Authentication sync tunnel into the EU domain controller.'
-        },
-        crownJewel: 'Corporate Remote-Access VPN Concentrator',
-        crownJewelPath: 'Primary tunnel endpoint for EU remote-access VPN',
-        crownJewelDesc: 'Terminates remote-access VPN sessions for the EU workforce ahead of the identity bridge into Active Directory.',
-        summary: 'Same emergency F5 advisory, affecting the EU remote-access VPN concentrator via a PSC::ip_address iRule. Unauthenticated, no confirmed exploitation yet.',
-        mitreTtp: 'T1190 - Exploit Public-Facing Application',
-        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
-        owningTeam: 'Network Engineering — EU Infrastructure Team',
-        whatIsThis: 'The same TMM stack-based buffer overflow vulnerability class, here triggered through an iRule using the PSC::ip_address command on the EU VPN concentrator.',
-        exploitDetails: 'Crafted requests reaching the vulnerable virtual server overflow a fixed buffer inside TMM while processing the PSC::ip_address command, crashing the traffic-management process and potentially enabling code execution — all without authentication.',
-        ifUnremediated: 'This appliance sits directly in front of the EU remote-access path into Active Directory. Disruption here cuts off remote workforce access; RCE would place an attacker on the device immediately upstream of the identity bridge.',
-        iocs: {
-          ips: [],
-          domains: [],
-          hashes: []
-        },
-        radar: {
-          exploitability: 85,
-          exposure: 70,
-          lateralMovement: 65,
-          assetCriticality: 80,
-          actorSophistication: 20,
-          detectionGap: 55
-        }
-      },
-      {
-        id: 'CORR-2026-153',
-        graphTopology: 'diamond',
-        title: 'F5 BIG-IP iRule GENERICMESSAGE::route Stack Buffer Overflow (RCE)',
-        cve: 'CVE-2026-116953',
-        cvss: 9.8,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
-        epss: 0.7,
-        inKev: false,
-        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
-        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
-        actorDesc: 'No confirmed exploitation in the wild yet — part of the same emergency F5 advisory affecting the BIG-IP fleet.',
-        actorTtp: 'T1190 - Exploit Public-Facing Application',
-        riskScore: 72,
-        status: 'Active',
-        priority: 'P1-CRITICAL',
-        internetFacing: true,
-        targetHost: 'bigip-partner-portal-prod.corp',
-        hostIp: '198.51.100.47',
-        environment: 'On-Prem DMZ (US-East Secondary Data Center)',
-        software: 'F5 BIG-IP TMOS 17.5.x (VULNERABLE, GENERICMESSAGE::route iRule active)',
-        secondaryNode: {
-          name: 'partner-edi-processor-01',
-          type: 'EDI PROCESSOR',
-          sw: 'B2B Data Exchange Service',
-          desc: 'Processes inbound and outbound EDI transactions with supply-chain partners.'
-        },
-        crownJewel: 'Partner Data Exchange Hub',
-        crownJewelPath: 'Fronts the Partner Data Exchange Hub — direct data-plane path',
-        crownJewelDesc: 'Carries EDI transaction data exchanged with supply-chain partners; disruption or compromise affects partner-facing operations.',
-        summary: 'Same emergency F5 advisory, affecting the partner portal BIG-IP via a GENERICMESSAGE::route iRule. Unauthenticated, no confirmed exploitation yet.',
-        mitreTtp: 'T1190 - Exploit Public-Facing Application',
-        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
-        owningTeam: 'Partner Integrations Team',
-        whatIsThis: 'The same TMM stack-based buffer overflow class, triggered here through an iRule using the GENERICMESSAGE::route command on the partner-facing virtual server.',
-        exploitDetails: 'An unauthenticated attacker sends requests that the vulnerable iRule processes through GENERICMESSAGE::route, overflowing a fixed buffer in TMM and crashing it — with RCE a realistic possibility depending on heap layout at the time.',
-        ifUnremediated: 'Disruption here interrupts EDI transaction flow with supply-chain partners; a successful RCE would give an attacker a presence on the device handling partner data exchange.',
-        iocs: {
-          ips: [],
-          domains: [],
-          hashes: []
-        },
-        radar: {
-          exploitability: 85,
-          exposure: 70,
-          lateralMovement: 50,
-          assetCriticality: 75,
-          actorSophistication: 20,
-          detectionGap: 55
-        }
-      },
-      {
-        id: 'CORR-2026-154',
-        graphTopology: 'direct',
-        title: 'F5 BIG-IP APM Per-Request Policy Stack Buffer Overflow (RCE)',
-        cve: 'CVE-2026-123637',
-        cvss: 9.8,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
-        epss: 0.8,
-        inKev: false,
-        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
-        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
-        actorDesc: 'No confirmed exploitation in the wild yet — part of the same emergency F5 advisory, this one in the Access Policy Manager (APM) module itself rather than a custom iRule.',
-        actorTtp: 'T1190 - Exploit Public-Facing Application',
-        riskScore: 80,
-        status: 'Active',
-        priority: 'P1-CRITICAL',
-        internetFacing: true,
-        targetHost: 'bigip-sso-apm-prod.corp',
-        hostIp: '203.0.113.72',
-        environment: 'On-Prem DMZ (US-East Primary, Identity Zone)',
-        software: 'F5 BIG-IP APM 17.1.x (VULNERABLE, Client Info + Endpoint Security agents active)',
-        secondaryNode: {
-          name: 'ad-domain-controller-01',
-          type: 'IDENTITY INFRASTRUCTURE',
-          sw: 'Active Directory Domain Services',
-          desc: 'Backing directory for corporate SSO authentication.'
-        },
-        crownJewel: 'Corporate SSO / Access Policy Manager',
-        crownJewelPath: 'Directly in front of corporate SSO — all authenticated sessions traverse this appliance',
-        crownJewelDesc: 'Every corporate SSO session is brokered through this APM instance ahead of the Active Directory domain controller.',
-        summary: 'Same emergency F5 advisory, this time in BIG-IP APM itself: a per-request policy using the Client Information and Endpoint Security agents can crash TMM. Highest risk score of this batch given its position directly in front of corporate SSO.',
-        mitreTtp: 'T1190 - Exploit Public-Facing Application',
-        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)', 'Potential Remote Code Execution (T1203)'],
-        owningTeam: 'Identity & Access Management Team',
-        whatIsThis: 'A stack-based buffer overflow in BIG-IP APM itself, triggered when a per-request policy combining the Client Information agent and Endpoint Security agent processes an unauthenticated request.',
-        exploitDetails: 'An attacker sends crafted requests to the APM virtual server; the per-request policy\'s agent chain overflows a fixed buffer in TMM while evaluating the request, crashing the process and potentially executing attacker-controlled code — no authentication required.',
-        ifUnremediated: 'This appliance brokers every corporate SSO session before it reaches Active Directory. A crash locks out SSO-dependent applications fleet-wide; RCE would place an attacker directly in front of the organization\'s identity infrastructure.',
-        iocs: {
-          ips: [],
-          domains: [],
-          hashes: []
-        },
-        radar: {
-          exploitability: 85,
-          exposure: 80,
-          lateralMovement: 80,
-          assetCriticality: 95,
-          actorSophistication: 20,
-          detectionGap: 55
-        }
-      },
-      {
-        id: 'CORR-2026-155',
-        graphTopology: 'sparse',
-        title: 'F5 BIG-IP APM SAML SP Integer Underflow (Unauthenticated DoS)',
-        cve: 'CVE-2026-126822',
-        cvss: 7.5,
-        cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H',
-        epss: 0.5,
-        inKev: false,
-        actor: 'Unattributed — Pre-Exploitation Scanning Risk',
-        actorType: 'Opportunistic Mass-Scanning (Anticipated, Not Yet Observed)',
-        actorDesc: 'No confirmed exploitation in the wild yet. Part of the same emergency F5 advisory, but DoS-only — no RCE path identified for this one, hence the lower priority tier.',
-        actorTtp: 'T1499 - Endpoint Denial of Service',
-        riskScore: 45,
-        status: 'Active',
-        priority: 'P2-HIGH',
-        internetFacing: true,
-        targetHost: 'bigip-saml-idp-prod.corp',
-        hostIp: '203.0.113.89',
-        environment: 'On-Prem DMZ (US-East Primary, Identity Zone)',
-        software: 'F5 BIG-IP APM 17.1.x (VULNERABLE, SAML SP Access Profile active)',
-        secondaryNode: {
-          name: 'saml-sp-relying-party-01',
-          type: 'SAML RELYING PARTY',
-          sw: 'SaaS Application Suite',
-          desc: 'Downstream SaaS applications relying on this SAML SP for authentication.'
-        },
-        crownJewel: 'Corporate SAML Identity Provider Endpoint',
-        crownJewelPath: 'DoS-only — no code execution path identified in the advisory',
-        crownJewelDesc: 'Brokers SAML authentication for downstream SaaS applications; impact is availability only, not compromise.',
-        summary: 'Same emergency F5 advisory — a SAML Service Provider integer underflow that can crash TMM. Unlike the other five findings, this one is DoS-only with no RCE path, so it is tracked at High rather than Critical.',
-        mitreTtp: 'T1499 - Endpoint Denial of Service',
-        killChain: ['Initial Access (T1190)', 'Endpoint DoS via TMM Crash (T1499)'],
-        owningTeam: 'Identity & Access Management Team',
-        whatIsThis: 'An integer underflow in how BIG-IP APM handles a SAML Service Provider Access Profile, reachable by an unauthenticated remote request and capable of crashing TMM. No remote code execution path has been identified for this specific finding.',
-        exploitDetails: 'An attacker sends a crafted request to the SAML SP virtual server; an integer underflow during processing crashes TMM. Traffic is disrupted while it restarts, but unlike the other findings in this advisory, there is no indication this can be escalated to code execution.',
-        ifUnremediated: 'Repeated crashes disrupt SAML-based authentication for downstream SaaS applications. Availability impact only — no confidentiality or integrity impact identified for this specific vulnerability.',
-        iocs: {
-          ips: [],
-          domains: [],
-          hashes: []
-        },
-        radar: {
-          exploitability: 70,
-          exposure: 65,
-          lateralMovement: 20,
-          assetCriticality: 60,
-          actorSophistication: 15,
-          detectionGap: 40
-        }
-      }
-    ];
+    const MOCK_ALERTS = [];
 
     // ==========================================
     // SLA / REMEDIATION TRACKING
@@ -2662,39 +2094,11 @@
       } catch (e) { /* live backend unreachable — localStorage/default state stands */ }
     }
 
-    const MOCK_CONNECTORS = [
-      { id: 'conn-1', name: 'CISA Known Exploited Vulns (KEV)', category: 'intel', type: 'REST JSON', status: 'Active', latency: '120ms', sync: 'Synced 5m ago', icon: 'KEV', enabled: true, desc: 'Official federal catalog of vulnerabilities actively weaponized in the wild.' , pollCadence: 'Every 5 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'conn-2', name: 'FIRST.org EPSS v3 Predictor', category: 'intel', type: 'REST API', status: 'Active', latency: '340ms', sync: 'Synced 1h ago', icon: 'EPSS', enabled: true, desc: 'Machine learning model predicting 30-day weaponization probability for all CVEs.' , pollCadence: 'Hourly Sync', ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'conn-3', name: 'MISP TAXII 2.1 Threat Exchange', category: 'intel', type: 'TAXII 2.1', status: 'Active', latency: '480ms', sync: 'Real-time Streaming', icon: 'MISP', enabled: true, desc: 'Community-driven open source STIX 2.1 threat indicators and campaign clusters.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'medium', keywords: 'ransomware, APT' } },
-      { id: 'conn-4', name: 'AlienVault OTX (Open Threat Exchange)', category: 'intel', type: 'REST API', status: 'Active', latency: '210ms', sync: 'Synced 12m ago', icon: 'OTX', enabled: true, desc: 'Crowdsourced pulses covering emerging malware hashes, domains, and C2 IPs.' , pollCadence: 'Every 15 Minutes', ingestFilter: { minSeverity: 'all', keywords: 'malware, C2' } },
-      { id: 'conn-5', name: 'Recorded Future Intelligence API', category: 'intel', type: 'Commercial API', status: 'Active', latency: '180ms', sync: 'Continuous', icon: 'RF', enabled: true, desc: 'Dark web forum chatter, ransomware extortion leak monitoring, and brand defense.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'high', keywords: 'ransomware, extortion, dark web' } },
-      { id: 'conn-6', name: 'AWS CloudTrail & Config Inventory', category: 'asset', type: 'AWS IAM / SQS', status: 'Active', latency: '95ms', sync: 'Synced 2m ago', icon: 'AWS', enabled: true, desc: 'Auto-discovers EC2 instances, public ALBs, RDS databases, and exposed S3 buckets across 4 accounts.' , pollCadence: 'Every 5 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'conn-7', name: 'CrowdStrike Falcon Sensor Telemetry', category: 'asset', type: 'OAuth2 REST', status: 'Active', latency: '150ms', sync: 'Real-time Event Stream', icon: 'CS', enabled: true, desc: '1,420 active host agents providing installed package versions, CPEs, and active process trees.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'conn-8', name: 'ServiceNow CMDB Production Sync', category: 'asset', type: 'REST API', status: 'Active', latency: '610ms', sync: 'Synced 30m ago', icon: 'SNOW', enabled: true, desc: 'Imports service ownership tags, criticality tiers (P0/P1), and business unit boundaries.' , pollCadence: 'Every 30 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'conn-9', name: 'Wiz.io Cloud Security Posture (CSPM)', category: 'asset', type: 'GraphQL', status: 'Active', latency: '290ms', sync: 'Synced 8m ago', icon: 'WIZ', enabled: true, desc: 'Correlates network reachability and IAM privilege escalation pathways in multi-cloud.' , pollCadence: 'Every 15 Minutes', ingestFilter: { minSeverity: 'high', keywords: 'public exposure, privilege escalation' } },
-      { id: 'conn-10', name: 'Jira Software & Service Management', category: 'soar', type: 'Webhook / REST', status: 'Active', latency: '110ms', sync: 'Bi-Directional', icon: 'JIRA', enabled: true, desc: 'Creates enriched remediation tickets with MITRE ATT&CK tags and tracks SLA closure.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'high', keywords: '' } },
-      { id: 'conn-11', name: 'Microsoft Teams SOC Security War Room', category: 'soar', type: 'Incoming Webhook', status: 'Active', latency: '80ms', sync: 'Instant Push', icon: 'TEAMS', enabled: true, desc: 'Sends immediate adaptive card alerts to the SOC Tier 1 Alerts channel with 1-click isolate buttons.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'critical', keywords: '' } },
-      { id: 'conn-12', name: 'AWS WAF & Cloudflare Virtual Patching', category: 'soar', type: 'Edge API', status: 'Active', latency: '220ms', sync: 'Active Orchestration', icon: 'WAF', enabled: true, desc: 'Automates deployment of URI regex blocks to perimeter WAFs when weaponized 0-days hit KEV.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'critical', keywords: 'KEV' } },
-      { id: 'conn-13', name: 'Splunk Enterprise SIEM Forwarder', category: 'soar', type: 'HEC', status: 'Active', latency: '90ms', sync: 'Streaming', icon: 'SPL', enabled: true, desc: 'Streams correlated risk incidents and contextual telemetry directly into internal security data lake.' , pollCadence: 'Real-time Webhook', ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'conn-14', name: 'internal-k8s-sbom-collector.prod', category: 'custom', type: 'Internal REST', status: 'Active', latency: '45ms', sync: 'Synced 1m ago', icon: 'K8S', enabled: true, desc: 'Internal Go daemon scanning Kubernetes pod container image manifests and Syft SBOMs.' , pollCadence: 'Every 5 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'conn-15', name: 'corp-pci-network-mapper.internal', category: 'custom', type: 'mTLS Private', status: 'Active', latency: '60ms', sync: 'Synced 15m ago', icon: 'NET', enabled: true, desc: 'Internal network scanner verifying VPC peering routes and security group ingress limits.' , pollCadence: 'Every 15 Minutes', ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'conn-16', name: 'ad-identity-privilege-audit-api', category: 'custom', type: 'Kerberos API', status: 'Active', latency: '190ms', sync: 'Hourly Sync', icon: 'AD', enabled: true, desc: 'Correlates compromised service accounts and domain admin privileges from Active Directory.' , pollCadence: 'Hourly Sync', ingestFilter: { minSeverity: 'medium', keywords: 'privilege escalation' } }
-    ];
+    const MOCK_CONNECTORS = [];
 
-    const MOCK_ASSETS = [
-      { name: 'k8s-ingress-prod-eu.corp', ip: '203.0.113.88', cloud: 'Azure westeurope', sw: 'KubeProxy 1.32.0', exposed: true, cves: ['CVE-2026-10332 (P1)'], edr: 'Defender (Online)' },
-      { name: 'gw-prod-east-01.company.net', ip: '198.51.100.24', cloud: 'AWS us-east-1', sw: 'HyperMesh Gateway 2.4.1', exposed: true, cves: ['CVE-2026-44201 (P1)'], edr: 'CrowdStrike (Online)' },
-      { name: 'auth-sso.corp.internal', ip: '10.240.12.8', cloud: 'GCP europe-west1', sw: 'AuthShield SSO 4.2', exposed: true, cves: ['CVE-2026-21890 (P1)'], edr: 'SentinelOne (Online)' },
-      { name: 'analytics-worker-04.dev', ip: '10.0.84.112', cloud: 'Private Dev VPC', sw: 'NexusDB 1.9.0', exposed: false, cves: ['CVE-2025-99411 (P2)'], edr: 'CrowdStrike (Online)' },
-      { name: 'bastion-mgmt-jump.internal', ip: '10.100.1.5', cloud: 'AWS Mgmt VPC', sw: 'OpenSSH 8.9p1', exposed: false, cves: ['CVE-2023-48795 (P3)'], edr: 'CrowdStrike (Online)' },
-      { name: 'payments-db-cluster-01', ip: '10.200.5.12', cloud: 'AWS us-east-1 (PCI)', sw: 'PostgreSQL 16.2', exposed: false, cves: ['None (Hardened)'], edr: 'CrowdStrike (Online)' }
-    ];
+    const MOCK_ASSETS = [];
 
-    const MOCK_FEEDS = [
-      { id: 'feed-1', name: 'Open Source STIX Bundle', type: 'stix', url: 'intel.example.org/feeds/opensource-bundle.json', desc: 'Community-maintained instance re-publishing MISP galaxy clusters and OSINT reports as a public STIX 2.1 bundle.', cadence: 'Hourly Sync', status: 'Active', lastSync: 'Synced 40m ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'feed-2', name: 'MITRE ATT&CK TAXII Collection', type: 'taxii', url: 'cti-taxii.mitre.org/stix/collections/enterprise-attack', desc: 'Official MITRE-hosted TAXII 2.1 server exposing Enterprise ATT&CK techniques and groups as STIX objects.', cadence: 'Daily Sync', status: 'Active', lastSync: 'Synced 6h ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: '' } },
-      { id: 'feed-3', name: 'The Hacker News - Security RSS', type: 'rss', url: 'thehackernews.com/feeds/posts/default', desc: 'General security news RSS feed used for analyst situational awareness, not auto-correlated against assets.', cadence: 'Every 5 Minutes', status: 'Active', lastSync: 'Synced 3m ago', enabled: true, ingestFilter: { minSeverity: 'all', keywords: 'breach, zero-day, ransomware' } }
-    ];
+    const MOCK_FEEDS = [];
 
     let editingFeedId = null;
 
@@ -2707,8 +2111,7 @@
     const SESSION_STORAGE_KEY = 'aegisCtiDemoSession_v1';
 
     const MOCK_USERS = [
-      { username: 'analyst1', password: 'demo1234', displayName: 'Alex Chen', role: 'Senior Analyst', email: 'achen@aegissecure.net' },
-      { username: 'leadership1', password: 'demo1234', displayName: 'Jordan Blake', role: 'Leadership (Read-Only)', email: 'jblake@aegissecure.net' }
+      { username: 'admin', password: 'ChangeMe123!', displayName: 'Matthew Buggs', role: 'Admin', email: 'admin@aegissecure.net' }
     ];
     let currentUser = null;
 
@@ -2775,11 +2178,7 @@
       memo_generated: 'Threat Memo Generated'
     };
 
-    const MOCK_ALERT_RULES = [
-      { id: 'rule-1', trigger: 'p1_critical', minSeverity: 'critical', frequency: 'realtime', channel: 'Email + Teams', recipients: 'soc-tier1@corp.com, SOC Tier 1 Alerts' },
-      { id: 'rule-2', trigger: 'kev_match', minSeverity: 'all', frequency: 'daily', channel: 'Email', recipients: 'ciso@corp.com' },
-      { id: 'rule-3', trigger: 'connector_failure', minSeverity: 'all', frequency: 'realtime', channel: 'Teams', recipients: 'SOC Tier 1 Alerts' }
-    ];
+    const MOCK_ALERT_RULES = [];
 
     function saveAlertRulesToStorage() {
       try { localStorage.setItem(ALERT_RULES_STORAGE_KEY, JSON.stringify(MOCK_ALERT_RULES)); } catch (e) { /* ignore */ }
@@ -3099,7 +2498,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 56;
+    let currentVersionMinor = 57;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -6221,6 +5620,8 @@
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Saved Demo Accounts</span><span class="text-emerald-300 text-right">${MOCK_USERS.length}</span></div>
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Active Alert Rules</span><span class="text-emerald-300 text-right">${MOCK_ALERT_RULES.length}</span></div>
         <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Audit Log Entries</span><span class="text-emerald-300 text-right">${auditLog.length}</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Server Memory</span><span id="sysStatusMemory" class="text-slate-500 text-right">Loading…</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-400 shrink-0">Server Storage</span><span id="sysStatusDisk" class="text-slate-500 text-right">Loading…</span></div>
       `;
       renderUserSetupList();
       renderAlertRuleList();
@@ -6228,7 +5629,40 @@
       if (auditFilterInput) auditFilterInput.value = '';
       renderAuditLogList('');
       renderRoadmapList();
+      loadSystemStatus();
       switchSettingsTab(activeSettingsTab);
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return '—';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let n = bytes, i = 0;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+      return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+
+    // Real host memory/disk, read live from the backend (os/fs APIs on the server itself —
+    // see /api/system-status) — no-ops gracefully on the public demo, which has no backend.
+    async function loadSystemStatus() {
+      const memEl = document.getElementById('sysStatusMemory');
+      const diskEl = document.getElementById('sysStatusDisk');
+      if (!memEl || !diskEl) return;
+      try {
+        const res = await fetch(`${LIVE_API_BASE}/system-status`);
+        if (!res.ok) throw new Error('unreachable');
+        const data = await res.json();
+        const memPct = Math.round((data.memory.usedBytes / data.memory.totalBytes) * 100);
+        const diskPct = Math.round((data.disk.usedBytes / data.disk.totalBytes) * 100);
+        memEl.className = 'text-emerald-300 text-right';
+        memEl.textContent = `${formatBytes(data.memory.usedBytes)} / ${formatBytes(data.memory.totalBytes)} used (${memPct}%)`;
+        diskEl.className = 'text-emerald-300 text-right';
+        diskEl.textContent = `${formatBytes(data.disk.usedBytes)} / ${formatBytes(data.disk.totalBytes)} used (${diskPct}%)`;
+      } catch (e) {
+        memEl.className = 'text-slate-500 text-right';
+        memEl.textContent = 'Live backend unreachable';
+        diskEl.className = 'text-slate-500 text-right';
+        diskEl.textContent = 'Live backend unreachable';
+      }
     }
 
     let activeSettingsTab = 'status';
