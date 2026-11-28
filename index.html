@@ -3099,7 +3099,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 54;
+    let currentVersionMinor = 55;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -3297,12 +3297,18 @@
       const bannerWidth = banner.offsetWidth || 300;
       const bannerHeight = banner.offsetHeight || 110;
       const margin = 12;
-      const offset = 36;
+      // Offset has to clear the node's OWN radius, not a flat guess — a fixed 36px looked fine
+      // against the old, smaller node circles, but once node radii grew (wider labels fix) a
+      // flat offset landed inside the circle instead of outside it. Scale the node's SVG radius
+      // into screen pixels the same way its position already is, then add a little breathing room.
+      const nodeRadiusPx = (node.r || 50) * graphScale;
+      const clearanceX = nodeRadiusPx * scaleX + 16;
+      const clearanceY = nodeRadiusPx * scaleY + 16;
 
-      let left = nodePixelX + offset;
-      let top = nodePixelY + offset;
-      if (left + bannerWidth > containerRect.width - margin) left = nodePixelX - bannerWidth - offset;
-      if (top + bannerHeight > containerRect.height - margin) top = nodePixelY - bannerHeight - offset;
+      let left = nodePixelX + clearanceX;
+      let top = nodePixelY + clearanceY;
+      if (left + bannerWidth > containerRect.width - margin) left = nodePixelX - clearanceX - bannerWidth;
+      if (top + bannerHeight > containerRect.height - margin) top = nodePixelY - clearanceY - bannerHeight;
       left = Math.max(margin, Math.min(left, containerRect.width - bannerWidth - margin));
       top = Math.max(margin, Math.min(top, containerRect.height - bannerHeight - margin));
 
