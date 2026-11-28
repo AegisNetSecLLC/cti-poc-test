@@ -823,7 +823,7 @@
               </div>
               <div>
                 <label class="text-[12px] text-slate-400 font-mono block mb-1">Password</label>
-                <input id="newUserPassword" type="password" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="••••••••">
+                <input id="newUserPassword" type="password" autocomplete="new-password" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="••••••••">
               </div>
               <div class="sm:col-span-2">
                 <label class="text-[12px] text-slate-400 font-mono block mb-1">Email</label>
@@ -1718,6 +1718,29 @@
   <!-- SCRIPT ENGINE -->
   <script>
     // ==========================================
+    // OUTPUT ESCAPING — anything sourced from an RSS feed (title, summary, source name)
+    // is attacker-reachable: a feed URL anyone can subscribe you to, publishing content
+    // nobody here controls. It gets rendered via innerHTML all over the news UI, so every
+    // such value needs escaping before interpolation, not just the obviously "untrusted" ones.
+    // ==========================================
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    // A feed item's own "link" field could be anything, including a javascript: URI — only
+    // ever render it as an href if it's actually http(s).
+    function safeExternalUrl(url) {
+      try {
+        const u = new URL(String(url || ''), window.location.href);
+        return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : '#';
+      } catch {
+        return '#';
+      }
+    }
+
+    // ==========================================
     // UI ENHANCEMENTS — toasts, count-up animation, new-data pulses, tab badge
     // ==========================================
     function showToast(message, variant) {
@@ -2381,7 +2404,8 @@
       const email = document.getElementById('newUserEmail').value.trim();
       const errorBox = document.getElementById('newUserErrorMsg');
 
-      if (!displayName || !username || !password || !email) {
+      const isEditing = !!editingUsername;
+      if (!displayName || !username || !email || (!isEditing && !password)) {
         errorBox.textContent = 'Display name, username, password, and email are all required.';
         errorBox.classList.remove('hidden');
         return;
@@ -2408,7 +2432,7 @@
         editingUser.displayName = displayName;
         editingUser.role = role;
         editingUser.username = username;
-        editingUser.password = password;
+        if (password) editingUser.password = password; // blank = keep the existing password
         editingUser.email = email;
         if (wasCurrentUser) {
           document.getElementById('headerUserAvatar').textContent = initials(currentUser.displayName);
@@ -2439,7 +2463,9 @@
       document.getElementById('newUserDisplayName').value = user.displayName;
       document.getElementById('newUserRole').value = user.role;
       document.getElementById('newUserUsername').value = user.username;
-      document.getElementById('newUserPassword').value = user.password;
+      const pwField = document.getElementById('newUserPassword');
+      pwField.value = '';
+      pwField.placeholder = 'Leave blank to keep the current password';
       document.getElementById('newUserEmail').value = user.email || '';
       document.getElementById('newUserErrorMsg').classList.add('hidden');
       document.getElementById('userFormModeBanner').classList.remove('hidden');
@@ -2453,7 +2479,9 @@
       editingUsername = null;
       document.getElementById('newUserDisplayName').value = '';
       document.getElementById('newUserUsername').value = '';
-      document.getElementById('newUserPassword').value = '';
+      const pwField = document.getElementById('newUserPassword');
+      pwField.value = '';
+      pwField.placeholder = '••••••••';
       document.getElementById('newUserEmail').value = '';
       document.getElementById('newUserErrorMsg').classList.add('hidden');
       document.getElementById('userFormModeBanner').classList.add('hidden');
@@ -2484,7 +2512,7 @@
             <div class="h-6 w-6 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[11px] font-mono font-bold text-cyan-300">${initials(u.displayName)}</div>
             <div class="min-w-0">
               <div class="text-[13px] text-slate-200 truncate">${u.displayName} <span class="text-slate-500">· ${u.role}</span></div>
-              <div class="text-[11px] text-slate-500 font-mono truncate">${u.username} / ${'•'.repeat(Math.max(6, u.password.length))}</div>
+              <div class="text-[11px] text-slate-500 font-mono truncate">${u.username} / ••••••••</div>
               <div class="text-[11px] text-slate-500 font-mono truncate">${u.email || 'No email set'}</div>
             </div>
           </div>
@@ -2498,7 +2526,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 57;
+    let currentVersionMinor = 58;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -4470,13 +4498,13 @@
       return items.map(n => `
         <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800 space-y-1.5">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="text-[11px] font-mono text-slate-500 uppercase tracking-wide">${n.source || 'Unknown Source'}</span>
+            <span class="text-[11px] font-mono text-slate-500 uppercase tracking-wide">${escapeHtml(n.source) || 'Unknown Source'}</span>
             <span class="text-[11px] font-mono text-slate-600">${n.publishedAt ? timeAgo(new Date(n.publishedAt).getTime()) : ''}</span>
           </div>
-          <a href="${n.link}" target="_blank" rel="noopener noreferrer" class="block text-sm font-semibold text-white hover:text-purple-300 transition">${n.title}</a>
-          ${n.summary ? `<p class="text-[13px] text-slate-400 leading-relaxed">${n.summary}</p>` : ''}
+          <a href="${safeExternalUrl(n.link)}" target="_blank" rel="noopener noreferrer" class="block text-sm font-semibold text-white hover:text-purple-300 transition">${escapeHtml(n.title)}</a>
+          ${n.summary ? `<p class="text-[13px] text-slate-400 leading-relaxed">${escapeHtml(n.summary)}</p>` : ''}
           <div class="flex flex-wrap gap-1.5">
-            ${(n.matchedKeywords || []).map(k => `<span class="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800 text-[10.5px] font-mono uppercase">${k}</span>`).join('')}
+            ${(n.matchedKeywords || []).map(k => `<span class="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800 text-[10.5px] font-mono uppercase">${escapeHtml(k)}</span>`).join('')}
           </div>
           <div class="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-800/80">
             ${newsRemediationButtonsHtml(n)}
@@ -4529,7 +4557,7 @@
 
       const sources = [...new Set(LIVE_NEWS_ITEMS.map(n => n.source).filter(Boolean))].sort();
       const currentSource = sourceSelect.value;
-      sourceSelect.innerHTML = '<option value="">All Sources</option>' + sources.map(s => `<option value="${s}">${s}</option>`).join('');
+      sourceSelect.innerHTML = '<option value="">All Sources</option>' + sources.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
       sourceSelect.value = sources.includes(currentSource) ? currentSource : '';
 
       const clearBtn = document.getElementById('btnClearNewsRefine');
@@ -4559,9 +4587,9 @@
       const matches = (q ? pool.filter(s => s.label.toLowerCase().includes(q) && s.label.toLowerCase() !== q) : pool).slice(0, 8);
       if (!matches.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
       box.innerHTML = matches.map(s => `
-        <button type="button" onclick="pickNewsSearchSuggestion('${s.label.replace(/'/g, "\\'")}')" class="w-full text-left px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 flex items-center justify-between gap-2">
-          <span class="truncate">${s.label}</span>
-          <span class="text-[10px] font-mono uppercase text-slate-600 shrink-0">${s.kind}</span>
+        <button type="button" onclick="pickNewsSearchSuggestion('${s.label.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" class="w-full text-left px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 flex items-center justify-between gap-2">
+          <span class="truncate">${escapeHtml(s.label)}</span>
+          <span class="text-[10px] font-mono uppercase text-slate-600 shrink-0">${escapeHtml(s.kind)}</span>
         </button>
       `).join('');
       box.classList.remove('hidden');
