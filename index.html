@@ -3099,7 +3099,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 55;
+    let currentVersionMinor = 56;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
@@ -7453,9 +7453,11 @@ Correlation Team does not perform remediation itself.
     box-shadow:0 0 18px rgba(255,140,40,.25)}
   #askT-btn img{width:32px;height:32px;border-radius:8px}
   #askT-btn:hover{box-shadow:0 0 26px rgba(56,220,255,.35)}
-  #askT-panel{position:fixed;right:22px;bottom:80px;z-index:61;width:min(400px,calc(100vw - 32px));height:min(560px,calc(100vh - 120px));
+  #askT-panel{position:fixed;right:22px;bottom:80px;z-index:61;width:min(460px,calc(100vw - 32px));height:min(680px,calc(100vh - 100px));
+    min-width:320px;min-height:360px;max-width:calc(100vw - 32px);max-height:calc(100vh - 100px);
     display:none;flex-direction:column;background:#070b14;border:1px solid #334155;border-radius:14px;overflow:hidden;
-    font:14px/1.45 system-ui,sans-serif;color:#e2e8f0;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+    font:14px/1.45 system-ui,sans-serif;color:#e2e8f0;box-shadow:0 20px 60px rgba(0,0,0,.6);
+    resize:both}
   #askT-panel.open{display:flex}
   #askT-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #1e293b;background:#0b1220}
   #askT-head img{width:36px;height:36px;border-radius:8px}
