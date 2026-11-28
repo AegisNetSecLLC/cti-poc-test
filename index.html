@@ -113,6 +113,54 @@
     header.min-h-14 {
       box-shadow: inset 0 -1px 0 0 rgba(30, 41, 59, 0.6), 0 1px 0 0 rgba(34, 211, 238, 0.12);
     }
+
+    /* ==========================================
+       SITE-WIDE PASS — every section/card/modal in this app already shares a handful of
+       repeated Tailwind combos (the "rounded-xl border-slate-800 bg-slate-900/40" content
+       card, the "bg-slate-950/60|80" header strip, the "rounded-2xl shadow-2xl" modal
+       shell, the purple→cyan gradient primary button). Targeting those combos with
+       attribute selectors means this cascades to every screen and every modal at once —
+       Overview, Correlated Triage, Connectors, Threat Intel, Assets, Memos, Settings,
+       and all seven modals — without touching a single line of markup or JS. ==========
+       ========================================== */
+
+    /* Numbers read as data everywhere, not just in Platform Status. */
+    .font-mono { font-variant-numeric: tabular-nums; }
+
+    /* Content cards: a hairline lift instead of a flat, shadowless rectangle. */
+    [class*="rounded-xl border border-slate-800 bg-slate-900/40"] {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.02);
+    }
+    /* Card header strips: a faint top-down tint instead of flat fill, same trick as the
+       login card and header — gives every section banner a touch of depth. */
+    [class*="bg-slate-950/60"], [class*="bg-slate-950/80"] {
+      background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.025), transparent);
+    }
+
+    /* Section titles (every tab's "Program Overview" / "Settings" / etc. heading): a touch
+       tighter tracking so the bold sans face reads intentional, not just "bold text". */
+    h2.text-base.font-semibold.text-white { letter-spacing: -0.01em; }
+
+    /* Modal shells: the same hairline-top-edge treatment as the login card, tuned down
+       (no ambient glow blob — these are task dialogs, not an entrance moment) so every
+       modal in the app (Activate, Threat Memo, Add Connector/Feed, Deep Dive, etc.)
+       gets a slightly more deliberate top edge instead of a flat rounded rectangle.
+       Inset from the edges (not overflow:hidden) so this never touches the overflow
+       behavior some of these modals already depend on to let long content scroll. */
+    [class*="rounded-2xl"][class*="shadow-2xl"] { position: relative; }
+    [class*="rounded-2xl"][class*="shadow-2xl"]::before {
+      content: ''; position: absolute; top: 0; left: 1.25rem; right: 1.25rem; height: 1px; z-index: 1;
+      background: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.5), transparent);
+    }
+
+    /* Primary gradient buttons (Sign In, Activate & Deploy, Send via AegisCTI, etc.): a
+       little more presence on hover instead of just a color shift. */
+    [class*="from-purple-600"][class*="to-cyan-600"] { transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease; }
+    [class*="from-purple-600"][class*="to-cyan-600"]:hover { transform: translateY(-1px); box-shadow: 0 6px 16px -4px rgba(147, 51, 234, 0.4); }
+
+    /* Sidebar nav: a touch of transition polish on the item that's already styled active
+       by JS, so switching tabs feels less like a hard cut. */
+    .nav-item { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
   </style>
 </head>
 <body class="text-slate-200 antialiased font-sans h-screen overflow-hidden flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
@@ -2574,7 +2622,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 59;
+    let currentVersionMinor = 60;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
