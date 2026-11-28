@@ -7,9 +7,20 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>AegisCTI // Threat Intelligence & Environment Correlation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8/build/index.umd.js"></script>
   <style>
+    /* Typography — a real, loaded pairing instead of the OS-default sans/mono stacks
+       Tailwind falls back to. IBM Plex Sans/Mono are drawn/released as one family, so the
+       data-dense mono labels and the prose sans around them share the same visual DNA —
+       appropriate for a security tool where both read as "instrument," not just the data. */
+    :root { --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif; --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace; }
+    body, .font-sans { font-family: var(--font-sans) !important; }
+    .font-mono { font-family: var(--font-mono) !important; }
+
     /* Custom sleek scrollbar & cyber accents */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0b0f19; }
@@ -65,35 +76,72 @@
       100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
     }
     .new-item-glow { animation: newItemFlash 1.1s ease-out 2; }
+
+    /* Ambient depth — the app shell was a flat solid color; a very faint radial glow from
+       the top gives it the same "instrument panel" depth the login screen's glow already
+       has, without changing any actual surface color values components rely on. */
+    body {
+      background-color: #07090e;
+      background-image: radial-gradient(ellipse 1200px 600px at 50% -10%, rgba(8, 47, 73, 0.35), transparent 60%);
+      background-repeat: no-repeat;
+    }
+
+    /* Login card — a slightly more deliberate entrance: a soft ambient glow behind the
+       card (::before, purely decorative) and a hairline gradient top edge, instead of a
+       flat bordered box sitting directly on the grid pattern. */
+    #loginGate .login-card { position: relative; }
+    #loginGate .login-card::before {
+      content: ''; position: absolute; inset: -40% -20% auto -20%; height: 70%;
+      background: radial-gradient(ellipse at top, rgba(34, 211, 238, 0.16), transparent 70%);
+      pointer-events: none; z-index: -1;
+    }
+    #loginGate .login-card::after {
+      content: ''; position: absolute; top: 0; left: 1.5rem; right: 1.5rem; height: 1px;
+      background: linear-gradient(to right, transparent, rgba(34, 211, 238, 0.6), rgba(168, 85, 247, 0.6), transparent);
+    }
+
+    /* Settings → Platform Status: give each stat its own row rhythm (a hairline between
+       rows) instead of plain stacked flex rows with no separation, and keep numeric
+       values aligned on a tabular grid so they read as data, not just text. */
+    #settingsStatusBody { font-family: var(--font-mono); }
+    #settingsStatusBody > div { padding: 0.4rem 0; font-variant-numeric: tabular-nums; }
+    #settingsStatusBody > div:not(:last-child) { border-bottom: 1px solid rgba(30, 41, 59, 0.6); }
+
+    /* Top header: a faint gradient line along the bottom edge instead of a flat single
+       color — a box-shadow, not a background layer, so the header's existing
+       backdrop-blur/transparency (its see-through-while-scrolling effect) is untouched. */
+    header.min-h-14 {
+      box-shadow: inset 0 -1px 0 0 rgba(30, 41, 59, 0.6), 0 1px 0 0 rgba(34, 211, 238, 0.12);
+    }
   </style>
 </head>
-<body class="bg-[#07090e] text-slate-200 antialiased font-sans h-screen overflow-hidden flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+<body class="text-slate-200 antialiased font-sans h-screen overflow-hidden flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
   <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none"></div>
 
   <!-- LOGIN GATE (demo auth — saved to this browser's localStorage, no backend) -->
   <div id="loginGate" class="fixed inset-0 z-[100] bg-[#07090e] flex items-center justify-center p-4">
     <div class="absolute inset-0 grid-pattern opacity-60"></div>
-    <form onsubmit="attemptLogin(event)" class="relative w-full max-w-sm rounded-2xl border border-cyan-900/50 bg-[#0b0f19]/95 shadow-2xl shadow-cyan-950/40 p-6 space-y-5">
+    <form onsubmit="attemptLogin(event)" class="login-card relative w-full max-w-sm rounded-2xl border border-cyan-900/50 bg-[#0b0f19]/95 shadow-2xl shadow-cyan-950/40 p-7 space-y-6">
       <div class="flex items-center gap-3">
-        <div class="h-10 w-10 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
+        <div class="h-11 w-11 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
           </svg>
         </div>
         <div>
-          <div class="font-bold tracking-tight text-white text-base">AEGIS<span class="text-cyan-400">.INTEL</span></div>
-          <p class="text-[12px] text-slate-400">Sign in to continue</p>
+          <div class="font-bold tracking-tight text-white text-lg leading-none">AEGIS<span class="text-cyan-400">.INTEL</span></div>
+          <p class="text-[12px] text-slate-500 mt-1">Threat Intelligence &amp; Environment Correlation</p>
         </div>
       </div>
 
-      <div class="space-y-3">
+      <div class="space-y-3.5">
         <div>
-          <label class="text-[12px] text-slate-400 font-mono block mb-1">Username</label>
-          <input id="loginUsernameInput" type="text" autocomplete="username" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="e.g. analyst1">
+          <label class="text-[11px] text-slate-400 font-mono uppercase tracking-wide block mb-1.5">Username</label>
+          <input id="loginUsernameInput" type="text" autocomplete="username" class="w-full px-3 py-2.5 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40 transition" placeholder="e.g. analyst1">
         </div>
         <div>
-          <label class="text-[12px] text-slate-400 font-mono block mb-1">Password</label>
-          <input id="loginPasswordInput" type="password" autocomplete="current-password" class="w-full px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="••••••••">
+          <label class="text-[11px] text-slate-400 font-mono uppercase tracking-wide block mb-1.5">Password</label>
+          <input id="loginPasswordInput" type="password" autocomplete="current-password" class="w-full px-3 py-2.5 rounded-lg bg-slate-950/80 border border-slate-700 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40 transition" placeholder="••••••••">
         </div>
       </div>
 
@@ -103,7 +151,7 @@
         Sign In
       </button>
 
-      <div class="text-[12px] text-slate-500 leading-relaxed border-t border-slate-800 pt-3">
+      <div class="text-[12px] text-slate-500 leading-relaxed border-t border-slate-800/80 pt-3.5">
         Demo auth, saved in this browser — your account and login will still be here after a refresh. Manage accounts under <span class="text-slate-300">Settings → User Setup</span> once signed in.
       </div>
     </form>
@@ -2526,7 +2574,7 @@
     }
 
     let currentVersionMajor = 2;
-    let currentVersionMinor = 58;
+    let currentVersionMinor = 59;
     const pendingChanges = [];
 
     const AUDIT_LOG_STORAGE_KEY = 'aegisCtiDemoAuditLog_v1';
